@@ -14,8 +14,8 @@ const AppContent: React.FC = () => {
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 shadow-lg">
         <div className="max-w-6xl mx-auto px-4">
-          <h1 className="text-2xl font-bold">AI Collaboration Canvas</h1>
-          <p className="text-sm opacity-90">by Nicola Mattina</p>
+          <h1 className="text-2xl font-bold">Workflow AI Analyzer</h1>
+          <p className="text-sm opacity-90">Identifica quali attività delegare all'AI</p>
         </div>
       </header>
 
@@ -31,29 +31,10 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-6 mt-12">
+      <footer className="bg-gray-800 text-white py-4 mt-12">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-sm mb-2">
-            <strong>AI Collaboration Canvas</strong> - Framework by Nicola Mattina
-          </p>
           <p className="text-xs opacity-75">
-            <a
-              href="https://radicalcuriosity.xyz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-            >
-              radicalcuriosity.xyz
-            </a>
-            {' | '}
-            <a
-              href="https://linkedin.com/in/nicolamattina"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-            >
-              LinkedIn
-            </a>
+            © 2025 Workflow AI Analyzer
           </p>
         </div>
       </footer>
