@@ -1,0 +1,134 @@
+import { Strategy, Workflow, Evaluation, AppState } from '../types';
+
+// 1. Calcolo Tempo Totale
+export function calculateTotalTime(tempoMedio: number, frequenza: number): number {
+  return tempoMedio * frequenza; // minuti al mese
+}
+
+// 2. Calcolo Score Automazione
+export function calculateAutomationScore(a1: number, a2: number, a3: number, a4: number): number {
+  return a1 + a2 + a3 + a4; // Range: 0-8
+}
+
+// 3. Calcolo Score Carico Cognitivo
+export function calculateCognitiveScore(c1: number, c2: number, c3: number, c4: number): number {
+  return c1 + c2 + c3 + c4; // Range: 0-8
+}
+
+// 4. Calcolo Strategia AI (CORE LOGIC) - Matrice 2×2
+export function calculateStrategy(autoScore: number, cogScore: number): Strategy {
+  if (autoScore <= 4 && cogScore <= 4) {
+    return {
+      name: "🔴 Fuori Perimetro",
+      color: "#dc3545",
+      desc: "Non puoi delegare l'attività all'IA oppure non è vantaggioso"
+    };
+  }
+
+  if (autoScore >= 5 && cogScore <= 4) {
+    return {
+      name: "🔧 AI Tool",
+      color: "#17a2b8",
+      desc: "Trova un tool specifico per automatizzare"
+    };
+  }
+
+  if (autoScore <= 4 && cogScore >= 5) {
+    return {
+      name: "🤝 AI Assistant",
+      color: "#ffc107",
+      desc: "Crea un assistente tramite prompt ripetibile"
+    };
+  }
+
+  // autoScore >= 5 && cogScore >= 5
+  return {
+    name: "💡 AI Partner",
+    color: "#28a745",
+    desc: "Conversa con AI per esplorare idee e fare ricerche approfondite"
+  };
+}
+
+// 5. Calcolo Priorità
+export function calculatePriority(impatto: number, complessita: number): number {
+  if (complessita === 0) return 0;
+  return impatto / complessita; // Higher = più prioritario
+}
+
+// 6. Genera ID workflow progressivo
+export function generateWorkflowId(workflows: Workflow[]): string {
+  const maxId = workflows.reduce((max, w) => {
+    const num = parseInt(w.id.substring(1));
+    return num > max ? num : max;
+  }, 0);
+
+  const nextNum = maxId + 1;
+  return `W${String(nextNum).padStart(3, '0')}`;
+}
+
+// 7. Calcola statistiche aggregate
+export function calculateStats(workflows: Workflow[], evaluations: Record<string, Evaluation>): AppState['stats'] {
+  const totalSteps = workflows.length;
+  const totalTime = workflows.reduce((sum, w) => sum + w.tempoTotale, 0);
+
+  const strategyCounts = {
+    partner: 0,
+    assistant: 0,
+    tool: 0,
+    out: 0
+  };
+
+  Object.values(evaluations).forEach(evaluation => {
+    const strategyName = evaluation.strategy.name;
+    if (strategyName.includes('AI Partner')) {
+      strategyCounts.partner++;
+    } else if (strategyName.includes('AI Assistant')) {
+      strategyCounts.assistant++;
+    } else if (strategyName.includes('AI Tool')) {
+      strategyCounts.tool++;
+    } else if (strategyName.includes('Fuori Perimetro')) {
+      strategyCounts.out++;
+    }
+  });
+
+  return {
+    totalSteps,
+    totalTime,
+    strategyCounts
+  };
+}
+
+// 8. Export JSON
+export function exportToJSON(workflows: Workflow[], evaluations: Record<string, Evaluation>): string {
+  const stats = calculateStats(workflows, evaluations);
+
+  const exportData = {
+    timestamp: new Date().toISOString(),
+    version: "1.0",
+    workflows,
+    evaluations: Object.values(evaluations),
+    stats
+  };
+
+  return JSON.stringify(exportData, null, 2);
+}
+
+// 9. Download file
+export function downloadJSON(data: string, filename: string = 'ai-collaboration-canvas.json'): void {
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// 10. Get color for time (conditional formatting)
+export function getTimeColor(timeInMinutes: number): string {
+  if (timeInMinutes < 60) return '#28a745'; // verde
+  if (timeInMinutes <= 120) return '#ffc107'; // giallo
+  return '#dc3545'; // rosso
+}
