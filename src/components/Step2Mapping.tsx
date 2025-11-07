@@ -3,17 +3,34 @@ import { useAppContext } from '../context/AppContext';
 import { Workflow } from '../types';
 import { calculateTotalTime, generateWorkflowId, getTimeColor } from '../utils/businessLogic';
 
+const FASI_PREDEFINITE = ['Analisi', 'Produzione', 'Controllo', 'Pianificazione', 'Esecuzione', 'Verifica'];
+
 export const Step2Mapping: React.FC = () => {
   const { state, addWorkflow, updateWorkflow, deleteWorkflow, setCurrentStep } = useAppContext();
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<Workflow>>({
-    fase: 'Analisi',
+  const [formData, setFormData] = useState<{
+    fase: string;
+    titolo: string;
+    descrizione: string;
+    tool: string[];
+    input: string[];
+    output: string[];
+    tempoMedio: number;
+    frequenza: number;
+    painPoints: string;
+    owner: string;
+    note: string;
+    pii: boolean;
+    hitl: boolean;
+    citazioni: boolean;
+  }>({
+    fase: '',
     titolo: '',
     descrizione: '',
-    tool: '',
-    input: '',
-    output: '',
+    tool: [''],
+    input: [''],
+    output: [''],
     tempoMedio: 0,
     frequenza: 0,
     painPoints: '',
@@ -28,6 +45,10 @@ export const Step2Mapping: React.FC = () => {
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+
+    if (!formData.fase || formData.fase.trim().length === 0) {
+      newErrors.fase = 'La fase è obbligatoria';
+    }
 
     if (!formData.titolo || formData.titolo.length < 3) {
       newErrors.titolo = 'Il titolo deve essere di almeno 3 caratteri';
@@ -61,60 +82,63 @@ export const Step2Mapping: React.FC = () => {
       formData.frequenza || 0
     );
 
+    // Filtra array vuoti
+    const tool = formData.tool.filter(t => t.trim() !== '');
+    const input = formData.input.filter(i => i.trim() !== '');
+    const output = formData.output.filter(o => o.trim() !== '');
+
     if (editingId) {
-      // Modifica workflow esistente
       const workflow: Workflow = {
         id: editingId,
-        fase: formData.fase as 'Analisi' | 'Produzione' | 'Controllo',
-        titolo: formData.titolo || '',
-        descrizione: formData.descrizione || '',
-        tool: formData.tool || '',
-        input: formData.input || '',
-        output: formData.output || '',
-        tempoMedio: formData.tempoMedio || 0,
-        frequenza: formData.frequenza || 0,
+        fase: formData.fase.trim(),
+        titolo: formData.titolo,
+        descrizione: formData.descrizione,
+        tool,
+        input,
+        output,
+        tempoMedio: formData.tempoMedio,
+        frequenza: formData.frequenza,
         tempoTotale,
-        painPoints: formData.painPoints || '',
-        owner: formData.owner || '',
-        note: formData.note || '',
-        pii: formData.pii || false,
-        hitl: formData.hitl || false,
-        citazioni: formData.citazioni || false
+        painPoints: formData.painPoints,
+        owner: formData.owner,
+        note: formData.note,
+        pii: formData.pii,
+        hitl: formData.hitl,
+        citazioni: formData.citazioni
       };
       updateWorkflow(editingId, workflow);
       setEditingId(null);
     } else {
-      // Nuovo workflow
       const newId = generateWorkflowId(state.workflows);
       const workflow: Workflow = {
         id: newId,
-        fase: formData.fase as 'Analisi' | 'Produzione' | 'Controllo',
-        titolo: formData.titolo || '',
-        descrizione: formData.descrizione || '',
-        tool: formData.tool || '',
-        input: formData.input || '',
-        output: formData.output || '',
-        tempoMedio: formData.tempoMedio || 0,
-        frequenza: formData.frequenza || 0,
+        fase: formData.fase.trim(),
+        titolo: formData.titolo,
+        descrizione: formData.descrizione,
+        tool,
+        input,
+        output,
+        tempoMedio: formData.tempoMedio,
+        frequenza: formData.frequenza,
         tempoTotale,
-        painPoints: formData.painPoints || '',
-        owner: formData.owner || '',
-        note: formData.note || '',
-        pii: formData.pii || false,
-        hitl: formData.hitl || false,
-        citazioni: formData.citazioni || false
+        painPoints: formData.painPoints,
+        owner: formData.owner,
+        note: formData.note,
+        pii: formData.pii,
+        hitl: formData.hitl,
+        citazioni: formData.citazioni
       };
       addWorkflow(workflow);
     }
 
     // Reset form
     setFormData({
-      fase: 'Analisi',
+      fase: '',
       titolo: '',
       descrizione: '',
-      tool: '',
-      input: '',
-      output: '',
+      tool: [''],
+      input: [''],
+      output: [''],
       tempoMedio: 0,
       frequenza: 0,
       painPoints: '',
@@ -128,7 +152,22 @@ export const Step2Mapping: React.FC = () => {
   };
 
   const handleEdit = (workflow: Workflow) => {
-    setFormData(workflow);
+    setFormData({
+      fase: workflow.fase,
+      titolo: workflow.titolo,
+      descrizione: workflow.descrizione,
+      tool: workflow.tool.length > 0 ? workflow.tool : [''],
+      input: workflow.input.length > 0 ? workflow.input : [''],
+      output: workflow.output.length > 0 ? workflow.output : [''],
+      tempoMedio: workflow.tempoMedio,
+      frequenza: workflow.frequenza,
+      painPoints: workflow.painPoints,
+      owner: workflow.owner,
+      note: workflow.note,
+      pii: workflow.pii,
+      hitl: workflow.hitl,
+      citazioni: workflow.citazioni
+    });
     setEditingId(workflow.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -136,12 +175,12 @@ export const Step2Mapping: React.FC = () => {
   const handleCancelEdit = () => {
     setEditingId(null);
     setFormData({
-      fase: 'Analisi',
+      fase: '',
       titolo: '',
       descrizione: '',
-      tool: '',
-      input: '',
-      output: '',
+      tool: [''],
+      input: [''],
+      output: [''],
       tempoMedio: 0,
       frequenza: 0,
       painPoints: '',
@@ -152,6 +191,22 @@ export const Step2Mapping: React.FC = () => {
       citazioni: false
     });
     setErrors({});
+  };
+
+  // Gestione array dinamici
+  const addArrayItem = (field: 'tool' | 'input' | 'output') => {
+    setFormData({ ...formData, [field]: [...formData[field], ''] });
+  };
+
+  const removeArrayItem = (field: 'tool' | 'input' | 'output', index: number) => {
+    const newArray = formData[field].filter((_, i) => i !== index);
+    setFormData({ ...formData, [field]: newArray.length > 0 ? newArray : [''] });
+  };
+
+  const updateArrayItem = (field: 'tool' | 'input' | 'output', index: number, value: string) => {
+    const newArray = [...formData[field]];
+    newArray[index] = value;
+    setFormData({ ...formData, [field]: newArray });
   };
 
   const tempoTotaleCalc = calculateTotalTime(
@@ -168,20 +223,29 @@ export const Step2Mapping: React.FC = () => {
       {/* Form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 mb-8">
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Fase */}
+          {/* Fase - Combobox personalizzabile */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Fase *
             </label>
-            <select
+            <input
+              type="text"
+              list="fasi-options"
               value={formData.fase}
-              onChange={(e) => setFormData({ ...formData, fase: e.target.value as any })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="Analisi">Analisi</option>
-              <option value="Produzione">Produzione</option>
-              <option value="Controllo">Controllo</option>
-            </select>
+              onChange={(e) => setFormData({ ...formData, fase: e.target.value })}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.fase ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Scegli o scrivi una fase"
+            />
+            <datalist id="fasi-options">
+              {FASI_PREDEFINITE.map(fase => (
+                <option key={fase} value={fase} />
+              ))}
+            </datalist>
+            {errors.fase && (
+              <p className="text-red-500 text-sm mt-1">{errors.fase}</p>
+            )}
           </div>
 
           {/* Titolo */}
@@ -223,48 +287,106 @@ export const Step2Mapping: React.FC = () => {
           )}
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mt-6">
-          {/* Tool */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Tool usati
-            </label>
-            <input
-              type="text"
-              value={formData.tool}
-              onChange={(e) => setFormData({ ...formData, tool: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Es: Excel, Jira"
-            />
-          </div>
+        {/* Tool usati - Array multiplo */}
+        <div className="mt-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            🛠️ Tool usati
+          </label>
+          {formData.tool.map((tool, index) => (
+            <div key={index} className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={tool}
+                onChange={(e) => updateArrayItem('tool', index, e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Es: Excel, Jira, Notion..."
+              />
+              {formData.tool.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeArrayItem('tool', index)}
+                  className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addArrayItem('tool')}
+            className="mt-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold"
+          >
+            + Aggiungi Tool
+          </button>
+        </div>
 
-          {/* Input */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Input necessario
-            </label>
-            <input
-              type="text"
-              value={formData.input}
-              onChange={(e) => setFormData({ ...formData, input: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Es: Dati vendite"
-            />
-          </div>
+        {/* Input necessario - Array multiplo */}
+        <div className="mt-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            📥 Input necessario
+          </label>
+          {formData.input.map((inputItem, index) => (
+            <div key={index} className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={inputItem}
+                onChange={(e) => updateArrayItem('input', index, e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Es: Dati vendite, Report precedente..."
+              />
+              {formData.input.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeArrayItem('input', index)}
+                  className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addArrayItem('input')}
+            className="mt-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold"
+          >
+            + Aggiungi Input
+          </button>
+        </div>
 
-          {/* Output */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Output prodotto
-            </label>
-            <input
-              type="text"
-              value={formData.output}
-              onChange={(e) => setFormData({ ...formData, output: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Es: Report PDF"
-            />
-          </div>
+        {/* Output prodotto - Array multiplo */}
+        <div className="mt-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            📤 Output prodotto
+          </label>
+          {formData.output.map((outputItem, index) => (
+            <div key={index} className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={outputItem}
+                onChange={(e) => updateArrayItem('output', index, e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Es: Report PDF, Email di sintesi..."
+              />
+              {formData.output.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeArrayItem('output', index)}
+                  className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addArrayItem('output')}
+            className="mt-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-semibold"
+          >
+            + Aggiungi Output
+          </button>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mt-6">
@@ -474,9 +596,19 @@ export const Step2Mapping: React.FC = () => {
                       {workflow.tempoTotale} min/mese
                     </span>
                   </div>
-                  {workflow.tool && (
+                  {workflow.tool.length > 0 && workflow.tool[0] !== '' && (
                     <div>
-                      <span className="font-semibold">🛠️ Tool:</span> {workflow.tool}
+                      <span className="font-semibold">🛠️ Tool:</span> {workflow.tool.join(', ')}
+                    </div>
+                  )}
+                  {workflow.input.length > 0 && workflow.input[0] !== '' && (
+                    <div>
+                      <span className="font-semibold">📥 Input:</span> {workflow.input.join(', ')}
+                    </div>
+                  )}
+                  {workflow.output.length > 0 && workflow.output[0] !== '' && (
+                    <div>
+                      <span className="font-semibold">📤 Output:</span> {workflow.output.join(', ')}
                     </div>
                   )}
                   {workflow.owner && (

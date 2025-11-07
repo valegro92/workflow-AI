@@ -238,9 +238,19 @@ export const Step4Results: React.FC = () => {
                 <div className="bg-white rounded px-3 py-1">
                   <span className="font-semibold">⏱️ Tempo:</span> {workflow.tempoTotale} min/mese
                 </div>
-                {workflow.tool && (
+                {workflow.tool.length > 0 && workflow.tool[0] !== '' && (
                   <div className="bg-white rounded px-3 py-1">
-                    <span className="font-semibold">🛠️ Tool:</span> {workflow.tool}
+                    <span className="font-semibold">🛠️ Tool:</span> {workflow.tool.join(', ')}
+                  </div>
+                )}
+                {workflow.input.length > 0 && workflow.input[0] !== '' && (
+                  <div className="bg-white rounded px-3 py-1">
+                    <span className="font-semibold">📥 Input:</span> {workflow.input.join(', ')}
+                  </div>
+                )}
+                {workflow.output.length > 0 && workflow.output[0] !== '' && (
+                  <div className="bg-white rounded px-3 py-1">
+                    <span className="font-semibold">📤 Output:</span> {workflow.output.join(', ')}
                   </div>
                 )}
                 {workflow.owner && (
