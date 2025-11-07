@@ -19,33 +19,33 @@ export function calculateCognitiveScore(c1: number, c2: number, c3: number, c4: 
 export function calculateStrategy(autoScore: number, cogScore: number): Strategy {
   if (autoScore <= 4 && cogScore <= 4) {
     return {
-      name: "🔴 Fuori Perimetro",
+      name: "🔴 Mantienilo umano",
       color: "#dc3545",
-      desc: "Non puoi delegare l'attività all'IA oppure non è vantaggioso"
+      desc: "Non delegare all'IA, rimane gestione manuale"
     };
   }
 
   if (autoScore >= 5 && cogScore <= 4) {
     return {
-      name: "🔧 AI Tool",
+      name: "🔧 Strumento automatizzato",
       color: "#17a2b8",
-      desc: "Trova un tool specifico per automatizzare"
+      desc: "Trova un tool specifico che automatizza completamente"
     };
   }
 
   if (autoScore <= 4 && cogScore >= 5) {
     return {
-      name: "🤝 AI Assistant",
-      color: "#ffc107",
-      desc: "Crea un assistente tramite prompt ripetibile"
+      name: "💡 Brainstorming con l'intelligenza artificiale",
+      color: "#9c27b0",
+      desc: "Usa l'IA come partner di pensiero per esplorare idee"
     };
   }
 
   // autoScore >= 5 && cogScore >= 5
   return {
-    name: "💡 AI Partner",
+    name: "🤝 Assistente AI",
     color: "#28a745",
-    desc: "Conversa con AI per esplorare idee e fare ricerche approfondite"
+    desc: "Crea un prompt riutilizzabile per delegare sistematicamente"
   };
 }
 
@@ -80,13 +80,13 @@ export function calculateStats(workflows: Workflow[], evaluations: Record<string
 
   Object.values(evaluations).forEach(evaluation => {
     const strategyName = evaluation.strategy.name;
-    if (strategyName.includes('AI Partner')) {
+    if (strategyName.includes('Brainstorming')) {
       strategyCounts.partner++;
-    } else if (strategyName.includes('AI Assistant')) {
+    } else if (strategyName.includes('Assistente AI')) {
       strategyCounts.assistant++;
-    } else if (strategyName.includes('AI Tool')) {
+    } else if (strategyName.includes('Strumento')) {
       strategyCounts.tool++;
-    } else if (strategyName.includes('Fuori Perimetro')) {
+    } else if (strategyName.includes('umano')) {
       strategyCounts.out++;
     }
   });

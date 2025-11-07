@@ -2,12 +2,12 @@
 
 export interface Workflow {
   id: string;                    // Auto-generato: "W001", "W002", etc.
-  fase: 'Analisi' | 'Produzione' | 'Controllo';
+  fase: string;                  // Fase personalizzabile (es: "Analisi", "Produzione", etc.)
   titolo: string;                // Titolo breve dello step
   descrizione: string;           // Descrizione dettagliata
-  tool: string;                  // Tool/strumenti attualmente usati
-  input: string;                 // Input necessario
-  output: string;                // Output prodotto
+  tool: string[];                // Tool/strumenti attualmente usati (multipli)
+  input: string[];               // Input necessari (multipli)
+  output: string[];              // Output prodotti (multipli)
   tempoMedio: number;            // Tempo medio in minuti
   frequenza: number;             // Quante volte al mese
   tempoTotale: number;           // AUTO: tempoMedio × frequenza
