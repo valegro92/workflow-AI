@@ -17,8 +17,8 @@ export const automationQuestions: Question[] = [
     question: 'Il risultato ha sempre la stessa struttura?',
     options: [
       { value: 0, label: 'No' },
-      { value: 1, label: 'Parzialmente' },
-      { value: 2, label: 'Sì' }
+      { value: 1, label: 'Simile' },
+      { value: 2, label: 'Identico' }
     ]
   },
   {
@@ -35,7 +35,7 @@ export const automationQuestions: Question[] = [
     question: 'Puoi farlo senza prendere decisioni contestuali?',
     options: [
       { value: 0, label: 'No' },
-      { value: 1, label: 'In parte' },
+      { value: 1, label: 'Poche' },
       { value: 2, label: 'Sì' }
     ]
   }
@@ -47,22 +47,22 @@ export const cognitiveQuestions: Question[] = [
     question: 'È meccanico o richiede concentrazione?',
     options: [
       { value: 0, label: 'Meccanico' },
-      { value: 1, label: 'Misto' },
-      { value: 2, label: 'Cognitivo' }
+      { value: 1, label: 'Moderato' },
+      { value: 2, label: 'Ragionamento' }
     ]
   },
   {
     key: 'c2',
-    question: 'Lavori principalmente con i testi?',
+    question: 'Lavoro principalmente con il linguaggio?',
     options: [
-      { value: 0, label: 'No' },
-      { value: 1, label: 'In parte' },
-      { value: 2, label: 'Sì' }
+      { value: 0, label: 'Poco' },
+      { value: 1, label: 'Un po\'' },
+      { value: 2, label: 'Molto' }
     ]
   },
   {
     key: 'c3',
-    question: 'Quante informazioni devi processare?',
+    question: 'Quante informazioni devo processare?',
     options: [
       { value: 0, label: 'Poche' },
       { value: 1, label: 'Moderate' },
@@ -71,11 +71,11 @@ export const cognitiveQuestions: Question[] = [
   },
   {
     key: 'c4',
-    question: 'È utile esplorare diverse possibilità e prospettive?',
+    question: 'Esistono più modi per svolgere il compito?',
     options: [
       { value: 0, label: 'No' },
-      { value: 1, label: 'In parte' },
-      { value: 2, label: 'Sì' }
+      { value: 1, label: 'In qualche modo' },
+      { value: 2, label: 'Moltissimo' }
     ]
   }
 ];

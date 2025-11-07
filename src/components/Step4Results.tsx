@@ -26,9 +26,9 @@ export const Step4Results: React.FC = () => {
     });
   };
 
-  const partnerWorkflows = getWorkflowsForStrategy('AI Partner');
-  const assistantWorkflows = getWorkflowsForStrategy('AI Assistant');
-  const toolWorkflows = getWorkflowsForStrategy('AI Tool');
+  const partnerWorkflows = getWorkflowsForStrategy('Brainstorming');
+  const assistantWorkflows = getWorkflowsForStrategy('Assistente AI');
+  const toolWorkflows = getWorkflowsForStrategy('Strumento');
 
   const getPercentage = (count: number) => {
     return stats.totalSteps > 0
@@ -49,24 +49,24 @@ export const Step4Results: React.FC = () => {
           <p className="text-3xl font-bold text-gray-900">{stats.totalSteps}</p>
         </div>
 
-        <div className="bg-green-50 rounded-lg shadow-md p-4 border-2 border-green-200">
-          <p className="text-sm text-gray-600 mb-1">💡 AI Partner</p>
-          <p className="text-3xl font-bold text-green-600">
+        <div className="bg-purple-50 rounded-lg shadow-md p-4 border-2 border-purple-200">
+          <p className="text-sm text-gray-600 mb-1">💡 Brainstorming</p>
+          <p className="text-3xl font-bold text-purple-600">
             {stats.strategyCounts.partner}
           </p>
           <p className="text-xs text-gray-500">{getPercentage(stats.strategyCounts.partner)}%</p>
         </div>
 
-        <div className="bg-yellow-50 rounded-lg shadow-md p-4 border-2 border-yellow-200">
-          <p className="text-sm text-gray-600 mb-1">🤝 AI Assistant</p>
-          <p className="text-3xl font-bold text-yellow-600">
+        <div className="bg-green-50 rounded-lg shadow-md p-4 border-2 border-green-200">
+          <p className="text-sm text-gray-600 mb-1">🤝 Assistente AI</p>
+          <p className="text-3xl font-bold text-green-600">
             {stats.strategyCounts.assistant}
           </p>
           <p className="text-xs text-gray-500">{getPercentage(stats.strategyCounts.assistant)}%</p>
         </div>
 
         <div className="bg-blue-50 rounded-lg shadow-md p-4 border-2 border-blue-200">
-          <p className="text-sm text-gray-600 mb-1">🔧 AI Tool</p>
+          <p className="text-sm text-gray-600 mb-1">🔧 Strumento</p>
           <p className="text-3xl font-bold text-blue-600">
             {stats.strategyCounts.tool}
           </p>
@@ -74,7 +74,7 @@ export const Step4Results: React.FC = () => {
         </div>
 
         <div className="bg-red-50 rounded-lg shadow-md p-4 border-2 border-red-200">
-          <p className="text-sm text-gray-600 mb-1">🔴 Fuori Perimetro</p>
+          <p className="text-sm text-gray-600 mb-1">🔴 Mantieni umano</p>
           <p className="text-3xl font-bold text-red-600">
             {stats.strategyCounts.out}
           </p>
@@ -97,75 +97,75 @@ export const Step4Results: React.FC = () => {
         </h3>
 
         <div className="grid grid-cols-2 gap-4">
-          {/* Top Left - AI Assistant */}
-          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6 min-h-[200px]">
+          {/* Top Left - Brainstorming */}
+          <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-6 min-h-[200px]">
             <div className="text-center mb-3">
               <div className="text-sm font-semibold text-gray-600 mb-1">
                 Automazione BASSA (0-4) | Carico Cogn. ALTO (5-8)
               </div>
-              <div className="text-3xl font-bold text-yellow-700 mb-2">
-                🤝 AI ASSISTANT
+              <div className="text-3xl font-bold text-purple-700 mb-2">
+                💡 BRAINSTORMING CON L'IA
               </div>
-              <div className="text-xl font-bold text-yellow-600">
-                {stats.strategyCounts.assistant} step
+              <div className="text-xl font-bold text-purple-600">
+                {stats.strategyCounts.partner} step
               </div>
             </div>
             <p className="text-sm text-gray-700 text-center">
-              Crea un assistente tramite prompt ripetibile
+              Usa l'IA come partner di pensiero per esplorare idee
             </p>
           </div>
 
-          {/* Top Right - AI Partner */}
+          {/* Top Right - Assistente AI */}
           <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6 min-h-[200px]">
             <div className="text-center mb-3">
               <div className="text-sm font-semibold text-gray-600 mb-1">
                 Automazione ALTA (5-8) | Carico Cogn. ALTO (5-8)
               </div>
               <div className="text-3xl font-bold text-green-700 mb-2">
-                💡 AI PARTNER
+                🤝 ASSISTENTE AI
               </div>
               <div className="text-xl font-bold text-green-600">
-                {stats.strategyCounts.partner} step
+                {stats.strategyCounts.assistant} step
               </div>
             </div>
             <p className="text-sm text-gray-700 text-center">
-              Conversa con AI per esplorare idee e ricerche
+              Crea un prompt riutilizzabile per delegare sistematicamente
             </p>
           </div>
 
-          {/* Bottom Left - Fuori Perimetro */}
+          {/* Bottom Left - Mantieni umano */}
           <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 min-h-[200px]">
             <div className="text-center mb-3">
               <div className="text-sm font-semibold text-gray-600 mb-1">
                 Automazione BASSA (0-4) | Carico Cogn. BASSO (0-4)
               </div>
               <div className="text-3xl font-bold text-red-700 mb-2">
-                🔴 FUORI PERIMETRO
+                🔴 MANTIENILO UMANO
               </div>
               <div className="text-xl font-bold text-red-600">
                 {stats.strategyCounts.out} step
               </div>
             </div>
             <p className="text-sm text-gray-700 text-center">
-              Non delegabile o non vantaggioso
+              Non delegare all'IA, rimane gestione manuale
             </p>
           </div>
 
-          {/* Bottom Right - AI Tool */}
+          {/* Bottom Right - Strumento automatizzato */}
           <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6 min-h-[200px]">
             <div className="text-center mb-3">
               <div className="text-sm font-semibold text-gray-600 mb-1">
                 Automazione ALTA (5-8) | Carico Cogn. BASSO (0-4)
               </div>
               <div className="text-3xl font-bold text-blue-700 mb-2">
-                🔧 AI TOOL
+                🔧 STRUMENTO AUTOMATIZZATO
               </div>
               <div className="text-xl font-bold text-blue-600">
                 {stats.strategyCounts.tool} step
               </div>
             </div>
             <p className="text-sm text-gray-700 text-center">
-              Trova un tool specifico per automatizzare
+              Trova un tool specifico che automatizza completamente
             </p>
           </div>
         </div>
@@ -291,26 +291,26 @@ export const Step4Results: React.FC = () => {
 
           {partnerWorkflows.length > 0 && (
             <div className="mb-4 bg-white rounded-lg p-4">
-              <h4 className="font-bold text-green-700 mb-2">
-                💡 AI Partner ({partnerWorkflows.length} step)
+              <h4 className="font-bold text-purple-700 mb-2">
+                💡 Brainstorming con l'intelligenza artificiale ({partnerWorkflows.length} step)
               </h4>
               <p className="text-gray-700">
-                Questi step hanno alto potenziale di automazione E alto carico cognitivo.
-                Considera l'uso di Claude, ChatGPT o altri LLM per conversazioni approfondite,
-                brainstorming, ricerca e analisi complesse.
+                Questi step non possono essere standardizzati (non si ripetono mai nello stesso modo) ma richiedono
+                ragionamento, creatività e pensiero esplorativo. Usa l'IA come partner di pensiero:
+                inizia con un contesto ben definito, poni domande aperte, valuta le proposte e itera.
               </p>
             </div>
           )}
 
           {assistantWorkflows.length > 0 && (
             <div className="mb-4 bg-white rounded-lg p-4">
-              <h4 className="font-bold text-yellow-700 mb-2">
-                🤝 AI Assistant ({assistantWorkflows.length} step)
+              <h4 className="font-bold text-green-700 mb-2">
+                🤝 Assistente AI ({assistantWorkflows.length} step)
               </h4>
               <p className="text-gray-700">
-                Questi step richiedono thinking ma non sono completamente standardizzabili.
-                Crea prompt ripetibili e template per assistere il lavoro cognitivo mantenendo
-                supervisione umana.
+                Questi step sono cognitivamente impegnativi ma altamente ripetitivi. L'input cambia ogni volta
+                ma il processo rimane coerente. Crea un prompt ben strutturato che diventa una risorsa riutilizzabile:
+                definisci ruolo, input, output e regole con precisione.
               </p>
             </div>
           )}
@@ -318,12 +318,11 @@ export const Step4Results: React.FC = () => {
           {toolWorkflows.length > 0 && (
             <div className="bg-white rounded-lg p-4">
               <h4 className="font-bold text-blue-700 mb-2">
-                🔧 AI Tool ({toolWorkflows.length} step)
+                🔧 Strumento automatizzato ({toolWorkflows.length} step)
               </h4>
               <p className="text-gray-700">
-                Questi step sono altamente ripetibili ma non richiedono molto thinking.
-                Cerca tool specifici di automazione (RPA, API, script) o AI specializzati
-                per il task specifico.
+                Questi step sono così operativi e ripetitivi che non richiedono praticamente alcun intervento umano.
+                Identifica uno strumento specializzato che esegua già l'attività: configuralo, testalo e lascialo eseguire.
               </p>
             </div>
           )}
