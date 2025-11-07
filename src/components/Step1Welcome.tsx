@@ -9,7 +9,7 @@ export const Step1Welcome: React.FC = () => {
       {/* Hero Section */}
       <div className="text-center mb-12">
         <h1 className="text-5xl font-bold text-gray-900 mb-4">
-          AI Collaboration Canvas
+          Workflow AI Analyzer
         </h1>
         <p className="text-xl text-gray-600">
           Identifica quali attività delegare all'AI
@@ -65,24 +65,6 @@ export const Step1Welcome: React.FC = () => {
             </p>
           </div>
         </div>
-      </div>
-
-      {/* Informazioni Autore */}
-      <div className="bg-gray-50 rounded-lg p-6 mb-8">
-        <p className="text-sm text-gray-600 mb-2">
-          <strong>Basato sul framework:</strong> AI Collaboration Canvas
-        </p>
-        <p className="text-sm text-gray-600">
-          <strong>Autore:</strong> Nicola Mattina |{' '}
-          <a
-            href="https://radicalcuriosity.xyz"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-          >
-            radicalcuriosity.xyz
-          </a>
-        </p>
       </div>
 
       {/* CTA Button */}
