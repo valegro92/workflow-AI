@@ -1,5 +1,10 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { AppProvider, useAppContext } from './context/AppContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 import { AziendaSelector } from './components/AziendaSelector';
 import { TabNavigation } from './components/TabNavigation';
 import { Step1Welcome } from './components/Step1Welcome';
@@ -9,6 +14,7 @@ import { Step4Results } from './components/Step4Results';
 
 const AppContent: React.FC = () => {
   const { state, currentAzienda, setCurrentStep, deselectAzienda } = useAppContext();
+  const { logout, user } = require('./context/AuthContext').useAuth();
 
   // Se non c'è un'azienda selezionata, mostra il selettore
   if (!currentAzienda) {
@@ -40,19 +46,42 @@ const AppContent: React.FC = () => {
             <h1 className="text-xl font-bold">Workflow AI Analyzer</h1>
             <p className="text-xs opacity-90">
               <span className="font-semibold">🏢 {currentAzienda}</span>
+              {user && (
+                <span className="ml-2">
+                  | 👤 {user.email}
+                  {user.plan === 'pro' && (
+                    <span className="ml-1 bg-yellow-400 text-purple-900 px-2 py-0.5 rounded-full text-xs font-bold">
+                      PRO
+                    </span>
+                  )}
+                </span>
+              )}
             </p>
           </div>
-          <button
-            onClick={() => {
-              if (window.confirm(`Vuoi tornare alla selezione aziende?\n\nI dati di "${currentAzienda}" sono salvati automaticamente.`)) {
-                deselectAzienda();
-              }
-            }}
-            className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
-            title="Cambia azienda"
-          >
-            🔄 Cambia Azienda
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (window.confirm(`Vuoi tornare alla selezione aziende?\n\nI dati di "${currentAzienda}" sono salvati automaticamente.`)) {
+                  deselectAzienda();
+                }
+              }}
+              className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
+              title="Cambia azienda"
+            >
+              🔄 Cambia Azienda
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm('Sei sicuro di voler uscire?')) {
+                  logout();
+                }
+              }}
+              className="bg-red-500 bg-opacity-80 hover:bg-opacity-100 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
+              title="Logout"
+            >
+              🚪 Esci
+            </button>
+          </div>
         </div>
       </header>
 
@@ -113,9 +142,30 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* Protected route - Main app */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <AppContent />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch all - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AppProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
