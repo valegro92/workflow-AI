@@ -55,17 +55,20 @@ export const Step1Welcome: React.FC = () => {
       });
 
       if (!response.ok) {
-        // Try to parse JSON, fallback to text if it fails
+        // Read body as text first (can only read once)
+        const responseText = await response.text();
         let errorMessage = 'Errore durante il processing';
+
         try {
-          const error = await response.json();
+          // Try to parse as JSON
+          const error = JSON.parse(responseText);
           errorMessage = error.details || error.error || errorMessage;
         } catch {
-          // If JSON parsing fails, get text (likely HTML error page)
-          const text = await response.text();
-          console.error('API Error (non-JSON):', text);
+          // If JSON parsing fails, it's likely HTML error page
+          console.error('API Error (non-JSON):', responseText.substring(0, 500));
           errorMessage = `Server error (${response.status})`;
         }
+
         throw new Error(errorMessage);
       }
 
