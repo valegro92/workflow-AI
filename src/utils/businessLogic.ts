@@ -1,4 +1,5 @@
 import { Strategy, Workflow, Evaluation, AppState } from '../types';
+import jsPDF from 'jspdf';
 
 // 1. Calcolo Tempo Totale
 export function calculateTotalTime(tempoMedio: number, frequenza: number): number {
@@ -153,7 +154,152 @@ export function downloadJSON(data: string, nomeAzienda?: string): void {
   URL.revokeObjectURL(url);
 }
 
-// 10. Get color for time (conditional formatting)
+// 10. Export PDF
+export function exportToPDF(
+  workflows: Workflow[],
+  evaluations: Record<string, Evaluation>,
+  nomeAzienda: string,
+  costoOrario?: number,
+  implementationPlan?: string
+): void {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let yPosition = 20;
+  const lineHeight = 7;
+  const marginLeft = 15;
+  const marginRight = 15;
+  const contentWidth = pageWidth - marginLeft - marginRight;
+
+  // Helper: add new page if needed
+  const checkPageBreak = (requiredSpace: number = 20) => {
+    if (yPosition + requiredSpace > pageHeight - 20) {
+      doc.addPage();
+      yPosition = 20;
+      return true;
+    }
+    return false;
+  };
+
+  // Helper: wrap text
+  const addWrappedText = (text: string, x: number, maxWidth: number, fontSize: number = 10) => {
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(text, maxWidth);
+    lines.forEach((line: string) => {
+      checkPageBreak();
+      doc.text(line, x, yPosition);
+      yPosition += lineHeight;
+    });
+  };
+
+  // === HEADER ===
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Workflow AI Analyzer', marginLeft, yPosition);
+  yPosition += 10;
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Azienda: ${nomeAzienda}`, marginLeft, yPosition);
+  yPosition += 7;
+  doc.text(`Data: ${new Date().toLocaleDateString('it-IT')}`, marginLeft, yPosition);
+  yPosition += 15;
+
+  // === STATISTICHE OVERVIEW ===
+  const stats = calculateStats(workflows, evaluations);
+  const totalTime = stats.totalTime;
+  const totalSavings = costoOrario ? calculateMonthlySavings(totalTime, costoOrario) : null;
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Statistiche Overview', marginLeft, yPosition);
+  yPosition += 10;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Workflow totali: ${workflows.length}`, marginLeft, yPosition);
+  yPosition += 7;
+  doc.text(`Tempo mensile totale: ${totalTime} minuti`, marginLeft, yPosition);
+  yPosition += 7;
+  if (totalSavings) {
+    doc.text(`Risparmio potenziale: €${totalSavings.toFixed(2)}/mese`, marginLeft, yPosition);
+    yPosition += 7;
+  }
+  doc.text(`Strategie: ${stats.strategyCounts.assistant} Assistente AI, ${stats.strategyCounts.tool} Strumenti, ${stats.strategyCounts.partner} Brainstorming, ${stats.strategyCounts.out} Manuale`, marginLeft, yPosition);
+  yPosition += 15;
+
+  // === WORKFLOW DETTAGLIATI ===
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Workflow Dettagliati', marginLeft, yPosition);
+  yPosition += 10;
+
+  workflows.forEach((workflow) => {
+    const evaluation = evaluations[workflow.id];
+
+    checkPageBreak(40);
+
+    // ID e Titolo
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`[${workflow.id}] ${workflow.titolo}`, marginLeft, yPosition);
+    yPosition += 7;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+
+    // Dettagli workflow
+    doc.text(`Fase: ${workflow.fase}`, marginLeft + 5, yPosition);
+    yPosition += 6;
+    doc.text(`Tempo: ${workflow.tempoMedio} min x ${workflow.frequenza}/mese = ${workflow.tempoTotale} min/mese`, marginLeft + 5, yPosition);
+    yPosition += 6;
+
+    if (evaluation) {
+      doc.text(`Strategia: ${evaluation.strategy.name.replace(/[^\w\s]/gi, '')}`, marginLeft + 5, yPosition);
+      yPosition += 6;
+      doc.text(`Score: Automazione ${evaluation.autoScore}/8, Carico Cognitivo ${evaluation.cogScore}/8`, marginLeft + 5, yPosition);
+      yPosition += 6;
+      doc.text(`Complessita: ${evaluation.complessita}/5, Priorita: ${evaluation.priorita.toFixed(1)}`, marginLeft + 5, yPosition);
+      yPosition += 6;
+    }
+
+    if (workflow.painPoints) {
+      addWrappedText(`Pain points: ${workflow.painPoints}`, marginLeft + 5, contentWidth - 10, 9);
+    }
+
+    yPosition += 5;
+  });
+
+  // === PIANO DI IMPLEMENTAZIONE AI ===
+  if (implementationPlan) {
+    checkPageBreak(30);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Piano di Implementazione AI', marginLeft, yPosition);
+    yPosition += 10;
+
+    // Converti markdown in testo semplice per PDF
+    const cleanPlan = implementationPlan
+      .replace(/#+\s/g, '') // Rimuovi markdown headers
+      .replace(/\*\*/g, '') // Rimuovi bold markdown
+      .replace(/\*/g, '- '); // Converti liste
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    addWrappedText(cleanPlan, marginLeft, contentWidth, 9);
+  }
+
+  // === DOWNLOAD ===
+  const sanitizedName = nomeAzienda
+    .replace(/[^a-zA-Z0-9]/g, '-')
+    .toLowerCase();
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `workflow-ai-${sanitizedName}-${timestamp}.pdf`;
+
+  doc.save(filename);
+}
+
+// 11. Get color for time (conditional formatting)
 export function getTimeColor(timeInMinutes: number): string {
   if (timeInMinutes < 60) return '#28a745'; // verde
   if (timeInMinutes <= 120) return '#ffc107'; // giallo
