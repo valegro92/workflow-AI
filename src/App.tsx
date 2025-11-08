@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
@@ -13,7 +13,7 @@ import { Step4Results } from './components/Step4Results';
 
 const AppContent: React.FC = () => {
   const { state, currentAzienda, setCurrentStep, deselectAzienda } = useAppContext();
-  const { logout, user } = require('./context/AuthContext').useAuth();
+  const { logout, user } = useAuth();
 
   // Se non c'è un'azienda selezionata, mostra il selettore
   if (!currentAzienda) {
