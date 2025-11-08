@@ -78,27 +78,46 @@ export default async function handler(
   }
 
   try {
+    console.log('=== PROCESS AUDIO START ===');
+
     // 1. Parse JSON body
+    console.log('Parsing request body...');
     const { audio, filename } = req.body;
 
     if (!audio || typeof audio !== 'string') {
+      console.error('No audio data in request body');
       return res.status(400).json({ error: 'No audio data provided' });
     }
 
+    console.log(`Filename: ${filename}`);
+    console.log(`Base64 length: ${audio.length} chars`);
+
     // Decode base64 to buffer
+    console.log('Decoding base64...');
     const audioBuffer = Buffer.from(audio, 'base64');
 
     // Check file size (25MB limit)
     if (audioBuffer.length > 25 * 1024 * 1024) {
+      console.error(`File too large: ${audioBuffer.length} bytes`);
       return res.status(400).json({ error: 'File too large. Maximum 25MB allowed.' });
     }
 
-    console.log(`Received file: ${filename}, size: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`✓ Decoded to buffer: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+
+    // Check API keys
+    if (!process.env.GROQ_API_KEY) {
+      console.error('GROQ_API_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
+    }
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.error('OPENROUTER_API_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: OPENROUTER_API_KEY missing' });
+    }
 
     // 2. Transcribe audio con Groq Whisper
-    console.log('Transcribing audio with Groq Whisper...');
-
+    console.log('Creating audio stream for Groq...');
     const audioFile = bufferToFile(audioBuffer, filename || 'audio.mp3');
+    console.log('Calling Groq Whisper API...');
 
     const transcription = await groq.audio.transcriptions.create({
       file: audioFile,
@@ -107,10 +126,11 @@ export default async function handler(
       response_format: 'text',
     });
 
-    console.log('Transcription completed:', transcription.substring(0, 200) + '...');
+    console.log(`✓ Transcription completed: ${transcription.length} chars`);
+    console.log(`Preview: ${transcription.substring(0, 100)}...`);
 
     // 3. Extract workflows con OpenRouter + Gemini Flash
-    console.log('Extracting workflows with OpenRouter...');
+    console.log('Calling OpenRouter + Gemini Flash...');
 
     const completion = await openrouter.chat.completions.create({
       model: 'google/gemini-2.0-flash-exp:free',
@@ -124,7 +144,8 @@ export default async function handler(
     });
 
     const extractedText = completion.choices[0]?.message?.content || '{}';
-    console.log('Extraction completed:', extractedText.substring(0, 200) + '...');
+    console.log(`✓ Extraction completed: ${extractedText.length} chars`);
+    console.log(`Preview: ${extractedText.substring(0, 150)}...`);
 
     const result = JSON.parse(extractedText);
 
@@ -135,6 +156,9 @@ export default async function handler(
       tempoTotale: w.tempoMedio * w.frequenza,
     }));
 
+    console.log(`✓ Created ${workflows.length} workflows`);
+    console.log('=== PROCESS AUDIO SUCCESS ===');
+
     return res.status(200).json({
       success: true,
       transcription,
@@ -142,10 +166,15 @@ export default async function handler(
     });
 
   } catch (error: any) {
-    console.error('Error processing audio:', error);
+    console.error('=== PROCESS AUDIO ERROR ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+
     return res.status(500).json({
       error: 'Error processing audio',
       details: error.message,
+      type: error.constructor.name,
     });
   }
 }
