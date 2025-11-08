@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
-import formidable from 'formidable';
-import fs from 'fs';
+import { Readable } from 'stream';
 
 // Groq client per Whisper
 const groq = new OpenAI({
@@ -15,12 +14,12 @@ const openrouter = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
 });
 
-// Disable bodyParser per gestire multipart
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Convert Buffer to Readable stream with filename
+function bufferToFile(buffer: Buffer, filename: string): any {
+  const stream = Readable.from(buffer) as any;
+  stream.path = filename; // OpenAI SDK needs this
+  return stream;
+}
 
 // Prompt per estrarre workflows dal transcript
 const EXTRACTION_PROMPT = `Sei un esperto di mappatura processi aziendali.
@@ -79,32 +78,30 @@ export default async function handler(
   }
 
   try {
-    // 1. Parse multipart form data
-    const form = formidable({
-      maxFileSize: 25 * 1024 * 1024, // 25MB limit
-      keepExtensions: true
-    });
+    // 1. Parse JSON body
+    const { audio, filename } = req.body;
 
-    const [fields, files] = await new Promise<[formidable.Fields, formidable.Files]>(
-      (resolve, reject) => {
-        form.parse(req, (err, fields, files) => {
-          if (err) reject(err);
-          else resolve([fields, files]);
-        });
-      }
-    );
-
-    const audioFile = Array.isArray(files.audio) ? files.audio[0] : files.audio;
-
-    if (!audioFile) {
-      return res.status(400).json({ error: 'No audio file provided' });
+    if (!audio || typeof audio !== 'string') {
+      return res.status(400).json({ error: 'No audio data provided' });
     }
+
+    // Decode base64 to buffer
+    const audioBuffer = Buffer.from(audio, 'base64');
+
+    // Check file size (25MB limit)
+    if (audioBuffer.length > 25 * 1024 * 1024) {
+      return res.status(400).json({ error: 'File too large. Maximum 25MB allowed.' });
+    }
+
+    console.log(`Received file: ${filename}, size: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
 
     // 2. Transcribe audio con Groq Whisper
     console.log('Transcribing audio with Groq Whisper...');
 
+    const audioFile = bufferToFile(audioBuffer, filename || 'audio.mp3');
+
     const transcription = await groq.audio.transcriptions.create({
-      file: fs.createReadStream(audioFile.filepath),
+      file: audioFile,
       model: 'whisper-large-v3-turbo',
       language: 'it', // Forza italiano
       response_format: 'text',
