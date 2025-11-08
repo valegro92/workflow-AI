@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Workflow } from '../types';
 import { calculateTotalTime, generateWorkflowId, getTimeColor } from '../utils/businessLogic';
@@ -12,6 +12,68 @@ export const Step2Mapping: React.FC = () => {
   const [freeTextDescription, setFreeTextDescription] = useState<string>('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognitionInstance = new SpeechRecognition();
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+        recognitionInstance.lang = 'it-IT';
+
+        recognitionInstance.onresult = (event: any) => {
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            }
+          }
+
+          if (finalTranscript) {
+            setFreeTextDescription(prev => prev + finalTranscript);
+          }
+        };
+
+        recognitionInstance.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+          if (event.error === 'not-allowed') {
+            setAiError('Permesso microfono negato. Abilita il microfono nelle impostazioni del browser.');
+          } else {
+            setAiError('Errore durante la registrazione vocale.');
+          }
+        };
+
+        recognitionInstance.onend = () => {
+          setIsRecording(false);
+        };
+
+        setRecognition(recognitionInstance);
+      }
+    }
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognition) {
+      setAiError('Il tuo browser non supporta la registrazione vocale. Usa Chrome, Edge o Safari.');
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+      setIsRecording(false);
+    } else {
+      setAiError('');
+      recognition.start();
+      setIsRecording(true);
+    }
+  };
 
   const [formData, setFormData] = useState<{
     fase: string;
@@ -296,15 +358,45 @@ export const Step2Mapping: React.FC = () => {
           <h3 className="text-xl font-bold text-gray-900">Compila con AI</h3>
         </div>
         <p className="text-gray-700 text-sm mb-4">
-          Descrivi il workflow a parole libere e l'AI compilerà automaticamente il form per te.
+          Scrivi o parla per descrivere il workflow, poi l'AI compilerà automaticamente il form.
         </p>
-        <textarea
-          value={freeTextDescription}
-          onChange={(e) => setFreeTextDescription(e.target.value)}
-          placeholder="Esempio: 'Ogni lunedì passo 2 ore a creare il report vendite. Prendo i dati dal CRM, li metto su Excel, faccio pivot table, poi mando email al team. È noioso e a volte sbaglio le formule.'"
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none min-h-[120px] text-sm"
-          disabled={aiLoading}
-        />
+        <div className="relative">
+          <textarea
+            value={freeTextDescription}
+            onChange={(e) => setFreeTextDescription(e.target.value)}
+            placeholder="Scrivi qui o usa il microfono per dettare... Es: 'Ogni lunedì passo 2 ore a creare il report vendite. Prendo i dati dal CRM, li metto su Excel...'"
+            className="w-full px-4 py-3 pr-16 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none min-h-[120px] text-sm"
+            disabled={aiLoading || isRecording}
+          />
+          <button
+            type="button"
+            onClick={toggleRecording}
+            disabled={aiLoading}
+            className={`absolute right-3 bottom-3 p-3 rounded-full transition-all ${
+              isRecording
+                ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                : 'bg-purple-600 hover:bg-purple-700 text-white'
+            } ${aiLoading ? 'opacity-50 cursor-not-allowed' : 'shadow-md hover:shadow-lg'}`}
+            title={isRecording ? 'Ferma registrazione' : 'Inizia registrazione vocale'}
+          >
+            {isRecording ? (
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <rect x="6" y="6" width="8" height="8" rx="1" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+                <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
+              </svg>
+            )}
+          </button>
+        </div>
+        {isRecording && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
+            <span className="animate-pulse">🔴</span>
+            <span className="font-semibold">Registrazione in corso...</span>
+          </div>
+        )}
         {aiError && (
           <div className="mt-3 bg-red-50 border-l-4 border-red-400 p-3 rounded">
             <p className="text-red-700 text-sm">{aiError}</p>
