@@ -8,7 +8,7 @@ import { Step3Evaluation } from './components/Step3Evaluation';
 import { Step4Results } from './components/Step4Results';
 
 const AppContent: React.FC = () => {
-  const { state, currentAzienda, setCurrentStep } = useAppContext();
+  const { state, currentAzienda, setCurrentStep, deselectAzienda } = useAppContext();
 
   // Se non c'è un'azienda selezionata, mostra il selettore
   if (!currentAzienda) {
@@ -45,7 +45,7 @@ const AppContent: React.FC = () => {
           <button
             onClick={() => {
               if (window.confirm(`Vuoi tornare alla selezione aziende?\n\nI dati di "${currentAzienda}" sono salvati automaticamente.`)) {
-                window.location.reload();
+                deselectAzienda();
               }
             }}
             className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition-all text-sm"

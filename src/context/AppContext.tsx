@@ -11,6 +11,7 @@ interface AppContextType {
   getAllAziende: () => AziendaData[];
   createAzienda: (nomeAzienda: string) => void;
   selectAzienda: (nomeAzienda: string) => void;
+  deselectAzienda: () => void;
   deleteAzienda: (nomeAzienda: string) => void;
 
   // Metodi workflow (esistenti)
@@ -171,6 +172,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const deselectAzienda = () => {
+    setRepository(prev => ({
+      ...prev,
+      currentAzienda: null
+    }));
+    setState(initialState);
+  };
+
   const deleteAzienda = (nomeAzienda: string) => {
     setRepository(prev => {
       const newAziende = { ...prev.aziende };
@@ -310,6 +319,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         getAllAziende,
         createAzienda,
         selectAzienda,
+        deselectAzienda,
         deleteAzienda,
         setCurrentStep,
         setCostoOrario,
