@@ -5,6 +5,7 @@ import { calculateStats } from '../utils/businessLogic';
 interface AppContextType {
   state: AppState;
   setCurrentStep: (step: number) => void;
+  setCostoOrario: (costo: number | undefined) => void;
   addWorkflow: (workflow: Workflow) => void;
   updateWorkflow: (id: string, workflow: Workflow) => void;
   deleteWorkflow: (id: string) => void;
@@ -62,6 +63,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const setCurrentStep = (step: number) => {
     setState(prev => ({ ...prev, currentStep: step }));
+  };
+
+  const setCostoOrario = (costo: number | undefined) => {
+    setState(prev => ({ ...prev, costoOrario: costo }));
   };
 
   const addWorkflow = (workflow: Workflow) => {
@@ -143,6 +148,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       value={{
         state,
         setCurrentStep,
+        setCostoOrario,
         addWorkflow,
         updateWorkflow,
         deleteWorkflow,

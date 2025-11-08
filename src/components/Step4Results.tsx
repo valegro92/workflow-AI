@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { exportToJSON, downloadJSON } from '../utils/businessLogic';
+import { exportToJSON, downloadJSON, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
 
 export const Step4Results: React.FC = () => {
   const { state, setCurrentStep, resetApp } = useAppContext();
@@ -87,6 +87,131 @@ export const Step4Results: React.FC = () => {
             {stats.totalTime}
           </p>
           <p className="text-xs text-gray-500">min/mese</p>
+        </div>
+
+        {state.costoOrario && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg shadow-md p-4 border-2 border-green-300">
+            <p className="text-sm text-gray-600 mb-1">💰 Risparmio Potenziale</p>
+            <p className="text-2xl font-bold text-green-700">
+              {calculateMonthlySavings(stats.totalTime, state.costoOrario).toFixed(0)}€
+            </p>
+            <p className="text-xs text-gray-500">al mese</p>
+          </div>
+        )}
+      </div>
+
+      {/* Prioritizzazione e ROI */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg shadow-lg p-6 mb-8">
+        <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+          🎯 Priorità di Implementazione
+        </h3>
+
+        <p className="text-center text-gray-600 mb-6">
+          Step ordinati per priorità (impatto ÷ complessità) - inizia dai valori più alti
+        </p>
+
+        {state.costoOrario && (
+          <div className="bg-white rounded-lg p-3 mb-4 text-center">
+            <p className="text-sm text-gray-600">
+              Calcolo ROI basato su <strong>{state.costoOrario}€/ora</strong>
+            </p>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full bg-white rounded-lg overflow-hidden">
+            <thead className="bg-gray-800 text-white">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold">#</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Step</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Strategia</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold">Impatto<br/>(min/mese)</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold">Complessità<br/>(1-5)</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold">Priorità</th>
+                {state.costoOrario && (
+                  <>
+                    <th className="px-4 py-3 text-center text-sm font-semibold">Risparmio<br/>(€/mese)</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold">ROI</th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {state.workflows
+                .filter(w => state.evaluations[w.id])
+                .sort((a, b) => {
+                  const evalA = state.evaluations[a.id];
+                  const evalB = state.evaluations[b.id];
+                  return evalB.priorita - evalA.priorita;
+                })
+                .map((workflow, index) => {
+                  const evaluation = state.evaluations[workflow.id];
+                  const savings = state.costoOrario
+                    ? calculateMonthlySavings(workflow.tempoTotale, state.costoOrario)
+                    : 0;
+                  const roi = state.costoOrario
+                    ? calculateROI(savings, evaluation.complessita)
+                    : 0;
+
+                  return (
+                    <tr
+                      key={workflow.id}
+                      className={`border-b border-gray-200 ${index < 3 ? 'bg-yellow-50' : ''}`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center">
+                          {index < 3 && <span className="text-lg mr-2">🏆</span>}
+                          <span className="font-bold text-gray-900">{index + 1}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-gray-900">{workflow.id}</div>
+                        <div className="text-sm text-gray-600">{workflow.titolo}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div
+                          className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white"
+                          style={{ backgroundColor: evaluation.strategy.color }}
+                        >
+                          {evaluation.strategy.name.split(' ')[0]}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center font-semibold text-gray-900">
+                        {workflow.tempoTotale}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-semibold text-purple-600">
+                          {evaluation.complessita}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-bold text-green-600 text-lg">
+                          {evaluation.priorita.toFixed(1)}
+                        </span>
+                      </td>
+                      {state.costoOrario && (
+                        <>
+                          <td className="px-4 py-3 text-center font-semibold text-green-700">
+                            {savings.toFixed(0)}€
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="font-bold text-blue-600">
+                              {roi.toFixed(0)}
+                            </span>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 p-4">
+          <p className="text-sm text-blue-800">
+            <strong>💡 Consiglio:</strong> Inizia dai primi 3 step (evidenziati) per ottenere risultati rapidi e costruire momentum.
+          </p>
         </div>
       </div>
 

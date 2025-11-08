@@ -47,16 +47,17 @@ export interface Evaluation {
   cogScore: number;              // c1 + c2 + c3 + c4 (0-8)
   strategy: Strategy;            // calcolata da matrice 2×2
 
-  // PRIORITIZZAZIONE (opzionale)
+  // PRIORITIZZAZIONE
   impatto: number;               // Workflow.tempoTotale
-  complessita?: number;          // Manuale: 1-5
-  priorita?: number;             // impatto / complessita
+  complessita: number;           // Manuale: 1-5 (sforzo implementazione)
+  priorita: number;              // impatto / complessita
 }
 
 export interface AppState {
   currentStep: number;           // 1-4
   workflows: Workflow[];
   evaluations: Record<string, Evaluation>;
+  costoOrario?: number;          // Costo orario in € (opzionale, per calcolo ROI)
   stats: {
     totalSteps: number;
     totalTime: number;

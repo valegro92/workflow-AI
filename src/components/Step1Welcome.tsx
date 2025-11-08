@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 export const Step1Welcome: React.FC = () => {
-  const { setCurrentStep } = useAppContext();
+  const { state, setCurrentStep, setCostoOrario } = useAppContext();
+  const [showROI, setShowROI] = useState(false);
+  const [costoInput, setCostoInput] = useState<string>(
+    state.costoOrario ? state.costoOrario.toString() : ''
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -65,6 +69,59 @@ export const Step1Welcome: React.FC = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Opzionale: Calcolo ROI */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div
+          className="flex items-center justify-between cursor-pointer"
+          onClick={() => setShowROI(!showROI)}
+        >
+          <div className="flex items-center">
+            <span className="text-2xl mr-3">💰</span>
+            <h3 className="text-lg font-bold text-gray-900">
+              Calcola il Risparmio Economico (opzionale)
+            </h3>
+          </div>
+          <span className="text-gray-500 text-xl">
+            {showROI ? '▼' : '▶'}
+          </span>
+        </div>
+
+        {showROI && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <p className="text-gray-600 mb-4 text-sm">
+              Inserisci il tuo costo orario in € per calcolare automaticamente il risparmio economico
+              mensile derivante dall'automazione.
+            </p>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 flex-1">
+                <span className="text-gray-700 font-semibold whitespace-nowrap">
+                  Costo orario:
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="5"
+                  value={costoInput}
+                  onChange={(e) => {
+                    setCostoInput(e.target.value);
+                    const value = parseFloat(e.target.value);
+                    setCostoOrario(value > 0 ? value : undefined);
+                  }}
+                  placeholder="es: 50"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <span className="text-gray-700 font-semibold">€/ora</span>
+              </label>
+            </div>
+            {state.costoOrario && (
+              <p className="mt-3 text-sm text-green-600">
+                ✓ Verrà calcolato il ROI in base a {state.costoOrario}€/ora
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* CTA Button */}

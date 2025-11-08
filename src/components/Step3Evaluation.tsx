@@ -4,7 +4,8 @@ import { Evaluation } from '../types';
 import {
   calculateAutomationScore,
   calculateCognitiveScore,
-  calculateStrategy
+  calculateStrategy,
+  calculatePriority
 } from '../utils/businessLogic';
 import { automationQuestions, cognitiveQuestions } from '../data/questions';
 
@@ -13,6 +14,7 @@ export const Step3Evaluation: React.FC = () => {
 
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [complessita, setComplessita] = useState<number>(3); // Default: media complessità
 
   useEffect(() => {
     // Auto-seleziona il primo workflow non valutato
@@ -40,8 +42,10 @@ export const Step3Evaluation: React.FC = () => {
         c3: evaluation.c3,
         c4: evaluation.c4
       });
+      setComplessita(evaluation.complessita || 3);
     } else {
       setAnswers({});
+      setComplessita(3);
     }
   }, [selectedWorkflowId, state.evaluations]);
 
@@ -79,6 +83,9 @@ export const Step3Evaluation: React.FC = () => {
       return;
     }
 
+    const impatto = selectedWorkflow?.tempoTotale || 0;
+    const priorita = calculatePriority(impatto, complessita);
+
     const evaluation: Evaluation = {
       workflowId: selectedWorkflowId,
       a1: answers.a1,
@@ -92,7 +99,9 @@ export const Step3Evaluation: React.FC = () => {
       autoScore,
       cogScore,
       strategy: strategy!,
-      impatto: selectedWorkflow?.tempoTotale || 0
+      impatto,
+      complessita,
+      priorita
     };
 
     if (state.evaluations[selectedWorkflowId]) {
@@ -108,6 +117,7 @@ export const Step3Evaluation: React.FC = () => {
     if (nextUneval) {
       setSelectedWorkflowId(nextUneval.id);
       setAnswers({});
+      setComplessita(3);
     }
   };
 
@@ -303,6 +313,48 @@ export const Step3Evaluation: React.FC = () => {
           <p className="text-lg">{strategy.desc}</p>
         </div>
       )}
+
+      {/* Complessità di Implementazione */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-3">
+          ⚙️ Complessità di Implementazione
+        </h3>
+        <p className="text-gray-600 mb-4 text-sm">
+          Quanto sforzo richiederà implementare questa strategia AI? (1 = molto facile, 5 = molto complesso)
+        </p>
+
+        <div className="flex gap-3">
+          {[1, 2, 3, 4, 5].map((value) => (
+            <label
+              key={value}
+              className={`
+                flex-1 p-4 border-2 rounded-lg cursor-pointer transition-all text-center
+                ${complessita === value
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-300 hover:border-purple-300'
+                }
+              `}
+            >
+              <input
+                type="radio"
+                name="complessita"
+                value={value}
+                checked={complessita === value}
+                onChange={() => setComplessita(value)}
+                className="sr-only"
+              />
+              <div className="font-bold text-2xl mb-1">{value}</div>
+              <div className="text-xs text-gray-600">
+                {value === 1 && 'Molto facile'}
+                {value === 2 && 'Facile'}
+                {value === 3 && 'Media'}
+                {value === 4 && 'Difficile'}
+                {value === 5 && 'Molto difficile'}
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
 
       {/* Buttons */}
       <div className="flex justify-between">

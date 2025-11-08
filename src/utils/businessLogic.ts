@@ -55,6 +55,20 @@ export function calculatePriority(impatto: number, complessita: number): number 
   return impatto / complessita; // Higher = più prioritario
 }
 
+// 5b. Calcolo Risparmio Mensile (in €)
+export function calculateMonthlySavings(timeInMinutes: number, costoOrario: number): number {
+  if (!costoOrario || costoOrario === 0) return 0;
+  return (timeInMinutes / 60) * costoOrario;
+}
+
+// 5c. Calcolo ROI percentuale
+export function calculateROI(savings: number, complessita: number): number {
+  if (complessita === 0) return 0;
+  // ROI semplificato: risparmio diviso per sforzo (1-5)
+  // Moltiplicato per 20 per avere una scala più leggibile (%)
+  return (savings / complessita) * 20;
+}
+
 // 6. Genera ID workflow progressivo
 export function generateWorkflowId(workflows: Workflow[]): string {
   const maxId = workflows.reduce((max, w) => {
