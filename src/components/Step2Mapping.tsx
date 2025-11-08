@@ -9,6 +9,10 @@ export const Step2Mapping: React.FC = () => {
   const { state, addWorkflow, updateWorkflow, deleteWorkflow, setCurrentStep } = useAppContext();
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [freeTextDescription, setFreeTextDescription] = useState<string>('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string>('');
+
   const [formData, setFormData] = useState<{
     fase: string;
     titolo: string;
@@ -42,6 +46,71 @@ export const Step2Mapping: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleAIExtract = async () => {
+    if (!freeTextDescription || freeTextDescription.trim().length < 10) {
+      setAiError('Inserisci almeno 10 caratteri per descrivere il workflow');
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError('');
+
+    try {
+      const response = await fetch('/api/ai-workflow-extract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: freeTextDescription,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Errore durante l\'estrazione';
+        try {
+          const error = JSON.parse(errorText);
+          errorMessage = error.details || error.error || errorMessage;
+        } catch {
+          errorMessage = `Server error (${response.status})`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      const extracted = data.workflow;
+
+      // Popola il form con i dati estratti
+      setFormData({
+        fase: extracted.fase || '',
+        titolo: extracted.titolo || '',
+        descrizione: extracted.descrizione || '',
+        tool: extracted.tool && extracted.tool.length > 0 ? extracted.tool : [''],
+        input: extracted.input && extracted.input.length > 0 ? extracted.input : [''],
+        output: extracted.output && extracted.output.length > 0 ? extracted.output : [''],
+        tempoMedio: extracted.tempoMedio || 0,
+        frequenza: extracted.frequenza || 0,
+        painPoints: extracted.painPoints || '',
+        owner: '',
+        note: '',
+        pii: extracted.pii || false,
+        hitl: extracted.hitl || false,
+        citazioni: extracted.citazioni || false,
+      });
+
+      // Clear the free text dopo la compilazione
+      setFreeTextDescription('');
+      setAiError('');
+
+    } catch (error: any) {
+      console.error('Error extracting workflow:', error);
+      setAiError(error.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -219,6 +288,54 @@ export const Step2Mapping: React.FC = () => {
       <h2 className="text-3xl font-bold text-gray-900 mb-6">
         📝 Mappatura Workflow
       </h2>
+
+      {/* AI Assistant - Compilazione Automatica */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md p-6 mb-8 border-2 border-purple-200">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">🪄</span>
+          <h3 className="text-xl font-bold text-gray-900">Compila con AI</h3>
+        </div>
+        <p className="text-gray-700 text-sm mb-4">
+          Descrivi il workflow a parole libere e l'AI compilerà automaticamente il form per te.
+        </p>
+        <textarea
+          value={freeTextDescription}
+          onChange={(e) => setFreeTextDescription(e.target.value)}
+          placeholder="Esempio: 'Ogni lunedì passo 2 ore a creare il report vendite. Prendo i dati dal CRM, li metto su Excel, faccio pivot table, poi mando email al team. È noioso e a volte sbaglio le formule.'"
+          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none min-h-[120px] text-sm"
+          disabled={aiLoading}
+        />
+        {aiError && (
+          <div className="mt-3 bg-red-50 border-l-4 border-red-400 p-3 rounded">
+            <p className="text-red-700 text-sm">{aiError}</p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={handleAIExtract}
+          disabled={aiLoading || !freeTextDescription.trim()}
+          className={`mt-4 flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+            aiLoading || !freeTextDescription.trim()
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-md hover:shadow-lg'
+          }`}
+        >
+          {aiLoading ? (
+            <>
+              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Sto compilando...</span>
+            </>
+          ) : (
+            <>
+              <span>🪄</span>
+              <span>Compila il Form</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 mb-8">
