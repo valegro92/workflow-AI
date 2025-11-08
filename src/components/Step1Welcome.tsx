@@ -1,12 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 export const Step1Welcome: React.FC = () => {
-  const { state, setCurrentStep, setCostoOrario } = useAppContext();
+  const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows } = useAppContext();
   const [showROI, setShowROI] = useState(false);
   const [costoInput, setCostoInput] = useState<string>(
     state.costoOrario ? state.costoOrario.toString() : ''
   );
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/wav'];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|mp4|m4a|wav)$/i)) {
+      setUploadStatus('❌ Formato file non valido. Usa MP3, MP4, M4A o WAV');
+      return;
+    }
+
+    // Validate file size (25MB limit)
+    if (file.size > 25 * 1024 * 1024) {
+      setUploadStatus('❌ File troppo grande. Massimo 25MB');
+      return;
+    }
+
+    setIsProcessing(true);
+    setUploadStatus('🎤 Trascrizione audio in corso...');
+
+    try {
+      const formData = new FormData();
+      formData.append('audio', file);
+
+      const response = await fetch('/api/process-audio', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Errore durante il processing');
+      }
+
+      const data = await response.json();
+
+      setUploadStatus('🧠 Estrazione workflow in corso...');
+
+      // Import workflows
+      if (data.workflows && data.workflows.length > 0) {
+        bulkAddWorkflows(data.workflows);
+        setUploadStatus(`✅ ${data.workflows.length} workflow importati con successo!`);
+
+        // Auto-navigate to step 2 after 2 seconds
+        setTimeout(() => {
+          setCurrentStep(2);
+        }, 2000);
+      } else {
+        setUploadStatus('⚠️ Nessun workflow trovato nella trascrizione');
+      }
+
+    } catch (error: any) {
+      console.error('Error processing audio:', error);
+      setUploadStatus(`❌ Errore: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -124,6 +190,64 @@ export const Step1Welcome: React.FC = () => {
         )}
       </div>
 
+      {/* Import da Audio */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-md p-6 mb-8">
+        <div className="flex items-center mb-4">
+          <span className="text-3xl mr-3">🎙️</span>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">
+              Import Automatico da Registrazione Workshop
+            </h3>
+            <p className="text-sm text-gray-600">
+              Carica un file audio MP3/M4A/WAV del workshop con il cliente - l'AI estrarrà automaticamente i workflow
+            </p>
+          </div>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".mp3,.mp4,.m4a,.wav,audio/*"
+          onChange={handleAudioUpload}
+          disabled={isProcessing}
+          className="hidden"
+          id="audio-upload"
+        />
+
+        <label
+          htmlFor="audio-upload"
+          className={`
+            block w-full text-center py-3 px-6 rounded-lg font-semibold cursor-pointer transition-all
+            ${isProcessing
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-purple-600 hover:bg-purple-700 text-white hover:shadow-lg'
+            }
+          `}
+        >
+          {isProcessing ? '⏳ Elaborazione in corso...' : '🎤 Carica Audio Workshop (max 25MB)'}
+        </label>
+
+        {uploadStatus && (
+          <div className={`
+            mt-4 p-3 rounded-lg text-sm font-medium text-center
+            ${uploadStatus.startsWith('✅') ? 'bg-green-100 text-green-800' :
+              uploadStatus.startsWith('❌') ? 'bg-red-100 text-red-800' :
+              uploadStatus.startsWith('⚠️') ? 'bg-yellow-100 text-yellow-800' :
+              'bg-blue-100 text-blue-800'}
+          `}>
+            {uploadStatus}
+          </div>
+        )}
+
+        <div className="mt-4 text-xs text-gray-500 text-center">
+          <p>💡 Formati supportati: MP3, MP4, M4A, WAV • Massimo 25MB • Trascrizione + Analisi AI in ~10 secondi</p>
+        </div>
+      </div>
+
+      <div className="text-center mb-4">
+        <p className="text-gray-500 text-sm mb-2">oppure</p>
+      </div>
+
       {/* CTA Button */}
       <div className="text-center">
         <button
@@ -135,7 +259,7 @@ export const Step1Welcome: React.FC = () => {
             shadow-lg hover:shadow-xl
           "
         >
-          Inizia Ora →
+          Inserisci Manualmente →
         </button>
       </div>
     </div>
