@@ -380,13 +380,14 @@ export const Step2Mapping: React.FC = () => {
             title={isRecording ? 'Ferma registrazione' : 'Inizia registrazione vocale'}
           >
             {isRecording ? (
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <rect x="6" y="6" width="8" height="8" rx="1" />
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="7" y="7" width="10" height="10" rx="2" />
               </svg>
             ) : (
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-                <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+                <path d="M12 19v3m0 0h-3m3 0h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             )}
           </button>
