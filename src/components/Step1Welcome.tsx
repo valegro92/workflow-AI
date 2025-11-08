@@ -55,16 +55,13 @@ export const Step1Welcome: React.FC = () => {
       });
 
       if (!response.ok) {
-        // Read body as text first (can only read once)
         const responseText = await response.text();
         let errorMessage = 'Errore durante il processing';
 
         try {
-          // Try to parse as JSON
           const error = JSON.parse(responseText);
           errorMessage = error.details || error.error || errorMessage;
         } catch {
-          // If JSON parsing fails, it's likely HTML error page
           console.error('API Error (non-JSON):', responseText.substring(0, 500));
           errorMessage = `Server error (${response.status})`;
         }
@@ -73,18 +70,15 @@ export const Step1Welcome: React.FC = () => {
       }
 
       const data = await response.json();
-
       setUploadStatus('🧠 Estrazione workflow in corso...');
 
-      // Import workflows
       if (data.workflows && data.workflows.length > 0) {
         bulkAddWorkflows(data.workflows);
         setUploadStatus(`✅ ${data.workflows.length} workflow importati con successo!`);
 
-        // Auto-navigate to step 2 after 2 seconds
         setTimeout(() => {
-          setCurrentStep(2);
-        }, 2000);
+          setUploadStatus('');
+        }, 3000);
       } else {
         setUploadStatus('⚠️ Nessun workflow trovato nella trascrizione');
       }
@@ -94,77 +88,100 @@ export const Step1Welcome: React.FC = () => {
       setUploadStatus(`❌ Errore: ${error.message}`);
     } finally {
       setIsProcessing(false);
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   };
 
+  const evaluatedCount = Object.keys(state.evaluations).length;
+  const hasWorkflows = state.workflows.length > 0;
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Hero Section */}
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold text-gray-900 mb-4">
-          Workflow AI Analyzer
-        </h1>
-        <p className="text-xl text-gray-600">
-          Identifica quali attività delegare all'AI
-        </p>
-      </div>
-
-      {/* 3 Info Boxes */}
-      <div className="grid md:grid-cols-3 gap-6 mb-12">
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-          <div className="text-4xl mb-3">📝</div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">
-            Mappa il Workflow
-          </h3>
-          <p className="text-gray-700">
-            Descrivi ogni step del tuo processo con dettagli su tempi, input e output
-          </p>
-        </div>
-
-        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
-          <div className="text-4xl mb-3">🎯</div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">
-            Valuta gli Step
-          </h3>
-          <p className="text-gray-700">
-            Rispondi a 8 domande scientifiche su automazione e carico cognitivo
-          </p>
-        </div>
-
-        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6">
-          <div className="text-4xl mb-3">📊</div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">
-            Strategia AI
-          </h3>
-          <p className="text-gray-700">
-            Ottieni la matrice 2×2 e scopri come l'AI può aiutarti
-          </p>
-        </div>
-      </div>
-
-      {/* Consiglio Pratico */}
-      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 mb-8">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <span className="text-2xl">💡</span>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Workflow Mappati</p>
+              <p className="text-3xl font-bold text-blue-600">{state.workflows.length}</p>
+            </div>
+            <span className="text-4xl">📝</span>
           </div>
-          <div className="ml-3">
-            <h3 className="text-lg font-bold text-yellow-800 mb-1">
-              Consiglio pratico
-            </h3>
-            <p className="text-yellow-700">
-              Inizia con un processo ripetitivo che svolgi regolarmente (es: report settimanali,
-              preparazione documenti, analisi dati)
-            </p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Workflow Valutati</p>
+              <p className="text-3xl font-bold text-green-600">{evaluatedCount}</p>
+            </div>
+            <span className="text-4xl">⚖️</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Tempo Totale</p>
+              <p className="text-3xl font-bold text-purple-600">{state.stats.totalTime}</p>
+              <p className="text-xs text-gray-500">min/mese</p>
+            </div>
+            <span className="text-4xl">⏱️</span>
           </div>
         </div>
       </div>
 
-      {/* Opzionale: Calcolo ROI */}
+      {/* Action Buttons */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <button
+          onClick={() => setCurrentStep(2)}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
+        >
+          <span className="text-2xl">+</span>
+          <span>Aggiungi Workflow</span>
+        </button>
+
+        <label
+          htmlFor="audio-upload"
+          className={`
+            text-white font-bold py-4 px-6 rounded-lg transition-all shadow-md flex items-center justify-center gap-3 cursor-pointer
+            ${isProcessing
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-purple-600 hover:bg-purple-700 hover:shadow-lg'
+            }
+          `}
+        >
+          <span className="text-2xl">🎤</span>
+          <span>{isProcessing ? 'Elaborazione...' : 'Importa da Audio'}</span>
+        </label>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".mp3,.mp4,.m4a,.wav,audio/*"
+          onChange={handleAudioUpload}
+          disabled={isProcessing}
+          className="hidden"
+          id="audio-upload"
+        />
+      </div>
+
+      {/* Upload Status */}
+      {uploadStatus && (
+        <div className={`
+          mb-6 p-4 rounded-lg text-sm font-medium text-center
+          ${uploadStatus.startsWith('✅') ? 'bg-green-100 text-green-800' :
+            uploadStatus.startsWith('❌') ? 'bg-red-100 text-red-800' :
+            uploadStatus.startsWith('⚠️') ? 'bg-yellow-100 text-yellow-800' :
+            'bg-blue-100 text-blue-800'}
+        `}>
+          {uploadStatus}
+        </div>
+      )}
+
+      {/* ROI Calculator (Collapsible) */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <div
           className="flex items-center justify-between cursor-pointer"
@@ -173,7 +190,7 @@ export const Step1Welcome: React.FC = () => {
           <div className="flex items-center">
             <span className="text-2xl mr-3">💰</span>
             <h3 className="text-lg font-bold text-gray-900">
-              Calcola il Risparmio Economico (opzionale)
+              Calcola Risparmio Economico
             </h3>
           </div>
           <span className="text-gray-500 text-xl">
@@ -184,8 +201,7 @@ export const Step1Welcome: React.FC = () => {
         {showROI && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <p className="text-gray-600 mb-4 text-sm">
-              Inserisci il tuo costo orario in € per calcolare automaticamente il risparmio economico
-              mensile derivante dall'automazione.
+              Inserisci il tuo costo orario per calcolare il risparmio mensile
             </p>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 flex-1">
@@ -210,85 +226,86 @@ export const Step1Welcome: React.FC = () => {
             </div>
             {state.costoOrario && (
               <p className="mt-3 text-sm text-green-600">
-                ✓ Verrà calcolato il ROI in base a {state.costoOrario}€/ora
+                ✓ ROI calcolato in base a {state.costoOrario}€/ora
               </p>
             )}
           </div>
         )}
       </div>
 
-      {/* Import da Audio */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-md p-6 mb-8">
-        <div className="flex items-center mb-4">
-          <span className="text-3xl mr-3">🎙️</span>
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">
-              Import Automatico da Registrazione Workshop
-            </h3>
-            <p className="text-sm text-gray-600">
-              Carica un file audio MP3/M4A/WAV del workshop con il cliente - l'AI estrarrà automaticamente i workflow
-            </p>
+      {/* Workflow List */}
+      {hasWorkflows ? (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            I tuoi workflow
+          </h2>
+          <div className="space-y-2">
+            {state.workflows.map((workflow) => {
+              const isEvaluated = !!state.evaluations[workflow.id];
+              const evaluation = state.evaluations[workflow.id];
+
+              return (
+                <div
+                  key={workflow.id}
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <span className={`text-xl ${isEvaluated ? 'text-green-600' : 'text-gray-300'}`}>
+                      {isEvaluated ? '✓' : '○'}
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm text-gray-500">{workflow.id}</span>
+                        <span className="font-semibold text-gray-900">{workflow.titolo}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-600 mt-1">
+                        <span>📂 {workflow.fase}</span>
+                        <span>⏱️ {workflow.tempoTotale} min/mese</span>
+                        {isEvaluated && evaluation && (
+                          <span
+                            className="px-2 py-0.5 rounded-full text-white font-semibold"
+                            style={{ backgroundColor: evaluation.strategy.color }}
+                          >
+                            {evaluation.strategy.name.split(' ')[0]}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {!isEvaluated && (
+                      <button
+                        onClick={() => setCurrentStep(3)}
+                        className="text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 px-3 py-1 rounded font-semibold transition-colors"
+                      >
+                        Da valutare
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".mp3,.mp4,.m4a,.wav,audio/*"
-          onChange={handleAudioUpload}
-          disabled={isProcessing}
-          className="hidden"
-          id="audio-upload"
-        />
-
-        <label
-          htmlFor="audio-upload"
-          className={`
-            block w-full text-center py-3 px-6 rounded-lg font-semibold cursor-pointer transition-all
-            ${isProcessing
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-purple-600 hover:bg-purple-700 text-white hover:shadow-lg'
-            }
-          `}
-        >
-          {isProcessing ? '⏳ Elaborazione in corso...' : '🎤 Carica Audio Workshop (max 25MB)'}
-        </label>
-
-        {uploadStatus && (
-          <div className={`
-            mt-4 p-3 rounded-lg text-sm font-medium text-center
-            ${uploadStatus.startsWith('✅') ? 'bg-green-100 text-green-800' :
-              uploadStatus.startsWith('❌') ? 'bg-red-100 text-red-800' :
-              uploadStatus.startsWith('⚠️') ? 'bg-yellow-100 text-yellow-800' :
-              'bg-blue-100 text-blue-800'}
-          `}>
-            {uploadStatus}
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-12 text-center">
+          <div className="text-6xl mb-4">📝</div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Nessun workflow ancora
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Inizia aggiungendo il tuo primo workflow o importa da registrazione audio
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setCurrentStep(2)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+            >
+              + Aggiungi Workflow
+            </button>
           </div>
-        )}
-
-        <div className="mt-4 text-xs text-gray-500 text-center">
-          <p>💡 Formati supportati: MP3, MP4, M4A, WAV • Massimo 25MB • Trascrizione + Analisi AI in ~10 secondi</p>
         </div>
-      </div>
-
-      <div className="text-center mb-4">
-        <p className="text-gray-500 text-sm mb-2">oppure</p>
-      </div>
-
-      {/* CTA Button */}
-      <div className="text-center">
-        <button
-          onClick={() => setCurrentStep(2)}
-          className="
-            bg-blue-600 hover:bg-blue-700 text-white font-bold
-            py-4 px-12 rounded-lg text-xl
-            transition-all duration-200 transform hover:scale-105
-            shadow-lg hover:shadow-xl
-          "
-        >
-          Inserisci Manualmente →
-        </button>
-      </div>
+      )}
     </div>
   );
 };

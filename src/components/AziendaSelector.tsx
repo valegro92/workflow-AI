@@ -5,7 +5,6 @@ export const AziendaSelector: React.FC = () => {
   const { getAllAziende, createAzienda, selectAzienda, deleteAzienda } = useAppContext();
   const [nuovaAzienda, setNuovaAzienda] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [showSavedAziende, setShowSavedAziende] = useState(false);
 
   const aziende = getAllAziende();
 
@@ -54,145 +53,139 @@ export const AziendaSelector: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header Compatto */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-gray-900 mb-3">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
             🏢 Workflow AI Analyzer
           </h1>
-          <p className="text-xl text-gray-600">
-            Mappa i processi aziendali e scopri le opportunità di automazione AI
+          <p className="text-gray-600">
+            Mappa processi aziendali e scopri opportunità di automazione AI
           </p>
         </div>
 
-        {/* HERO - Inizia Nuovo Assessment */}
-        <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-2xl p-10 mb-6 border-2 border-blue-200">
-          <div className="text-center mb-6">
-            <div className="text-6xl mb-4">🚀</div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Inizia Nuovo Assessment
-            </h2>
-            <p className="text-gray-600">
-              Inserisci il nome dell'azienda per iniziare subito
-            </p>
-          </div>
-
-          <form onSubmit={handleCreateAzienda} className="max-w-2xl mx-auto">
-            <div className="flex flex-col gap-4">
-              <input
-                type="text"
-                value={nuovaAzienda}
-                onChange={(e) => setNuovaAzienda(e.target.value)}
-                placeholder="Nome azienda (es: Acme S.p.A., Studio Rossi, ...)"
-                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none text-xl shadow-sm"
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-8 py-4 rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] text-xl"
-              >
-                ✨ Inizia Assessment
-              </button>
-            </div>
+        {/* Nuova Azienda - Inline */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <form onSubmit={handleCreateAzienda} className="flex gap-3">
+            <input
+              type="text"
+              value={nuovaAzienda}
+              onChange={(e) => setNuovaAzienda(e.target.value)}
+              placeholder="Nome nuova azienda (es: Acme S.p.A.)"
+              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-8 py-3 rounded-lg transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+            >
+              + Nuova Azienda
+            </button>
           </form>
         </div>
 
-        {/* Aziende Salvate (collassabile) */}
-        {aziende.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <button
-              onClick={() => setShowSavedAziende(!showSavedAziende)}
-              className="w-full px-6 py-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">📂</span>
-                <span className="text-lg font-semibold text-gray-900">
-                  Oppure riprendi un assessment esistente
-                </span>
-                <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                  {aziende.length}
-                </span>
+        {/* Grid Aziende o Empty State */}
+        {aziende.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+            <div className="text-6xl mb-6">🚀</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Inizia il tuo primo assessment
+            </h2>
+            <div className="max-w-2xl mx-auto text-left space-y-3 mb-6">
+              <div className="flex items-start gap-3">
+                <span className="text-green-600 text-xl">✓</span>
+                <p className="text-gray-700"><strong>Multi-cliente:</strong> Gestisci assessment di più aziende in un unico posto</p>
               </div>
-              <span className={`text-2xl transition-transform ${showSavedAziende ? 'rotate-180' : ''}`}>
-                ▼
-              </span>
-            </button>
-
-            {showSavedAziende && (
-              <div className="p-6 space-y-3 max-h-[500px] overflow-y-auto">
-                {aziende.map((azienda) => (
-                  <div
-                    key={azienda.nomeAzienda}
-                    className="border-2 border-gray-200 hover:border-blue-400 rounded-lg p-4 transition-all hover:shadow-md group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 cursor-pointer" onClick={() => selectAzienda(azienda.nomeAzienda)}>
-                        <div className="flex items-center gap-3">
-                          <div className="text-2xl">🏢</div>
-                          <div>
-                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                              {azienda.nomeAzienda}
-                            </h3>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                              <span>
-                                📊 {azienda.state.workflows.length} workflow
-                              </span>
-                              <span>
-                                ⏱️ {azienda.state.stats.totalTime} min/mese
-                              </span>
-                              <span>
-                                🕒 {formatDate(azienda.updatedAt)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
+              <div className="flex items-start gap-3">
+                <span className="text-green-600 text-xl">✓</span>
+                <p className="text-gray-700"><strong>Privacy-first:</strong> Tutti i dati restano nel tuo browser (localStorage)</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-green-600 text-xl">✓</span>
+                <p className="text-gray-700"><strong>AI-powered:</strong> Analisi automatica e roadmap di implementazione</p>
+              </div>
+            </div>
+            <p className="text-gray-500 text-sm">
+              Inserisci il nome dell'azienda qui sopra per iniziare
+            </p>
+          </div>
+        ) : (
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Le tue aziende ({aziende.length})
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {aziende.map((azienda) => (
+                <div
+                  key={azienda.nomeAzienda}
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all p-6 border-2 border-transparent hover:border-blue-400 cursor-pointer group"
+                  onClick={() => selectAzienda(azienda.nomeAzienda)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="text-4xl">🏢</div>
+                    {showDeleteConfirm === azienda.nomeAzienda ? (
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => selectAzienda(azienda.nomeAzienda)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+                          onClick={() => handleDeleteAzienda(azienda.nomeAzienda)}
+                          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1 rounded text-xs"
                         >
-                          Apri
+                          Conferma
                         </button>
-
-                        {showDeleteConfirm === azienda.nomeAzienda ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleDeleteAzienda(azienda.nomeAzienda)}
-                              className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
-                            >
-                              Conferma
-                            </button>
-                            <button
-                              onClick={() => setShowDeleteConfirm(null)}
-                              className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
-                            >
-                              Annulla
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setShowDeleteConfirm(azienda.nomeAzienda)}
-                            className="bg-gray-200 hover:bg-red-100 text-gray-600 hover:text-red-600 font-semibold px-4 py-2 rounded-lg transition-colors"
-                            title="Elimina azienda"
-                          >
-                            🗑️
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setShowDeleteConfirm(null)}
+                          className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-3 py-1 rounded text-xs"
+                        >
+                          Annulla
+                        </button>
                       </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDeleteConfirm(azienda.nomeAzienda);
+                        }}
+                        className="text-gray-400 hover:text-red-600 transition-colors"
+                        title="Elimina"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+
+                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-3 truncate">
+                    {azienda.nomeAzienda}
+                  </h3>
+
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <span>📊</span>
+                      <span>{azienda.state.workflows.length} workflow</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>⏱️</span>
+                      <span>{azienda.state.stats.totalTime} min/mese</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>🕒</span>
+                      <span>{formatDate(azienda.updatedAt)}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="text-blue-600 font-semibold text-sm group-hover:underline">
+                      Apri →
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Footer hint */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>I tuoi dati sono salvati localmente nel browser e non vengono mai inviati a server esterni</p>
+        <div className="mt-8 text-center text-xs text-gray-500">
+          <p>Dati salvati localmente • Privacy-first • Nessun server esterno</p>
         </div>
       </div>
     </div>
