@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/process-audio.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
+  "buildCommand": "npm run build",
+  "framework": "vite"
+}
