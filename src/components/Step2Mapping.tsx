@@ -43,10 +43,21 @@ export const Step2Mapping: React.FC = () => {
         recognitionInstance.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
           setIsRecording(false);
-          if (event.error === 'not-allowed') {
-            setAiError('Permesso microfono negato. Abilita il microfono nelle impostazioni del browser.');
+
+          // Handle specific error types
+          if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+            setAiError('❌ Permesso microfono negato. Abilita il microfono nelle impostazioni del browser.');
+          } else if (event.error === 'network') {
+            setAiError('🌐 Errore di rete. La registrazione vocale richiede una connessione internet. Verifica la connessione e riprova.');
+          } else if (event.error === 'no-speech') {
+            setAiError('🔇 Nessun audio rilevato. Parla più vicino al microfono.');
+          } else if (event.error === 'audio-capture') {
+            setAiError('🎤 Errore nell\'acquisizione audio. Verifica che il microfono sia collegato correttamente.');
+          } else if (event.error === 'aborted') {
+            // User stopped recording, no error message needed
+            setAiError('');
           } else {
-            setAiError('Errore durante la registrazione vocale.');
+            setAiError(`⚠️ Errore durante la registrazione vocale: ${event.error}`);
           }
         };
 
