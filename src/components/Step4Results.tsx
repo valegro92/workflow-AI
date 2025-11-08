@@ -301,83 +301,118 @@ export const Step4Results: React.FC = () => {
         </div>
       </div>
 
-      {/* Matrice 2×2 Visuale */}
+      {/* Mappa delle Opportunità AI */}
       <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-          Matrice 2×2 - Strategia AI
+        <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+          🎯 Mappa delle Opportunità AI
         </h3>
+        <p className="text-sm text-gray-600 text-center mb-6">
+          I tuoi workflow organizzati per strategia di automazione
+        </p>
 
         <div className="grid grid-cols-2 gap-4">
           {/* Top Left - Brainstorming */}
-          <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-6 min-h-[200px]">
+          <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 min-h-[250px] flex flex-col">
             <div className="text-center mb-3">
-              <div className="text-sm font-semibold text-gray-600 mb-1">
-                Automazione BASSA (0-4) | Carico Cogn. ALTO (5-8)
+              <div className="text-xs font-semibold text-gray-500 mb-1">
+                Automazione BASSA | Carico Cogn. ALTO
               </div>
-              <div className="text-3xl font-bold text-purple-700 mb-2">
-                💡 BRAINSTORMING CON L'IA
+              <div className="text-2xl font-bold text-purple-700 mb-1">
+                💡 BRAINSTORMING
               </div>
-              <div className="text-xl font-bold text-purple-600">
-                {stats.strategyCounts.partner} step
+              <div className="text-lg font-bold text-purple-600 mb-2">
+                {getWorkflowsForStrategy('Brainstorming').length} workflow
               </div>
             </div>
-            <p className="text-sm text-gray-700 text-center">
-              Usa l'IA come partner di pensiero per esplorare idee
+            <p className="text-xs text-gray-600 text-center mb-3 italic">
+              Partner di pensiero per esplorare idee
             </p>
+            <div className="flex-1 space-y-1.5 overflow-y-auto max-h-40">
+              {getWorkflowsForStrategy('Brainstorming').map((w) => (
+                <div key={w.id} className="bg-white rounded px-2 py-1.5 text-xs border border-purple-200">
+                  <span className="font-mono text-purple-600 font-semibold">{w.id}</span>
+                  <span className="text-gray-700 ml-1">{w.titolo}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Top Right - Assistente AI */}
-          <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6 min-h-[200px]">
+          <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 min-h-[250px] flex flex-col">
             <div className="text-center mb-3">
-              <div className="text-sm font-semibold text-gray-600 mb-1">
-                Automazione ALTA (5-8) | Carico Cogn. ALTO (5-8)
+              <div className="text-xs font-semibold text-gray-500 mb-1">
+                Automazione ALTA | Carico Cogn. ALTO
               </div>
-              <div className="text-3xl font-bold text-green-700 mb-2">
+              <div className="text-2xl font-bold text-green-700 mb-1">
                 🤝 ASSISTENTE AI
               </div>
-              <div className="text-xl font-bold text-green-600">
-                {stats.strategyCounts.assistant} step
+              <div className="text-lg font-bold text-green-600 mb-2">
+                {getWorkflowsForStrategy('Assistente').length} workflow
               </div>
             </div>
-            <p className="text-sm text-gray-700 text-center">
-              Crea un prompt riutilizzabile per delegare sistematicamente
+            <p className="text-xs text-gray-600 text-center mb-3 italic">
+              Prompt riutilizzabile per delegare
             </p>
+            <div className="flex-1 space-y-1.5 overflow-y-auto max-h-40">
+              {getWorkflowsForStrategy('Assistente').map((w) => (
+                <div key={w.id} className="bg-white rounded px-2 py-1.5 text-xs border border-green-200">
+                  <span className="font-mono text-green-600 font-semibold">{w.id}</span>
+                  <span className="text-gray-700 ml-1">{w.titolo}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Bottom Left - Mantieni umano */}
-          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 min-h-[200px]">
+          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 min-h-[250px] flex flex-col">
             <div className="text-center mb-3">
-              <div className="text-sm font-semibold text-gray-600 mb-1">
-                Automazione BASSA (0-4) | Carico Cogn. BASSO (0-4)
+              <div className="text-xs font-semibold text-gray-500 mb-1">
+                Automazione BASSA | Carico Cogn. BASSO
               </div>
-              <div className="text-3xl font-bold text-red-700 mb-2">
-                🔴 MANTIENILO UMANO
+              <div className="text-2xl font-bold text-red-700 mb-1">
+                🔴 MANTIENI UMANO
               </div>
-              <div className="text-xl font-bold text-red-600">
-                {stats.strategyCounts.out} step
+              <div className="text-lg font-bold text-red-600 mb-2">
+                {getWorkflowsForStrategy('umano').length} workflow
               </div>
             </div>
-            <p className="text-sm text-gray-700 text-center">
-              Non delegare all'IA, rimane gestione manuale
+            <p className="text-xs text-gray-600 text-center mb-3 italic">
+              Gestione manuale, non delegare
             </p>
+            <div className="flex-1 space-y-1.5 overflow-y-auto max-h-40">
+              {getWorkflowsForStrategy('umano').map((w) => (
+                <div key={w.id} className="bg-white rounded px-2 py-1.5 text-xs border border-red-200">
+                  <span className="font-mono text-red-600 font-semibold">{w.id}</span>
+                  <span className="text-gray-700 ml-1">{w.titolo}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Bottom Right - Strumento automatizzato */}
-          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6 min-h-[200px]">
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 min-h-[250px] flex flex-col">
             <div className="text-center mb-3">
-              <div className="text-sm font-semibold text-gray-600 mb-1">
-                Automazione ALTA (5-8) | Carico Cogn. BASSO (0-4)
+              <div className="text-xs font-semibold text-gray-500 mb-1">
+                Automazione ALTA | Carico Cogn. BASSO
               </div>
-              <div className="text-3xl font-bold text-blue-700 mb-2">
-                🔧 STRUMENTO AUTOMATIZZATO
+              <div className="text-2xl font-bold text-blue-700 mb-1">
+                🔧 TOOL AUTOMAZIONE
               </div>
-              <div className="text-xl font-bold text-blue-600">
-                {stats.strategyCounts.tool} step
+              <div className="text-lg font-bold text-blue-600 mb-2">
+                {getWorkflowsForStrategy('Strumento').length} workflow
               </div>
             </div>
-            <p className="text-sm text-gray-700 text-center">
-              Trova un tool specifico che automatizza completamente
+            <p className="text-xs text-gray-600 text-center mb-3 italic">
+              Tool specifico per automatizzare
             </p>
+            <div className="flex-1 space-y-1.5 overflow-y-auto max-h-40">
+              {getWorkflowsForStrategy('Strumento').map((w) => (
+                <div key={w.id} className="bg-white rounded px-2 py-1.5 text-xs border border-blue-200">
+                  <span className="font-mono text-blue-600 font-semibold">{w.id}</span>
+                  <span className="text-gray-700 ml-1">{w.titolo}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
