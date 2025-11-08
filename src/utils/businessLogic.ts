@@ -273,20 +273,95 @@ export function exportToPDF(
   // === PIANO DI IMPLEMENTAZIONE AI ===
   if (implementationPlan) {
     checkPageBreak(30);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Piano di Implementazione AI', marginLeft, yPosition);
-    yPosition += 10;
 
-    // Converti markdown in testo semplice per PDF
-    const cleanPlan = implementationPlan
-      .replace(/#+\s/g, '') // Rimuovi markdown headers
-      .replace(/\*\*/g, '') // Rimuovi bold markdown
-      .replace(/\*/g, '- '); // Converti liste
+    // Parse markdown e renderizza con formattazione
+    const lines = implementationPlan.split('\n');
 
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    addWrappedText(cleanPlan, marginLeft, contentWidth, 9);
+    lines.forEach((line) => {
+      const trimmedLine = line.trim();
+
+      // Skip empty lines (add small space)
+      if (!trimmedLine) {
+        yPosition += 3;
+        return;
+      }
+
+      checkPageBreak(15);
+
+      // H2 headers (## Title)
+      if (trimmedLine.startsWith('## ')) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        const text = trimmedLine.replace(/^##\s*/, '');
+        doc.text(text, marginLeft, yPosition);
+        yPosition += 10;
+        return;
+      }
+
+      // H3 headers (### Title)
+      if (trimmedLine.startsWith('### ')) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        const text = trimmedLine.replace(/^###\s*/, '');
+        doc.text(text, marginLeft + 3, yPosition);
+        yPosition += 8;
+        return;
+      }
+
+      // Bold lines (starts with **)
+      if (trimmedLine.startsWith('**') || trimmedLine.match(/^\*\*\[/)) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        const text = trimmedLine.replace(/\*\*/g, '');
+        const lines = doc.splitTextToSize(text, contentWidth - 10);
+        lines.forEach((l: string) => {
+          checkPageBreak();
+          doc.text(l, marginLeft + 5, yPosition);
+          yPosition += 6;
+        });
+        return;
+      }
+
+      // List items (- item or * item)
+      if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const text = trimmedLine.replace(/^[-*]\s*/, '• ');
+        const lines = doc.splitTextToSize(text, contentWidth - 15);
+        lines.forEach((l: string) => {
+          checkPageBreak();
+          doc.text(l, marginLeft + 8, yPosition);
+          yPosition += 5.5;
+        });
+        return;
+      }
+
+      // Sub-items (  - item or indented)
+      if (trimmedLine.match(/^\s{2,}[-*]/)) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const text = trimmedLine.replace(/^\s+[-*]\s*/, '  ◦ ');
+        const lines = doc.splitTextToSize(text, contentWidth - 20);
+        lines.forEach((l: string) => {
+          checkPageBreak();
+          doc.text(l, marginLeft + 12, yPosition);
+          yPosition += 5.5;
+        });
+        return;
+      }
+
+      // Regular paragraphs
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      // Remove any remaining markdown (bold, etc)
+      const cleanText = trimmedLine.replace(/\*\*/g, '').replace(/\*/g, '');
+      const lines = doc.splitTextToSize(cleanText, contentWidth - 10);
+      lines.forEach((l: string) => {
+        checkPageBreak();
+        doc.text(l, marginLeft + 5, yPosition);
+        yPosition += 5.5;
+      });
+    });
   }
 
   // === DOWNLOAD ===
