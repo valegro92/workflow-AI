@@ -106,8 +106,8 @@ export default async function handler(
 
     // Prepare data summary for AI
     const workflowSummary = workflows.map((w: WorkflowData, index: number) => {
-      const eval: EvaluationData = evaluations[w.id];
-      if (!eval) return null;
+      const evaluation: EvaluationData = evaluations[w.id];
+      if (!evaluation) return null;
 
       const savings = costoOrario ? ((w.tempoTotale / 60) * costoOrario).toFixed(0) : null;
 
@@ -116,10 +116,10 @@ export default async function handler(
 - Fase: ${w.fase}
 - Tempo totale: ${w.tempoTotale} min/mese ${savings ? `(€${savings}/mese risparmio)` : ''}
 - Tool attuali: ${w.tool.join(', ') || 'N/A'}
-- Strategia AI: ${eval.strategy.name}
-- Score: Automazione ${eval.autoScore}/8, Carico Cognitivo ${eval.cogScore}/8
-- Complessità implementazione: ${eval.complessita}/5
-- Priorità: ${eval.priorita.toFixed(1)}
+- Strategia AI: ${evaluation.strategy.name}
+- Score: Automazione ${evaluation.autoScore}/8, Carico Cognitivo ${evaluation.cogScore}/8
+- Complessità implementazione: ${evaluation.complessita}/5
+- Priorità: ${evaluation.priorita.toFixed(1)}
 - PII: ${w.pii ? 'Sì' : 'No'}, HITL: ${w.hitl ? 'Sì' : 'No'}
 ${w.painPoints ? `- Pain points: ${w.painPoints}` : ''}
 `.trim();
