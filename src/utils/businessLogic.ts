@@ -113,12 +113,17 @@ export function calculateStats(workflows: Workflow[], evaluations: Record<string
 }
 
 // 8. Export JSON
-export function exportToJSON(workflows: Workflow[], evaluations: Record<string, Evaluation>): string {
+export function exportToJSON(
+  workflows: Workflow[],
+  evaluations: Record<string, Evaluation>,
+  nomeAzienda?: string
+): string {
   const stats = calculateStats(workflows, evaluations);
 
   const exportData = {
     timestamp: new Date().toISOString(),
-    version: "1.0",
+    version: "2.0",  // Incrementato per multi-cliente
+    azienda: nomeAzienda || "Non specificata",
     workflows,
     evaluations: Object.values(evaluations),
     stats
@@ -128,7 +133,15 @@ export function exportToJSON(workflows: Workflow[], evaluations: Record<string, 
 }
 
 // 9. Download file
-export function downloadJSON(data: string, filename: string = 'ai-collaboration-canvas.json'): void {
+export function downloadJSON(data: string, nomeAzienda?: string): void {
+  // Sanitize nome azienda per filename (rimuovi caratteri speciali)
+  const sanitizedName = nomeAzienda
+    ? nomeAzienda.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()
+    : 'unknown';
+
+  const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const filename = `workflow-ai-${sanitizedName}-${timestamp}.json`;
+
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

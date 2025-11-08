@@ -3,15 +3,15 @@ import { useAppContext } from '../context/AppContext';
 import { exportToJSON, downloadJSON, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
 
 export const Step4Results: React.FC = () => {
-  const { state, setCurrentStep, resetApp } = useAppContext();
+  const { state, currentAzienda, setCurrentStep, resetApp } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string>('');
   const [aiError, setAiError] = useState<string>('');
   const [showAiModal, setShowAiModal] = useState(false);
 
   const handleExport = () => {
-    const jsonData = exportToJSON(state.workflows, state.evaluations);
-    downloadJSON(jsonData);
+    const jsonData = exportToJSON(state.workflows, state.evaluations, currentAzienda || undefined);
+    downloadJSON(jsonData, currentAzienda || undefined);
   };
 
   const handleReset = () => {
