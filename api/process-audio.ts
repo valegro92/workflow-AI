@@ -130,22 +130,48 @@ export default async function handler(
     console.log(`✓ Transcription completed: ${transcription.length} chars`);
     console.log(`Preview: ${transcription.substring(0, 100)}...`);
 
-    // 4. Extract workflows con OpenRouter + Gemini Flash
-    console.log('Calling OpenRouter + Gemini Flash...');
+    // 4. Extract workflows con OpenRouter + Gemini Flash (with fallback)
+    console.log('Calling OpenRouter for workflow extraction...');
 
-    const completion = await openrouter.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'user',
-          content: EXTRACTION_PROMPT + '\n\n' + transcription,
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
+    let completion;
+    let modelUsed = 'google/gemini-2.0-flash-exp:free';
+
+    try {
+      console.log('Trying primary model: google/gemini-2.0-flash-exp:free');
+      completion = await openrouter.chat.completions.create({
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          {
+            role: 'user',
+            content: EXTRACTION_PROMPT + '\n\n' + transcription,
+          },
+        ],
+        response_format: { type: 'json_object' },
+      });
+    } catch (primaryError: any) {
+      // If rate limited (429) or capacity issue, try fallback model
+      if (primaryError.status === 429 || primaryError.message?.includes('rate') || primaryError.message?.includes('capacity')) {
+        console.log('Primary model saturated (429), trying fallback: meta-llama/llama-3.3-70b-instruct:free');
+        modelUsed = 'meta-llama/llama-3.3-70b-instruct:free';
+
+        completion = await openrouter.chat.completions.create({
+          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          messages: [
+            {
+              role: 'user',
+              content: EXTRACTION_PROMPT + '\n\n' + transcription,
+            },
+          ],
+          response_format: { type: 'json_object' },
+        });
+      } else {
+        // Re-throw if not a rate limit error
+        throw primaryError;
+      }
+    }
 
     const extractedText = completion.choices[0]?.message?.content || '{}';
-    console.log(`✓ Extraction completed: ${extractedText.length} chars`);
+    console.log(`✓ Extraction completed with ${modelUsed}: ${extractedText.length} chars`);
     console.log(`Preview: ${extractedText.substring(0, 150)}...`);
 
     const result = JSON.parse(extractedText);
@@ -172,8 +198,21 @@ export default async function handler(
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
 
-    return res.status(500).json({
-      error: 'Error processing audio',
+    // Provide user-friendly error messages
+    let userMessage = 'Error processing audio';
+    let statusCode = 500;
+
+    if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('capacity')) {
+      userMessage = 'OpenRouter è temporaneamente saturo. Riprova tra 5-10 minuti oppure carica un audio più breve.';
+      statusCode = 503; // Service Unavailable
+    } else if (error.message?.includes('transcription') || error.message?.includes('Groq')) {
+      userMessage = 'Errore durante la trascrizione audio. Verifica che il file sia in formato MP3/M4A/WAV valido.';
+    } else if (error.message?.includes('parse') || error.message?.includes('JSON')) {
+      userMessage = "L'AI non è riuscita a estrarre workflow validi dal transcript. Prova con una registrazione più chiara.";
+    }
+
+    return res.status(statusCode).json({
+      error: userMessage,
       details: error.message,
       type: error.constructor.name,
     });

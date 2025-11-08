@@ -139,38 +139,65 @@ ${workflowSummary}
 `.trim();
 
     // Call AI based on type
-    let model = '';
+    let primaryModel = '';
+    let fallbackModel = '';
     let prompt = '';
 
     if (type === 'implementation-plan') {
-      model = 'deepseek/deepseek-r1:free';
+      primaryModel = 'deepseek/deepseek-r1:free';
+      fallbackModel = 'meta-llama/llama-3.3-70b-instruct:free';
       prompt = IMPLEMENTATION_PLAN_PROMPT + '\n\n' + contextData;
     } else {
       return res.status(400).json({ error: 'Unknown suggestion type' });
     }
 
-    console.log(`Calling OpenRouter with model: ${model}`);
+    console.log(`Calling OpenRouter with model: ${primaryModel}`);
 
-    const completion = await openrouter.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-    });
+    let completion;
+    let modelUsed = primaryModel;
+
+    try {
+      completion = await openrouter.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+      });
+    } catch (primaryError: any) {
+      // If rate limited (429) or capacity issue, try fallback model
+      if (primaryError.status === 429 || primaryError.message?.includes('rate') || primaryError.message?.includes('capacity')) {
+        console.log(`Primary model saturated (429), trying fallback: ${fallbackModel}`);
+        modelUsed = fallbackModel;
+
+        completion = await openrouter.chat.completions.create({
+          model: fallbackModel,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+        });
+      } else {
+        // Re-throw if not a rate limit error
+        throw primaryError;
+      }
+    }
 
     const suggestion = completion.choices[0]?.message?.content || '';
 
-    console.log(`✓ AI suggestion completed: ${suggestion.length} chars`);
+    console.log(`✓ AI suggestion completed with ${modelUsed}: ${suggestion.length} chars`);
     console.log('=== AI SUGGESTIONS SUCCESS ===');
 
     return res.status(200).json({
       success: true,
       suggestion,
-      model,
+      model: modelUsed,
     });
 
   } catch (error: any) {
@@ -178,8 +205,19 @@ ${workflowSummary}
     console.error('Error type:', error.constructor.name);
     console.error('Error message:', error.message);
 
-    return res.status(500).json({
-      error: 'Error generating AI suggestions',
+    // Provide user-friendly error messages
+    let userMessage = 'Error generating AI suggestions';
+    let statusCode = 500;
+
+    if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('capacity')) {
+      userMessage = 'OpenRouter è temporaneamente saturo. Riprova tra 5-10 minuti.';
+      statusCode = 503; // Service Unavailable
+    } else if (error.message?.includes('API key') || error.message?.includes('credentials')) {
+      userMessage = 'Configurazione API non valida. Verifica le chiavi API su Vercel.';
+    }
+
+    return res.status(statusCode).json({
+      error: userMessage,
       details: error.message,
     });
   }
