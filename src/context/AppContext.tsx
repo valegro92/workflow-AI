@@ -23,6 +23,7 @@ interface AppContextType {
   deleteWorkflow: (id: string) => void;
   addEvaluation: (evaluation: Evaluation) => void;
   updateEvaluation: (workflowId: string, evaluation: Evaluation) => void;
+  saveImplementationPlan: (plan: string) => void;
   resetApp: () => void;
 }
 
@@ -293,6 +294,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
+  const saveImplementationPlan = (plan: string) => {
+    setState(prev => ({ ...prev, implementationPlan: plan }));
+  };
+
   const resetApp = () => {
     if (repository.currentAzienda) {
       // Reset solo l'azienda corrente
@@ -329,6 +334,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteWorkflow,
         addEvaluation,
         updateEvaluation,
+        saveImplementationPlan,
         resetApp
       }}
     >

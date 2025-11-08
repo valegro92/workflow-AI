@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/jspdf": "^1.3.3",
     "@vercel/node": "^5.5.5",
+    "jspdf": "^3.0.3",
     "openai": "^6.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

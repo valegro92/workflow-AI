@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { exportToJSON, downloadJSON, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
+import { exportToPDF, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
 
 export const Step4Results: React.FC = () => {
-  const { state, currentAzienda, setCurrentStep, resetApp } = useAppContext();
+  const { state, currentAzienda, setCurrentStep, resetApp, saveImplementationPlan } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<string>('');
   const [aiError, setAiError] = useState<string>('');
   const [showAiModal, setShowAiModal] = useState(false);
 
   const handleExport = () => {
-    const jsonData = exportToJSON(state.workflows, state.evaluations, currentAzienda || undefined);
-    downloadJSON(jsonData, currentAzienda || undefined);
+    if (!currentAzienda) {
+      alert('Errore: nessuna azienda selezionata');
+      return;
+    }
+    exportToPDF(
+      state.workflows,
+      state.evaluations,
+      currentAzienda,
+      state.costoOrario,
+      state.implementationPlan
+    );
   };
 
   const handleReset = () => {
@@ -24,7 +32,6 @@ export const Step4Results: React.FC = () => {
   const handleGenerateAIPlan = async () => {
     setAiLoading(true);
     setAiError('');
-    setAiSuggestion('');
     setShowAiModal(true);
 
     try {
@@ -54,7 +61,7 @@ export const Step4Results: React.FC = () => {
       }
 
       const data = await response.json();
-      setAiSuggestion(data.suggestion);
+      saveImplementationPlan(data.suggestion);
 
     } catch (error: any) {
       console.error('Error generating AI plan:', error);
@@ -284,13 +291,13 @@ export const Step4Results: React.FC = () => {
               </>
             ) : (
               <>
-                <span className="text-2xl">🪄</span>
-                <span>Genera Piano di Implementazione AI</span>
+                <span className="text-2xl">{state.implementationPlan ? '🔄' : '🪄'}</span>
+                <span>{state.implementationPlan ? 'Rigenera Piano di Implementazione AI' : 'Genera Piano di Implementazione AI'}</span>
               </>
             )}
           </button>
           <p className="mt-2 text-xs text-gray-500">
-            Analisi intelligente con DeepSeek-R1 • Roadmap 30/60/90 giorni • Quick wins evidenziati
+            Analisi intelligente AI • Roadmap 30/60/90 giorni • Quick wins evidenziati
           </p>
         </div>
       </div>
@@ -558,7 +565,7 @@ export const Step4Results: React.FC = () => {
             onClick={handleExport}
             className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
           >
-            📥 Esporta JSON
+            📄 Esporta PDF
           </button>
 
           <button
@@ -597,7 +604,7 @@ export const Step4Results: React.FC = () => {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   <p className="text-lg text-gray-600 mb-2">L'AI sta analizzando i tuoi workflow...</p>
-                  <p className="text-sm text-gray-500">DeepSeek-R1 sta creando un piano dettagliato (~15 secondi)</p>
+                  <p className="text-sm text-gray-500">Creazione piano dettagliato in corso (~15 secondi)</p>
                 </div>
               )}
 
@@ -613,24 +620,24 @@ export const Step4Results: React.FC = () => {
                 </div>
               )}
 
-              {aiSuggestion && !aiLoading && (
+              {state.implementationPlan && !aiLoading && (
                 <div className="prose prose-sm max-w-none">
                   <div
                     className="markdown-content whitespace-pre-wrap font-mono text-sm leading-relaxed"
                     style={{ fontFamily: 'ui-monospace, monospace' }}
                   >
-                    {aiSuggestion}
+                    {state.implementationPlan}
                   </div>
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            {!aiLoading && (aiSuggestion || aiError) && (
+            {!aiLoading && (state.implementationPlan || aiError) && (
               <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(aiSuggestion);
+                    navigator.clipboard.writeText(state.implementationPlan || '');
                   }}
                   className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
                 >

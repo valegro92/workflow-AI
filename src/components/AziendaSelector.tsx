@@ -65,6 +65,42 @@ export const AziendaSelector: React.FC = () => {
           </p>
         </div>
 
+        {/* Come funziona - 3 passaggi */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+            Come funziona
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">📝</span>
+              </div>
+              <h3 className="font-bold text-lg text-gray-900 mb-2">1. Mappa i Workflow</h3>
+              <p className="text-gray-600 text-sm">
+                Descrivi i processi aziendali manualmente o importali da audio. Indica tempo necessario e frequenza.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">⚖️</span>
+              </div>
+              <h3 className="font-bold text-lg text-gray-900 mb-2">2. Valuta con AI</h3>
+              <p className="text-gray-600 text-sm">
+                L'AI analizza ogni workflow e suggerisce la strategia migliore: automazione totale, assistita, o solo monitoraggio.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">📊</span>
+              </div>
+              <h3 className="font-bold text-lg text-gray-900 mb-2">3. Risultati e ROI</h3>
+              <p className="text-gray-600 text-sm">
+                Ottieni dashboard visuale, calcolo ROI dettagliato e piano di implementazione AI pronto all'uso.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Nuova Azienda - Inline */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <form onSubmit={handleCreateAzienda} className="flex gap-3">
