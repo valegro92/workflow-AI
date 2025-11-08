@@ -2,18 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
 import { Readable } from 'stream';
 
-// Groq client per Whisper
-const groq = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: 'https://api.groq.com/openai/v1',
-});
-
-// OpenRouter client per LLM
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-});
-
 // Convert Buffer to Readable stream with filename
 function bufferToFile(buffer: Buffer, filename: string): any {
   const stream = Readable.from(buffer) as any;
@@ -80,7 +68,30 @@ export default async function handler(
   try {
     console.log('=== PROCESS AUDIO START ===');
 
-    // 1. Parse JSON body
+    // 1. Check API keys FIRST (before anything else)
+    if (!process.env.GROQ_API_KEY) {
+      console.error('GROQ_API_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
+    }
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.error('OPENROUTER_API_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: OPENROUTER_API_KEY missing' });
+    }
+
+    // Initialize API clients (must be done inside handler on Vercel)
+    const groq = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+    });
+
+    const openrouter = new OpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+    });
+
+    console.log('✓ API clients initialized');
+
+    // 2. Parse JSON body
     console.log('Parsing request body...');
     const { audio, filename } = req.body;
 
@@ -104,17 +115,7 @@ export default async function handler(
 
     console.log(`✓ Decoded to buffer: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
 
-    // Check API keys
-    if (!process.env.GROQ_API_KEY) {
-      console.error('GROQ_API_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
-    }
-    if (!process.env.OPENROUTER_API_KEY) {
-      console.error('OPENROUTER_API_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: OPENROUTER_API_KEY missing' });
-    }
-
-    // 2. Transcribe audio con Groq Whisper
+    // 3. Transcribe audio con Groq Whisper
     console.log('Creating audio stream for Groq...');
     const audioFile = bufferToFile(audioBuffer, filename || 'audio.mp3');
     console.log('Calling Groq Whisper API...');
@@ -129,7 +130,7 @@ export default async function handler(
     console.log(`✓ Transcription completed: ${transcription.length} chars`);
     console.log(`Preview: ${transcription.substring(0, 100)}...`);
 
-    // 3. Extract workflows con OpenRouter + Gemini Flash
+    // 4. Extract workflows con OpenRouter + Gemini Flash
     console.log('Calling OpenRouter + Gemini Flash...');
 
     const completion = await openrouter.chat.completions.create({
@@ -149,7 +150,7 @@ export default async function handler(
 
     const result = JSON.parse(extractedText);
 
-    // 4. Aggiungi IDs ai workflows
+    // 5. Aggiungi IDs ai workflows
     const workflows = (result.workflows || []).map((w: any, index: number) => ({
       ...w,
       id: `W${String(index + 1).padStart(3, '0')}`,
