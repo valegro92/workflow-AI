@@ -32,17 +32,41 @@ export const Step1Welcome: React.FC = () => {
     setUploadStatus('🎤 Trascrizione audio in corso...');
 
     try {
-      const formData = new FormData();
-      formData.append('audio', file);
+      // Convert file to base64 for reliable Vercel upload
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64String = (reader.result as string).split(',')[1];
+          resolve(base64String);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
       const response = await fetch('/api/process-audio', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          audio: base64,
+          filename: file.name,
+        }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Errore durante il processing');
+        // Try to parse JSON, fallback to text if it fails
+        let errorMessage = 'Errore durante il processing';
+        try {
+          const error = await response.json();
+          errorMessage = error.details || error.error || errorMessage;
+        } catch {
+          // If JSON parsing fails, get text (likely HTML error page)
+          const text = await response.text();
+          console.error('API Error (non-JSON):', text);
+          errorMessage = `Server error (${response.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
