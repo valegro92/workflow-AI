@@ -70,6 +70,20 @@ export interface AppState {
   };
 }
 
+// Dati azienda con timestamp per ordinamento
+export interface AziendaData {
+  nomeAzienda: string;
+  state: AppState;
+  createdAt: string;           // ISO timestamp
+  updatedAt: string;            // ISO timestamp
+}
+
+// Repository multi-cliente
+export interface ClientRepository {
+  currentAzienda: string | null;      // Azienda attualmente selezionata
+  aziende: Record<string, AziendaData>; // { [nomeAzienda]: AziendaData }
+}
+
 export interface QuestionOption {
   value: number;
   label: string;

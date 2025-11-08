@@ -1,9 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppState, Workflow, Evaluation } from '../types';
+import { AppState, Workflow, Evaluation, ClientRepository, AziendaData } from '../types';
 import { calculateStats } from '../utils/businessLogic';
 
 interface AppContextType {
+  // Stato corrente
   state: AppState;
+  currentAzienda: string | null;
+
+  // Gestione aziende
+  getAllAziende: () => AziendaData[];
+  createAzienda: (nomeAzienda: string) => void;
+  selectAzienda: (nomeAzienda: string) => void;
+  deleteAzienda: (nomeAzienda: string) => void;
+
+  // Metodi workflow (esistenti)
   setCurrentStep: (step: number) => void;
   setCostoOrario: (costo: number | undefined) => void;
   addWorkflow: (workflow: Workflow) => void;
@@ -17,7 +27,8 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'ai-collaboration-canvas-data';
+const STORAGE_KEY = 'ai-collaboration-canvas-multi-client';
+const OLD_STORAGE_KEY = 'ai-collaboration-canvas-data'; // per migrazione
 
 const initialState: AppState = {
   currentStep: 1,
@@ -35,32 +46,154 @@ const initialState: AppState = {
   }
 };
 
+const initialRepository: ClientRepository = {
+  currentAzienda: null,
+  aziende: {}
+};
+
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AppState>(() => {
-    // Carica dati da localStorage all'inizializzazione
+  // Repository multi-cliente
+  const [repository, setRepository] = useState<ClientRepository>(() => {
     try {
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
-        return {
-          ...parsed,
-          stats: calculateStats(parsed.workflows, parsed.evaluations)
+      // Prova a caricare nuovo formato multi-cliente
+      const savedRepo = localStorage.getItem(STORAGE_KEY);
+      if (savedRepo) {
+        return JSON.parse(savedRepo);
+      }
+
+      // Migrazione da vecchio formato (singolo cliente)
+      const oldData = localStorage.getItem(OLD_STORAGE_KEY);
+      if (oldData) {
+        const oldState = JSON.parse(oldData);
+        const now = new Date().toISOString();
+
+        // Crea azienda "Cliente Importato" con i vecchi dati
+        const migratedRepo: ClientRepository = {
+          currentAzienda: 'Cliente Importato',
+          aziende: {
+            'Cliente Importato': {
+              nomeAzienda: 'Cliente Importato',
+              state: {
+                ...oldState,
+                stats: calculateStats(oldState.workflows || [], oldState.evaluations || {})
+              },
+              createdAt: now,
+              updatedAt: now
+            }
+          }
         };
+
+        // Salva nuovo formato e rimuovi vecchio
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedRepo));
+        localStorage.removeItem(OLD_STORAGE_KEY);
+
+        return migratedRepo;
       }
     } catch (error) {
-      console.error('Error loading from localStorage:', error);
+      console.error('Error loading repository:', error);
+    }
+    return initialRepository;
+  });
+
+  // Stato dell'azienda corrente
+  const [state, setState] = useState<AppState>(() => {
+    if (repository.currentAzienda && repository.aziende[repository.currentAzienda]) {
+      return repository.aziende[repository.currentAzienda].state;
     }
     return initialState;
   });
 
-  // Salva in localStorage ogni volta che lo stato cambia
+  // Salva repository ogni volta che cambia
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(repository));
     } catch (error) {
-      console.error('Error saving to localStorage:', error);
+      console.error('Error saving repository:', error);
+    }
+  }, [repository]);
+
+  // Sincronizza state → repository quando state cambia
+  useEffect(() => {
+    if (repository.currentAzienda) {
+      setRepository(prev => {
+        const updatedAziende = {
+          ...prev.aziende,
+          [repository.currentAzienda!]: {
+            ...prev.aziende[repository.currentAzienda!],
+            state: state,
+            updatedAt: new Date().toISOString()
+          }
+        };
+
+        return {
+          ...prev,
+          aziende: updatedAziende
+        };
+      });
     }
   }, [state]);
+
+  // === GESTIONE AZIENDE ===
+
+  const getAllAziende = (): AziendaData[] => {
+    return Object.values(repository.aziende).sort((a, b) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  };
+
+  const createAzienda = (nomeAzienda: string) => {
+    const now = new Date().toISOString();
+    const newAzienda: AziendaData = {
+      nomeAzienda,
+      state: initialState,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    setRepository(prev => ({
+      currentAzienda: nomeAzienda,
+      aziende: {
+        ...prev.aziende,
+        [nomeAzienda]: newAzienda
+      }
+    }));
+
+    setState(initialState);
+  };
+
+  const selectAzienda = (nomeAzienda: string) => {
+    if (repository.aziende[nomeAzienda]) {
+      setRepository(prev => ({
+        ...prev,
+        currentAzienda: nomeAzienda
+      }));
+      setState(repository.aziende[nomeAzienda].state);
+    }
+  };
+
+  const deleteAzienda = (nomeAzienda: string) => {
+    setRepository(prev => {
+      const newAziende = { ...prev.aziende };
+      delete newAziende[nomeAzienda];
+
+      // Se eliminiamo l'azienda corrente, resettiamo
+      const newCurrentAzienda = prev.currentAzienda === nomeAzienda
+        ? null
+        : prev.currentAzienda;
+
+      return {
+        currentAzienda: newCurrentAzienda,
+        aziende: newAziende
+      };
+    });
+
+    // Se abbiamo eliminato l'azienda corrente, resettiamo lo stato
+    if (repository.currentAzienda === nomeAzienda) {
+      setState(initialState);
+    }
+  };
+
+  // === METODI WORKFLOW (invariati, operano su state) ===
 
   const setCurrentStep = (step: number) => {
     setState(prev => ({ ...prev, currentStep: step }));
@@ -152,14 +285,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const resetApp = () => {
+    if (repository.currentAzienda) {
+      // Reset solo l'azienda corrente
+      setRepository(prev => ({
+        ...prev,
+        aziende: {
+          ...prev.aziende,
+          [repository.currentAzienda!]: {
+            ...prev.aziende[repository.currentAzienda!],
+            state: initialState,
+            updatedAt: new Date().toISOString()
+          }
+        }
+      }));
+    }
     setState(initialState);
-    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
     <AppContext.Provider
       value={{
         state,
+        currentAzienda: repository.currentAzienda,
+        getAllAziende,
+        createAzienda,
+        selectAzienda,
+        deleteAzienda,
         setCurrentStep,
         setCostoOrario,
         addWorkflow,
