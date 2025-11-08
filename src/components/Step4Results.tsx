@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { exportToJSON, downloadJSON, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
 
 export const Step4Results: React.FC = () => {
   const { state, setCurrentStep, resetApp } = useAppContext();
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string>('');
+  const [aiError, setAiError] = useState<string>('');
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const handleExport = () => {
     const jsonData = exportToJSON(state.workflows, state.evaluations);
@@ -14,6 +18,49 @@ export const Step4Results: React.FC = () => {
     if (window.confirm('Sei sicuro di voler cancellare tutti i dati e ricominciare?')) {
       resetApp();
       setCurrentStep(1);
+    }
+  };
+
+  const handleGenerateAIPlan = async () => {
+    setAiLoading(true);
+    setAiError('');
+    setAiSuggestion('');
+    setShowAiModal(true);
+
+    try {
+      const response = await fetch('/api/ai-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'implementation-plan',
+          workflows: state.workflows,
+          evaluations: state.evaluations,
+          costoOrario: state.costoOrario,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Errore durante la generazione del piano';
+        try {
+          const error = JSON.parse(errorText);
+          errorMessage = error.details || error.error || errorMessage;
+        } catch {
+          errorMessage = `Server error (${response.status})`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setAiSuggestion(data.suggestion);
+
+    } catch (error: any) {
+      console.error('Error generating AI plan:', error);
+      setAiError(error.message);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -211,6 +258,39 @@ export const Step4Results: React.FC = () => {
         <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 p-4">
           <p className="text-sm text-blue-800">
             <strong>💡 Consiglio:</strong> Inizia dai primi 3 step (evidenziati) per ottenere risultati rapidi e costruire momentum.
+          </p>
+        </div>
+
+        {/* Bottone AI Piano Implementazione */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleGenerateAIPlan}
+            disabled={aiLoading}
+            className={`
+              inline-flex items-center gap-3 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg
+              ${aiLoading
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white hover:shadow-xl transform hover:scale-105'
+              }
+            `}
+          >
+            {aiLoading ? (
+              <>
+                <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>L'AI sta ragionando...</span>
+              </>
+            ) : (
+              <>
+                <span className="text-2xl">🪄</span>
+                <span>Genera Piano di Implementazione AI</span>
+              </>
+            )}
+          </button>
+          <p className="mt-2 text-xs text-gray-500">
+            Analisi intelligente con DeepSeek-R1 • Roadmap 30/60/90 giorni • Quick wins evidenziati
           </p>
         </div>
       </div>
@@ -489,6 +569,84 @@ export const Step4Results: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Modale AI Piano Implementazione */}
+      {showAiModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🪄</span>
+                <h3 className="text-2xl font-bold">Piano di Implementazione AI</h3>
+              </div>
+              <button
+                onClick={() => setShowAiModal(false)}
+                className="text-white hover:text-gray-200 text-2xl font-bold transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {aiLoading && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <svg className="animate-spin h-16 w-16 text-purple-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <p className="text-lg text-gray-600 mb-2">L'AI sta analizzando i tuoi workflow...</p>
+                  <p className="text-sm text-gray-500">DeepSeek-R1 sta creando un piano dettagliato (~15 secondi)</p>
+                </div>
+              )}
+
+              {aiError && (
+                <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg">
+                  <div className="flex items-start">
+                    <span className="text-2xl mr-3">❌</span>
+                    <div>
+                      <h4 className="font-bold text-red-800 mb-2">Errore</h4>
+                      <p className="text-red-700">{aiError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {aiSuggestion && !aiLoading && (
+                <div className="prose prose-sm max-w-none">
+                  <div
+                    className="markdown-content whitespace-pre-wrap font-mono text-sm leading-relaxed"
+                    style={{ fontFamily: 'ui-monospace, monospace' }}
+                  >
+                    {aiSuggestion}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!aiLoading && (aiSuggestion || aiError) && (
+              <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(aiSuggestion);
+                  }}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  📋 Copia
+                </button>
+                <button
+                  onClick={() => setShowAiModal(false)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+                >
+                  Chiudi
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
