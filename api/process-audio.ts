@@ -69,23 +69,23 @@ export default async function handler(
     console.log('=== PROCESS AUDIO START ===');
 
     // 1. Check API keys FIRST (before anything else)
-    if (!process.env.GROQ_API_KEY) {
-      console.error('GROQ_API_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
+    if (!process.env.Groq_API_KEY) {
+      console.error('Groq_API_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: Groq_API_KEY missing' });
     }
-    if (!process.env.OPENROUTER_API_KEY) {
-      console.error('OPENROUTER_API_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: OPENROUTER_API_KEY missing' });
+    if (!process.env.OPENTOUTER_KEY) {
+      console.error('OPENTOUTER_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: OPENTOUTER_KEY missing' });
     }
 
     // Initialize API clients (must be done inside handler on Vercel)
     const groq = new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
+      apiKey: process.env.Groq_API_KEY,
       baseURL: 'https://api.groq.com/openai/v1',
     });
 
     const openrouter = new OpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY,
+      apiKey: process.env.OPENTOUTER_KEY,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 
