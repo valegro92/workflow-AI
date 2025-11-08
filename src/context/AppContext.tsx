@@ -7,6 +7,7 @@ interface AppContextType {
   setCurrentStep: (step: number) => void;
   setCostoOrario: (costo: number | undefined) => void;
   addWorkflow: (workflow: Workflow) => void;
+  bulkAddWorkflows: (workflows: Workflow[]) => void;
   updateWorkflow: (id: string, workflow: Workflow) => void;
   deleteWorkflow: (id: string) => void;
   addEvaluation: (evaluation: Evaluation) => void;
@@ -72,6 +73,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const addWorkflow = (workflow: Workflow) => {
     setState(prev => {
       const newWorkflows = [...prev.workflows, workflow];
+      const newStats = calculateStats(newWorkflows, prev.evaluations);
+      return {
+        ...prev,
+        workflows: newWorkflows,
+        stats: newStats
+      };
+    });
+  };
+
+  const bulkAddWorkflows = (workflows: Workflow[]) => {
+    setState(prev => {
+      const newWorkflows = [...prev.workflows, ...workflows];
       const newStats = calculateStats(newWorkflows, prev.evaluations);
       return {
         ...prev,
@@ -150,6 +163,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setCurrentStep,
         setCostoOrario,
         addWorkflow,
+        bulkAddWorkflows,
         updateWorkflow,
         deleteWorkflow,
         addEvaluation,
