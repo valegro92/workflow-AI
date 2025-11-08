@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '@vercel/postgres';
+import { sql } from '../../src/lib/db';
 import { hashPassword, generateToken, isValidEmail, isValidPassword } from '../../src/lib/auth';
 
 /**
@@ -36,7 +36,8 @@ export default async function handler(
       SELECT id FROM users WHERE email = ${email.toLowerCase()}
     `;
 
-    if (existingUser.rows.length > 0) {
+    // Neon returns array directly
+    if (existingUser.length > 0) {
       return res.status(400).json({ error: 'Email già registrata' });
     }
 
@@ -50,7 +51,8 @@ export default async function handler(
       RETURNING id, email, plan, created_at
     `;
 
-    const user = result.rows[0];
+    // Neon returns array directly
+    const user = result[0];
 
     // Generate JWT token
     const token = generateToken({

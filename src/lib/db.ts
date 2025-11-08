@@ -1,9 +1,14 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
 
-// Database connection is handled automatically by Vercel Postgres
-// Just use the `sql` template literal from @vercel/postgres
+// Get database URL from environment
+const databaseUrl = process.env.DATABASE_URL;
 
-export { sql };
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
+
+// Create Neon SQL client (uses same template literal syntax as Vercel Postgres)
+export const sql = neon(databaseUrl);
 
 // Database Types
 export interface User {
@@ -89,7 +94,8 @@ export async function tablesExist(): Promise<boolean> {
       WHERE table_schema = 'public'
       AND table_name = 'users'
     `;
-    return result.rows.length > 0;
+    // Neon returns array directly, not { rows: [] }
+    return result.length > 0;
   } catch (error) {
     return false;
   }

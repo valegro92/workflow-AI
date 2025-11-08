@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '@vercel/postgres';
+import { sql } from '../../src/lib/db';
 import { verifyToken } from '../../src/lib/auth';
 
 /**
@@ -39,11 +39,12 @@ export default async function handler(
       WHERE id = ${decoded.userId}
     `;
 
-    if (result.rows.length === 0) {
+    // Neon returns array directly
+    if (result.length === 0) {
       return res.status(404).json({ error: 'Utente non trovato' });
     }
 
-    const user = result.rows[0];
+    const user = result[0];
 
     return res.status(200).json({
       success: true,

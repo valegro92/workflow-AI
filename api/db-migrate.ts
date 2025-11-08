@@ -1,11 +1,11 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '../src/lib/db';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 /**
  * Database Migration Endpoint
  *
  * This endpoint creates all necessary tables for the application.
- * Run this ONCE after setting up Vercel Postgres.
+ * Run this ONCE after setting up Neon database.
  *
  * To run: POST to /api/db-migrate with header X-Migration-Secret
  */

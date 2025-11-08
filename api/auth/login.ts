@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '@vercel/postgres';
+import { sql } from '../../src/lib/db';
 import { comparePassword, generateToken, isValidEmail } from '../../src/lib/auth';
 
 /**
@@ -34,11 +34,12 @@ export default async function handler(
       WHERE email = ${email.toLowerCase()}
     `;
 
-    if (result.rows.length === 0) {
+    // Neon returns array directly
+    if (result.length === 0) {
       return res.status(401).json({ error: 'Email o password non corretti' });
     }
 
-    const user = result.rows[0];
+    const user = result[0];
 
     // Check password
     const isPasswordValid = await comparePassword(password, user.password_hash);
