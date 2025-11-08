@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { AppProvider, useAppContext } from './context/AppContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { AziendaSelector } from './components/AziendaSelector';
@@ -70,17 +69,28 @@ const AppContent: React.FC = () => {
             >
               🔄 Cambia Azienda
             </button>
-            <button
-              onClick={() => {
-                if (window.confirm('Sei sicuro di voler uscire?')) {
-                  logout();
-                }
-              }}
-              className="bg-red-500 bg-opacity-80 hover:bg-opacity-100 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
-              title="Logout"
-            >
-              🚪 Esci
-            </button>
+
+            {user ? (
+              <button
+                onClick={() => {
+                  if (window.confirm('Sei sicuro di voler uscire?')) {
+                    logout();
+                  }
+                }}
+                className="bg-red-500 bg-opacity-80 hover:bg-opacity-100 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
+                title="Logout"
+              >
+                🚪 Esci
+              </button>
+            ) : (
+              <a
+                href="/login"
+                className="bg-green-500 bg-opacity-80 hover:bg-opacity-100 px-4 py-2 rounded-lg font-semibold transition-all text-sm inline-flex items-center"
+                title="Accedi per salvare i tuoi dati nel cloud"
+              >
+                👤 Accedi
+              </a>
+            )}
           </div>
         </div>
       </header>
@@ -146,19 +156,12 @@ function App() {
       <AuthProvider>
         <AppProvider>
           <Routes>
-            {/* Public routes */}
+            {/* Public routes - Login and Register are optional */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Protected route - Main app */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <AppContent />
-                </ProtectedRoute>
-              }
-            />
+            {/* Main app - NO LOGIN REQUIRED! Works with localStorage */}
+            <Route path="/" element={<AppContent />} />
 
             {/* Catch all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
