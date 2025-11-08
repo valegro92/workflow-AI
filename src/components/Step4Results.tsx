@@ -6,7 +6,6 @@ export const Step4Results: React.FC = () => {
   const { state, currentAzienda, setCurrentStep, resetApp, saveImplementationPlan } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
-  const [showAiModal, setShowAiModal] = useState(false);
 
   const handleExport = () => {
     if (!currentAzienda) {
@@ -32,7 +31,6 @@ export const Step4Results: React.FC = () => {
   const handleGenerateAIPlan = async () => {
     setAiLoading(true);
     setAiError('');
-    setShowAiModal(true);
 
     try {
       const response = await fetch('/api/ai-suggestions', {
@@ -62,6 +60,7 @@ export const Step4Results: React.FC = () => {
 
       const data = await response.json();
       saveImplementationPlan(data.suggestion);
+      setAiError(''); // Clear any previous errors
 
     } catch (error: any) {
       console.error('Error generating AI plan:', error);
@@ -551,6 +550,86 @@ export const Step4Results: React.FC = () => {
         </div>
       )}
 
+      {/* Piano di Implementazione AI - Sezione Permanente */}
+      {(state.implementationPlan || aiLoading || aiError) && (
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow-lg p-6 mb-8 border-2 border-purple-200">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">🪄</span>
+            <h3 className="text-2xl font-bold text-gray-900">Piano di Implementazione AI</h3>
+          </div>
+
+          {/* Loading State */}
+          {aiLoading && (
+            <div className="bg-white rounded-lg p-12 shadow-inner">
+              <div className="flex flex-col items-center justify-center">
+                <svg className="animate-spin h-16 w-16 text-purple-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-lg text-gray-600 mb-2">L'AI sta analizzando i tuoi workflow...</p>
+                <p className="text-sm text-gray-500">Creazione piano dettagliato in corso (~15 secondi)</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {!aiLoading && aiError && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg">
+              <div className="flex items-start">
+                <span className="text-2xl mr-3">❌</span>
+                <div className="flex-1">
+                  <h4 className="font-bold text-red-800 mb-2">Errore</h4>
+                  <p className="text-red-700 mb-4">{aiError}</p>
+                  <button
+                    onClick={handleGenerateAIPlan}
+                    className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    🔄 Riprova
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success State - Piano Generato */}
+          {!aiLoading && !aiError && state.implementationPlan && (
+            <>
+              <div className="bg-white rounded-lg p-6 shadow-inner">
+                <div className="prose prose-sm max-w-none">
+                  <div
+                    className="markdown-content whitespace-pre-wrap text-sm leading-relaxed"
+                    style={{
+                      fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
+                      maxHeight: '600px',
+                      overflowY: 'auto'
+                    }}
+                  >
+                    {state.implementationPlan}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(state.implementationPlan || '');
+                    alert('Piano copiato negli appunti!');
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  📋 Copia Piano
+                </button>
+                <button
+                  onClick={handleGenerateAIPlan}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  🔄 Rigenera
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-4 justify-between items-center">
         <button
@@ -577,83 +656,6 @@ export const Step4Results: React.FC = () => {
         </div>
       </div>
 
-      {/* Modale AI Piano Implementazione */}
-      {showAiModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">🪄</span>
-                <h3 className="text-2xl font-bold">Piano di Implementazione AI</h3>
-              </div>
-              <button
-                onClick={() => setShowAiModal(false)}
-                className="text-white hover:text-gray-200 text-2xl font-bold transition-colors"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {aiLoading && (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <svg className="animate-spin h-16 w-16 text-purple-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <p className="text-lg text-gray-600 mb-2">L'AI sta analizzando i tuoi workflow...</p>
-                  <p className="text-sm text-gray-500">Creazione piano dettagliato in corso (~15 secondi)</p>
-                </div>
-              )}
-
-              {aiError && (
-                <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg">
-                  <div className="flex items-start">
-                    <span className="text-2xl mr-3">❌</span>
-                    <div>
-                      <h4 className="font-bold text-red-800 mb-2">Errore</h4>
-                      <p className="text-red-700">{aiError}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {state.implementationPlan && !aiLoading && (
-                <div className="prose prose-sm max-w-none">
-                  <div
-                    className="markdown-content whitespace-pre-wrap font-mono text-sm leading-relaxed"
-                    style={{ fontFamily: 'ui-monospace, monospace' }}
-                  >
-                    {state.implementationPlan}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            {!aiLoading && (state.implementationPlan || aiError) && (
-              <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(state.implementationPlan || '');
-                  }}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  📋 Copia
-                </button>
-                <button
-                  onClick={() => setShowAiModal(false)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-                >
-                  Chiudi
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
