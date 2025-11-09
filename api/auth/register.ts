@@ -31,21 +31,11 @@ export default async function handler(
       return res.status(400).json({ error: 'La password deve essere lunga almeno 8 caratteri' });
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email.toLowerCase())
-      .single();
-
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email già registrata' });
-    }
-
     // Hash password
     const passwordHash = await hashPassword(password);
 
-    // Create user
+    // Create user (atomic operation - database will enforce unique constraint)
+    // No need for preliminary check - let the database handle uniqueness
     const { data: user, error: insertError } = await supabase
       .from('users')
       .insert({
@@ -56,8 +46,21 @@ export default async function handler(
       .select('id, email, plan, created_at')
       .single();
 
-    if (insertError || !user) {
-      throw new Error(insertError?.message || 'Failed to create user');
+    // Handle errors
+    if (insertError) {
+      // Check if it's a duplicate email error (unique constraint violation)
+      // PostgreSQL error code 23505 = unique_violation
+      if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
+        return res.status(400).json({ error: 'Email già registrata' });
+      }
+
+      // Other database errors
+      console.error('Database error during user creation:', insertError);
+      throw new Error(insertError.message || 'Failed to create user');
+    }
+
+    if (!user) {
+      throw new Error('Failed to create user - no data returned');
     }
 
     // Generate JWT token

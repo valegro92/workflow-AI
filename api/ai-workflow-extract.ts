@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 // OpenRouter client
 const openrouter = new OpenAI({
-  apiKey: process.env.OPENTOUTER_KEY,
+  apiKey: process.env.OPENROUTER_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
 });
 
@@ -65,8 +65,8 @@ export default async function handler(
     console.log('=== AI WORKFLOW EXTRACT START ===');
 
     // Check API key
-    if (!process.env.OPENTOUTER_KEY) {
-      console.error('OPENTOUTER_KEY not configured');
+    if (!process.env.OPENROUTER_KEY) {
+      console.error('OPENROUTER_KEY not configured');
       return res.status(500).json({ error: 'Server misconfiguration' });
     }
 

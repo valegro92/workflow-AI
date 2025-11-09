@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useAppContext } from './context/AppContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { AziendaSelector } from './components/AziendaSelector';
@@ -156,12 +157,19 @@ function App() {
       <AuthProvider>
         <AppProvider>
           <Routes>
-            {/* Public routes - Login and Register are optional */}
+            {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Main app - NO LOGIN REQUIRED! Works with localStorage */}
-            <Route path="/" element={<AppContent />} />
+            {/* Protected routes - Login required for data persistence and security */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <AppContent />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Catch all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

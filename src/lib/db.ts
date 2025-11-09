@@ -1,15 +1,23 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Get Supabase credentials from environment
+// NOTE: This file is used by backend API routes only, so we use SERVICE_ROLE_KEY
+// for full database access. Frontend should use ANON_KEY with RLS policies.
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set');
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables must be set');
 }
 
-// Create Supabase client
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+// Create Supabase client with service role key for backend operations
+// This bypasses Row Level Security (RLS) policies - use with caution
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    persistSession: false, // Don't persist sessions in serverless functions
+    autoRefreshToken: false,
+  }
+});
 
 // Database Types
 export interface User {

@@ -2,7 +2,16 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 // JWT Secret (must be set in environment variables)
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Validate JWT_SECRET is set at module initialization
+if (!JWT_SECRET) {
+  throw new Error(
+    'CRITICAL: JWT_SECRET environment variable is not set. ' +
+    'The application cannot start without a secure JWT secret. ' +
+    'Please set JWT_SECRET in your environment variables.'
+  );
+}
 
 export interface JwtPayload {
   userId: string;
