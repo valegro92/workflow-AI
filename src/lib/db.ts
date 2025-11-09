@@ -1,14 +1,15 @@
-import { neon } from '@neondatabase/serverless';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Get database URL from environment
-const databaseUrl = process.env.DATABASE_URL;
+// Get Supabase credentials from environment
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL environment variable is not set');
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set');
 }
 
-// Create Neon SQL client (uses same template literal syntax as Vercel Postgres)
-export const sql = neon(databaseUrl);
+// Create Supabase client
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 // Database Types
 export interface User {
@@ -88,14 +89,12 @@ export interface ApiUsage {
 // Helper to check if tables exist
 export async function tablesExist(): Promise<boolean> {
   try {
-    const result = await sql`
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-      AND table_name = 'users'
-    `;
-    // Neon returns array directly, not { rows: [] }
-    return result.length > 0;
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1);
+
+    return !error;
   } catch (error) {
     return false;
   }

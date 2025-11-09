@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '../../src/lib/db';
+import { supabase } from '../../src/lib/db';
 import { hashPassword, generateToken, isValidEmail, isValidPassword } from '../../src/lib/auth';
 
 /**
@@ -32,12 +32,13 @@ export default async function handler(
     }
 
     // Check if user already exists
-    const existingUser = await sql`
-      SELECT id FROM users WHERE email = ${email.toLowerCase()}
-    `;
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email.toLowerCase())
+      .single();
 
-    // Neon returns array directly
-    if (existingUser.length > 0) {
+    if (existingUser) {
       return res.status(400).json({ error: 'Email già registrata' });
     }
 
@@ -45,14 +46,19 @@ export default async function handler(
     const passwordHash = await hashPassword(password);
 
     // Create user
-    const result = await sql`
-      INSERT INTO users (email, password_hash, plan)
-      VALUES (${email.toLowerCase()}, ${passwordHash}, 'free')
-      RETURNING id, email, plan, created_at
-    `;
+    const { data: user, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        email: email.toLowerCase(),
+        password_hash: passwordHash,
+        plan: 'free'
+      })
+      .select('id, email, plan, created_at')
+      .single();
 
-    // Neon returns array directly
-    const user = result[0];
+    if (insertError || !user) {
+      throw new Error(insertError?.message || 'Failed to create user');
+    }
 
     // Generate JWT token
     const token = generateToken({
