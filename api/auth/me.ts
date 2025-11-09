@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '../../src/lib/db';
+import { supabase } from '../../src/lib/db';
 import { verifyToken } from '../../src/lib/auth';
 
 /**
@@ -33,18 +33,15 @@ export default async function handler(
     }
 
     // Get user from database
-    const result = await sql`
-      SELECT id, email, plan, stripe_customer_id, stripe_subscription_id, subscription_status, created_at
-      FROM users
-      WHERE id = ${decoded.userId}
-    `;
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, plan, stripe_customer_id, stripe_subscription_id, subscription_status, created_at')
+      .eq('id', decoded.userId)
+      .single();
 
-    // Neon returns array directly
-    if (result.length === 0) {
+    if (error || !user) {
       return res.status(404).json({ error: 'Utente non trovato' });
     }
-
-    const user = result[0];
 
     return res.status(200).json({
       success: true,
