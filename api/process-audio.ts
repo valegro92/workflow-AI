@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
 import { Readable } from 'stream';
+import { withTimeout } from './middleware/timeout';
 
 // Convert Buffer to Readable stream with filename
 function bufferToFile(buffer: Buffer, filename: string): any {
@@ -57,7 +58,7 @@ Se la trascrizione non contiene processi chiari, ritorna array vuoto.
 TRASCRIZIONE:
 `;
 
-export default async function handler(
+async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -248,3 +249,9 @@ export default async function handler(
     return res.status(statusCode).json(response);
   }
 }
+
+// Export handler with 50-second timeout (audio processing can take time)
+export default withTimeout(handler, {
+  timeoutMs: 50000, // 50 seconds for audio transcription + AI processing
+  message: 'Audio processing took too long. Try with a shorter audio file.'
+});

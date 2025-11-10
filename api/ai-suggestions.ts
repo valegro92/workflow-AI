@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
+import { withTimeout } from './middleware/timeout';
 
 // OpenRouter client
 const openrouter = new OpenAI({
@@ -77,7 +78,7 @@ interface EvaluationData {
   cogScore: number;
 }
 
-export default async function handler(
+async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -229,3 +230,9 @@ ${workflowSummary}
     return res.status(statusCode).json(response);
   }
 }
+
+// Export handler with 30-second timeout (AI generation can take time)
+export default withTimeout(handler, {
+  timeoutMs: 30000, // 30 seconds for AI suggestion generation
+  message: 'AI suggestion generation took too long. Try again with fewer workflows.'
+});

@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
+import { withTimeout } from './middleware/timeout';
 
 // OpenRouter client
 const openrouter = new OpenAI({
@@ -53,7 +54,7 @@ FORMATO OUTPUT (JSON valido):
 
 Analizza il testo fornito ed estrai le informazioni in formato JSON.`;
 
-export default async function handler(
+async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -169,3 +170,9 @@ export default async function handler(
     return res.status(statusCode).json(response);
   }
 }
+
+// Export handler with 15-second timeout (workflow extraction is usually fast)
+export default withTimeout(handler, {
+  timeoutMs: 15000, // 15 seconds
+  message: 'Workflow extraction took too long. Please try again.'
+});
