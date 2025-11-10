@@ -3,6 +3,27 @@ import { supabase } from '../../src/lib/db';
 import { hashPassword, generateToken, isValidEmail, getPasswordErrors } from '../../src/lib/auth';
 import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from '../middleware/rateLimit';
 import { checkCSRF } from '../middleware/csrf';
+import { validateBody, type ValidationSchema } from '../middleware/validation';
+
+/**
+ * Validation schema for registration
+ */
+const registerSchema: ValidationSchema = {
+  email: {
+    type: 'string',
+    required: true,
+    minLength: 5,
+    maxLength: 254,
+    message: 'Email must be between 5 and 254 characters'
+  },
+  password: {
+    type: 'string',
+    required: true,
+    minLength: 8,
+    maxLength: 128,
+    message: 'Password must be between 8 and 128 characters'
+  }
+};
 
 /**
  * Register a new user
@@ -20,6 +41,15 @@ export default async function handler(
   // CSRF Protection
   if (!checkCSRF(req, res)) {
     return; // Response already sent by checkCSRF
+  }
+
+  // Input validation
+  const validationErrors = validateBody(req.body, registerSchema);
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      error: 'Invalid input',
+      details: validationErrors.map(e => e.message)
+    });
   }
 
   try {

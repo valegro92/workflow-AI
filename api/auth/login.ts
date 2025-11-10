@@ -3,6 +3,25 @@ import { supabase } from '../../src/lib/db';
 import { comparePassword, generateToken, isValidEmail } from '../../src/lib/auth';
 import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from '../middleware/rateLimit';
 import { checkCSRF } from '../middleware/csrf';
+import { validateBody, type ValidationSchema } from '../middleware/validation';
+
+/**
+ * Validation schema for login
+ */
+const loginSchema: ValidationSchema = {
+  email: {
+    type: 'string',
+    required: true,
+    minLength: 5,
+    maxLength: 254
+  },
+  password: {
+    type: 'string',
+    required: true,
+    minLength: 1,
+    maxLength: 128
+  }
+};
 
 /**
  * Login user
@@ -20,6 +39,15 @@ export default async function handler(
   // CSRF Protection
   if (!checkCSRF(req, res)) {
     return; // Response already sent by checkCSRF
+  }
+
+  // Input validation
+  const validationErrors = validateBody(req.body, loginSchema);
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      error: 'Invalid input',
+      details: validationErrors.map(e => e.message)
+    });
   }
 
   try {
