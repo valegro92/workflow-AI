@@ -59,16 +59,60 @@ export function verifyToken(token: string): JwtPayload {
 
 /**
  * Validate email format
+ * Uses a basic but effective regex pattern
  */
 export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  // More strict email validation
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return emailRegex.test(email) && email.length <= 254; // RFC 5321 max length
 }
 
 /**
  * Validate password strength
- * Requirements: at least 8 characters
+ * Requirements:
+ * - At least 8 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one number
+ * - At least one special character
  */
 export function isValidPassword(password: string): boolean {
-  return password.length >= 8;
+  if (password.length < 8) return false;
+
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+  return hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
+}
+
+/**
+ * Get detailed password validation errors
+ * Returns array of error messages, or empty array if valid
+ */
+export function getPasswordErrors(password: string): string[] {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push('Almeno 8 caratteri');
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Almeno una lettera maiuscola');
+  }
+
+  if (!/[a-z]/.test(password)) {
+    errors.push('Almeno una lettera minuscola');
+  }
+
+  if (!/[0-9]/.test(password)) {
+    errors.push('Almeno un numero');
+  }
+
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Almeno un carattere speciale (!@#$%^&*...)');
+  }
+
+  return errors;
 }

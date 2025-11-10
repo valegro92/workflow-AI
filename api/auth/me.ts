@@ -58,9 +58,17 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('Me error:', error);
-    return res.status(500).json({
-      error: 'Errore durante il recupero utente',
-      details: error.message
-    });
+
+    // Don't expose internal error details in production
+    const response: any = {
+      error: 'Errore durante il recupero utente'
+    };
+
+    // Only include details in development mode
+    if (process.env.NODE_ENV === 'development') {
+      response.details = error.message;
+    }
+
+    return res.status(500).json(response);
   }
 }

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../../src/lib/db';
-import { hashPassword, generateToken, isValidEmail, isValidPassword } from '../../src/lib/auth';
+import { hashPassword, generateToken, isValidEmail, getPasswordErrors } from '../../src/lib/auth';
 
 /**
  * Register a new user
@@ -27,8 +27,13 @@ export default async function handler(
       return res.status(400).json({ error: 'Email non valida' });
     }
 
-    if (!isValidPassword(password)) {
-      return res.status(400).json({ error: 'La password deve essere lunga almeno 8 caratteri' });
+    // Validate password strength
+    const passwordErrors = getPasswordErrors(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({
+        error: 'Password non sicura',
+        details: 'La password deve contenere: ' + passwordErrors.join(', ')
+      });
     }
 
     // Hash password
@@ -83,9 +88,17 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('Register error:', error);
-    return res.status(500).json({
-      error: 'Errore durante la registrazione',
-      details: error.message
-    });
+
+    // Don't expose internal error details in production
+    const response: any = {
+      error: 'Errore durante la registrazione'
+    };
+
+    // Only include details in development mode
+    if (process.env.NODE_ENV === 'development') {
+      response.details = error.message;
+    }
+
+    return res.status(500).json(response);
   }
 }

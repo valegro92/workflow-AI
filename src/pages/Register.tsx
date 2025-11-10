@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { getPasswordErrors } from '../lib/auth';
 
 export const Register: React.FC = () => {
   const { register, loading } = useAuth();
@@ -9,6 +10,9 @@ export const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+
+  // Calculate password validation errors in real-time
+  const passwordErrors = useMemo(() => getPasswordErrors(password), [password]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,8 +24,8 @@ export const Register: React.FC = () => {
       return;
     }
 
-    if (password.length < 8) {
-      setError('La password deve essere lunga almeno 8 caratteri');
+    if (passwordErrors.length > 0) {
+      setError('La password deve contenere: ' + passwordErrors.join(', '));
       return;
     }
 
@@ -92,12 +96,33 @@ export const Register: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={8}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
               placeholder="••••••••"
               disabled={loading}
             />
-            <p className="mt-1 text-xs text-gray-500">Minimo 8 caratteri</p>
+            {/* Password requirements checklist */}
+            {password.length > 0 && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-xs font-semibold text-gray-700 mb-1">Requisiti password:</p>
+                <ul className="text-xs space-y-0.5">
+                  <li className={password.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                    {password.length >= 8 ? '✓' : '○'} Almeno 8 caratteri
+                  </li>
+                  <li className={/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                    {/[A-Z]/.test(password) ? '✓' : '○'} Almeno una lettera maiuscola
+                  </li>
+                  <li className={/[a-z]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                    {/[a-z]/.test(password) ? '✓' : '○'} Almeno una lettera minuscola
+                  </li>
+                  <li className={/[0-9]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                    {/[0-9]/.test(password) ? '✓' : '○'} Almeno un numero
+                  </li>
+                  <li className={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                    {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? '✓' : '○'} Almeno un carattere speciale (!@#$%...)
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
 
           <div>

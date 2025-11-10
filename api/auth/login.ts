@@ -64,9 +64,17 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('Login error:', error);
-    return res.status(500).json({
-      error: 'Errore durante il login',
-      details: error.message
-    });
+
+    // Don't expose internal error details in production
+    const response: any = {
+      error: 'Errore durante il login'
+    };
+
+    // Only include details in development mode
+    if (process.env.NODE_ENV === 'development') {
+      response.details = error.message;
+    }
+
+    return res.status(500).json(response);
   }
 }

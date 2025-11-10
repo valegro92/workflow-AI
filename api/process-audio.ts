@@ -234,10 +234,17 @@ export default async function handler(
       userMessage = "L'AI non è riuscita a estrarre workflow validi dal transcript. Prova con una registrazione più chiara.";
     }
 
-    return res.status(statusCode).json({
-      error: userMessage,
-      details: error.message,
-      type: error.constructor.name,
-    });
+    // Don't expose internal error details in production
+    const response: any = {
+      error: userMessage
+    };
+
+    // Only include details in development mode
+    if (process.env.NODE_ENV === 'development') {
+      response.details = error.message;
+      response.type = error.constructor.name;
+    }
+
+    return res.status(statusCode).json(response);
   }
 }
