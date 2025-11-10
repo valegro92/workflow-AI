@@ -188,7 +188,7 @@ export function withHeaders(
  * Set headers for API responses that should not be cached
  * (auth, mutations, user-specific data)
  */
-export function setNoCache Headers(res: VercelResponse): void {
+export function setNoCacheHeaders(res: VercelResponse): void {
   setCacheHeaders(res, CacheStrategy.NO_CACHE);
   setJSONHeaders(res);
 }
