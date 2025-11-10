@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useAppContext } from './context/AppContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { AziendaSelector } from './components/AziendaSelector';
@@ -103,12 +105,28 @@ const AppContent: React.FC = () => {
         evaluationCount={Object.keys(state.evaluations).length}
       />
 
-      {/* Main Content */}
+      {/* Main Content - Each step wrapped in ErrorBoundary to isolate errors */}
       <main className="pb-12">
-        {state.currentStep === 1 && <Step1Welcome />}
-        {state.currentStep === 2 && <Step2Mapping />}
-        {state.currentStep === 3 && <Step3Evaluation />}
-        {state.currentStep === 4 && <Step4Results />}
+        {state.currentStep === 1 && (
+          <ErrorBoundary>
+            <Step1Welcome />
+          </ErrorBoundary>
+        )}
+        {state.currentStep === 2 && (
+          <ErrorBoundary>
+            <Step2Mapping />
+          </ErrorBoundary>
+        )}
+        {state.currentStep === 3 && (
+          <ErrorBoundary>
+            <Step3Evaluation />
+          </ErrorBoundary>
+        )}
+        {state.currentStep === 4 && (
+          <ErrorBoundary>
+            <Step4Results />
+          </ErrorBoundary>
+        )}
       </main>
 
       {/* Footer */}
@@ -152,23 +170,36 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppProvider>
-          <Routes>
-            {/* Public routes - Login and Register are optional */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <ErrorBoundary>
+            <AppProvider>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-            {/* Main app - NO LOGIN REQUIRED! Works with localStorage */}
-            <Route path="/" element={<AppContent />} />
+                {/* Protected routes - Login required for data persistence and security */}
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <ErrorBoundary>
+                        <AppContent />
+                      </ErrorBoundary>
+                    </ProtectedRoute>
+                  }
+                />
 
-            {/* Catch all - redirect to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AppProvider>
-      </AuthProvider>
-    </BrowserRouter>
+                {/* Catch all - redirect to home */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </AppProvider>
+          </ErrorBoundary>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

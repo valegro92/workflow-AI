@@ -15,7 +15,7 @@ export const Step2Mapping: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
 
-  // Initialize speech recognition
+  // Initialize speech recognition with cleanup
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -66,6 +66,18 @@ export const Step2Mapping: React.FC = () => {
         };
 
         setRecognition(recognitionInstance);
+
+        // Cleanup function to stop recognition on unmount
+        return () => {
+          if (recognitionInstance) {
+            try {
+              recognitionInstance.stop();
+            } catch (error) {
+              // Ignore errors if recognition is already stopped
+              console.debug('Speech recognition cleanup:', error);
+            }
+          }
+        };
       }
     }
   }, []);

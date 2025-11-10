@@ -16,17 +16,19 @@ export const Step3Evaluation: React.FC = () => {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [complessita, setComplessita] = useState<number>(3); // Default: media complessità
 
+  // Auto-select first unevaluated workflow when workflows change
+  // Don't include selectedWorkflowId in deps to avoid circular dependency
   useEffect(() => {
-    // Auto-seleziona il primo workflow non valutato
     if (state.workflows.length > 0 && !selectedWorkflowId) {
       const firstUneval = state.workflows.find(w => !state.evaluations[w.id]);
       if (firstUneval) {
         setSelectedWorkflowId(firstUneval.id);
-      } else {
+      } else if (state.workflows[0]) {
         setSelectedWorkflowId(state.workflows[0].id);
       }
     }
-  }, [state.workflows, selectedWorkflowId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.workflows]); // Only run when workflows change, not when selectedWorkflowId changes
 
   useEffect(() => {
     // Carica valutazione esistente quando si seleziona un workflow

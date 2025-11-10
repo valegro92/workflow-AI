@@ -1,6 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../../src/lib/db';
 import { comparePassword, generateToken, isValidEmail } from '../../src/lib/auth';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from '../middleware/rateLimit';
+import { checkCSRF } from '../middleware/csrf';
+import { validateBody, type ValidationSchema } from '../middleware/validation';
+
+/**
+ * Validation schema for login
+ */
+const loginSchema: ValidationSchema = {
+  email: {
+    type: 'string',
+    required: true,
+    minLength: 5,
+    maxLength: 254
+  },
+  password: {
+    type: 'string',
+    required: true,
+    minLength: 1,
+    maxLength: 128
+  }
+};
 
 /**
  * Login user
@@ -15,7 +36,33 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // CSRF Protection
+  if (!checkCSRF(req, res)) {
+    return; // Response already sent by checkCSRF
+  }
+
+  // Input validation
+  const validationErrors = validateBody(req.body, loginSchema);
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      error: 'Invalid input',
+      details: validationErrors.map(e => e.message)
+    });
+  }
+
   try {
+    // Rate limiting: 5 attempts per 15 minutes
+    const rateLimit = checkRateLimit(req, {
+      maxAttempts: 5,
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      blockDurationMs: 15 * 60 * 1000, // Block for 15 minutes
+      keyPrefix: 'login:'
+    });
+
+    if (!rateLimit.allowed) {
+      return sendRateLimitError(res, rateLimit.retryAfter!);
+    }
+
     const { email, password } = req.body;
 
     // Validation
@@ -52,6 +99,11 @@ export default async function handler(
       plan: user.plan
     });
 
+    // Add rate limit headers
+    if (rateLimit.remaining !== undefined) {
+      addRateLimitHeaders(res, rateLimit.remaining, 5);
+    }
+
     return res.status(200).json({
       success: true,
       token,
@@ -64,9 +116,17 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('Login error:', error);
-    return res.status(500).json({
-      error: 'Errore durante il login',
-      details: error.message
-    });
+
+    // Don't expose internal error details in production
+    const response: any = {
+      error: 'Errore durante il login'
+    };
+
+    // Only include details in development mode
+    if (process.env.NODE_ENV === 'development') {
+      response.details = error.message;
+    }
+
+    return res.status(500).json(response);
   }
 }

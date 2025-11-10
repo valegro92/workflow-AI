@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
+import { withTimeout } from './middleware/timeout';
 
 // OpenRouter client
 const openrouter = new OpenAI({
-  apiKey: process.env.OPENTOUTER_KEY,
+  apiKey: process.env.OPENROUTER_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
 });
 
@@ -77,7 +78,7 @@ interface EvaluationData {
   cogScore: number;
 }
 
-export default async function handler(
+async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -89,8 +90,8 @@ export default async function handler(
     console.log('=== AI SUGGESTIONS START ===');
 
     // Check API key
-    if (!process.env.OPENTOUTER_KEY) {
-      console.error('OPENTOUTER_KEY not configured');
+    if (!process.env.OPENROUTER_KEY) {
+      console.error('OPENROUTER_KEY not configured');
       return res.status(500).json({ error: 'Server misconfiguration' });
     }
 
@@ -216,9 +217,22 @@ ${workflowSummary}
       userMessage = 'Configurazione API non valida. Verifica le chiavi API su Vercel.';
     }
 
-    return res.status(statusCode).json({
-      error: userMessage,
-      details: error.message,
-    });
+    // Don't expose internal error details in production
+    const response: any = {
+      error: userMessage
+    };
+
+    // Only include details in development mode
+    if (process.env.NODE_ENV === 'development') {
+      response.details = error.message;
+    }
+
+    return res.status(statusCode).json(response);
   }
 }
+
+// Export handler with 30-second timeout (AI generation can take time)
+export default withTimeout(handler, {
+  timeoutMs: 30000, // 30 seconds for AI suggestion generation
+  message: 'AI suggestion generation took too long. Try again with fewer workflows.'
+});

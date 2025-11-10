@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
+import { withTimeout } from './middleware/timeout';
 
 // OpenRouter client
 const openrouter = new OpenAI({
-  apiKey: process.env.OPENTOUTER_KEY,
+  apiKey: process.env.OPENROUTER_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
 });
 
@@ -53,7 +54,7 @@ FORMATO OUTPUT (JSON valido):
 
 Analizza il testo fornito ed estrai le informazioni in formato JSON.`;
 
-export default async function handler(
+async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -65,8 +66,8 @@ export default async function handler(
     console.log('=== AI WORKFLOW EXTRACT START ===');
 
     // Check API key
-    if (!process.env.OPENTOUTER_KEY) {
-      console.error('OPENTOUTER_KEY not configured');
+    if (!process.env.OPENROUTER_KEY) {
+      console.error('OPENROUTER_KEY not configured');
       return res.status(500).json({ error: 'Server misconfiguration' });
     }
 
@@ -156,9 +157,22 @@ export default async function handler(
       statusCode = 503;
     }
 
-    return res.status(statusCode).json({
-      error: userMessage,
-      details: error.message,
-    });
+    // Don't expose internal error details in production
+    const response: any = {
+      error: userMessage
+    };
+
+    // Only include details in development mode
+    if (process.env.NODE_ENV === 'development') {
+      response.details = error.message;
+    }
+
+    return res.status(statusCode).json(response);
   }
 }
+
+// Export handler with 15-second timeout (workflow extraction is usually fast)
+export default withTimeout(handler, {
+  timeoutMs: 15000, // 15 seconds
+  message: 'Workflow extraction took too long. Please try again.'
+});

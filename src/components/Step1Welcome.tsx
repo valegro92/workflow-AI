@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 
 export const Step1Welcome: React.FC = () => {
@@ -75,10 +75,7 @@ export const Step1Welcome: React.FC = () => {
       if (data.workflows && data.workflows.length > 0) {
         bulkAddWorkflows(data.workflows);
         setUploadStatus(`✅ ${data.workflows.length} workflow importati con successo!`);
-
-        setTimeout(() => {
-          setUploadStatus('');
-        }, 3000);
+        // Timer cleanup handled by useEffect below
       } else {
         setUploadStatus('⚠️ Nessun workflow trovato nella trascrizione');
       }
@@ -93,6 +90,19 @@ export const Step1Welcome: React.FC = () => {
       }
     }
   };
+
+  // Auto-clear upload status after 5 seconds (with cleanup to prevent memory leaks)
+  useEffect(() => {
+    if (!uploadStatus || uploadStatus.startsWith('❌') || uploadStatus.startsWith('⚠️')) {
+      return; // Don't auto-clear error messages
+    }
+
+    const timer = setTimeout(() => {
+      setUploadStatus('');
+    }, 5000); // 5 seconds
+
+    return () => clearTimeout(timer); // Cleanup on unmount or when uploadStatus changes
+  }, [uploadStatus]);
 
   const evaluatedCount = Object.keys(state.evaluations).length;
   const hasWorkflows = state.workflows.length > 0;

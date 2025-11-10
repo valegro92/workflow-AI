@@ -105,7 +105,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return initialState;
   });
 
-  // Salva repository ogni volta che cambia
+  // Sincronizza state → repository e salva su localStorage
+  // Combined effect to avoid circular dependencies and reduce re-renders
+  useEffect(() => {
+    if (!repository.currentAzienda) return;
+
+    // Update repository with current state
+    setRepository(prev => {
+      // Check if state actually changed to avoid unnecessary updates
+      const currentAziendaData = prev.aziende[prev.currentAzienda!];
+      if (currentAziendaData && JSON.stringify(currentAziendaData.state) === JSON.stringify(state)) {
+        return prev; // No change, don't trigger update
+      }
+
+      const updatedAziende = {
+        ...prev.aziende,
+        [prev.currentAzienda!]: {
+          ...prev.aziende[prev.currentAzienda!],
+          state: state,
+          updatedAt: new Date().toISOString()
+        }
+      };
+
+      return {
+        ...prev,
+        aziende: updatedAziende
+      };
+    });
+  }, [state, repository.currentAzienda]);
+
+  // Save repository to localStorage (separate effect to handle all repository changes)
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(repository));
@@ -113,27 +142,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error('Error saving repository:', error);
     }
   }, [repository]);
-
-  // Sincronizza state → repository quando state cambia
-  useEffect(() => {
-    if (repository.currentAzienda) {
-      setRepository(prev => {
-        const updatedAziende = {
-          ...prev.aziende,
-          [repository.currentAzienda!]: {
-            ...prev.aziende[repository.currentAzienda!],
-            state: state,
-            updatedAt: new Date().toISOString()
-          }
-        };
-
-        return {
-          ...prev,
-          aziende: updatedAziende
-        };
-      });
-    }
-  }, [state]);
 
   // === GESTIONE AZIENDE ===
 

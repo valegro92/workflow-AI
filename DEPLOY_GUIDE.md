@@ -16,16 +16,18 @@
 4. Aggiungi queste variabili (tutte con scope **Production**, **Preview**, **Development**):
 
 ```env
-DATABASE_URL=postgresql://neondb_owner:npg_VNs0DGkTub7Q@ep-bitter-grass-aglwpwzg-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://username:password@your-neon-host.neon.tech/dbname?sslmode=require
 
-JWT_SECRET=super-secret-jwt-key-change-in-production-12345
+JWT_SECRET=<genera-una-stringa-random-di-almeno-32-caratteri>
 
-MIGRATION_SECRET=migration-secret-key-xyz789
+MIGRATION_SECRET=<genera-una-stringa-random-per-le-migration>
 
 GROQ_API_KEY=<la-tua-chiave-groq>
 
 OPENROUTER_API_KEY=<la-tua-chiave-openrouter>
 ```
+
+> **⚠️ ATTENZIONE SICUREZZA**: NON committare MAI le tue credenziali reali nel repository! Usa sempre placeholder come sopra.
 
 ⚠️ **IMPORTANTE**: Per produzione, cambia `JWT_SECRET` con una stringa random di almeno 32 caratteri!
 
@@ -50,9 +52,9 @@ Oppure da Vercel Dashboard: **Deployments** > **Deploy**
 Una volta deployato, crea le tabelle nel database:
 
 ```bash
-# Sostituisci con il tuo dominio Vercel
+# Sostituisci con il tuo dominio Vercel e il tuo MIGRATION_SECRET
 curl -X POST https://workflow-ai-XXXX.vercel.app/api/db-migrate \
-  -H "X-Migration-Secret: migration-secret-key-xyz789"
+  -H "X-Migration-Secret: <il-tuo-migration-secret>"
 ```
 
 Dovresti vedere:

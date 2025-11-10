@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
 import { Readable } from 'stream';
+import { withTimeout } from './middleware/timeout';
 
 // Convert Buffer to Readable stream with filename
 function bufferToFile(buffer: Buffer, filename: string): any {
@@ -57,7 +58,7 @@ Se la trascrizione non contiene processi chiari, ritorna array vuoto.
 TRASCRIZIONE:
 `;
 
-export default async function handler(
+async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -69,23 +70,23 @@ export default async function handler(
     console.log('=== PROCESS AUDIO START ===');
 
     // 1. Check API keys FIRST (before anything else)
-    if (!process.env.Groq_API_KEY) {
-      console.error('Groq_API_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: Groq_API_KEY missing' });
+    if (!process.env.GROQ_API_KEY) {
+      console.error('GROQ_API_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
     }
-    if (!process.env.OPENTOUTER_KEY) {
-      console.error('OPENTOUTER_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: OPENTOUTER_KEY missing' });
+    if (!process.env.OPENROUTER_KEY) {
+      console.error('OPENROUTER_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: OPENROUTER_KEY missing' });
     }
 
     // Initialize API clients (must be done inside handler on Vercel)
     const groq = new OpenAI({
-      apiKey: process.env.Groq_API_KEY,
+      apiKey: process.env.GROQ_API_KEY,
       baseURL: 'https://api.groq.com/openai/v1',
     });
 
     const openrouter = new OpenAI({
-      apiKey: process.env.OPENTOUTER_KEY,
+      apiKey: process.env.OPENROUTER_KEY,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 
@@ -174,10 +175,33 @@ export default async function handler(
     console.log(`✓ Extraction completed with ${modelUsed}: ${extractedText.length} chars`);
     console.log(`Preview: ${extractedText.substring(0, 150)}...`);
 
-    const result = JSON.parse(extractedText);
+    // 5. Parse AI response with error handling
+    let result;
+    try {
+      result = JSON.parse(extractedText);
+    } catch (parseError: any) {
+      console.error('=== JSON PARSE ERROR ===');
+      console.error('Parse error:', parseError.message);
+      console.error('Raw AI response:', extractedText);
 
-    // 5. Aggiungi IDs ai workflows
-    const workflows = (result.workflows || []).map((w: any, index: number) => ({
+      return res.status(500).json({
+        error: "L'AI non ha prodotto un JSON valido. Riprova con un audio più chiaro.",
+        details: `JSON parse error: ${parseError.message}`,
+        rawResponse: extractedText.substring(0, 500), // First 500 chars for debugging
+      });
+    }
+
+    // 6. Validate and transform workflows
+    if (!result || !Array.isArray(result.workflows)) {
+      console.error('Invalid result structure:', result);
+      return res.status(500).json({
+        error: "L'AI ha restituito una struttura dati non valida.",
+        details: 'Expected object with workflows array',
+        received: typeof result,
+      });
+    }
+
+    const workflows = result.workflows.map((w: any, index: number) => ({
       ...w,
       id: `W${String(index + 1).padStart(3, '0')}`,
       tempoTotale: w.tempoMedio * w.frequenza,
@@ -211,10 +235,23 @@ export default async function handler(
       userMessage = "L'AI non è riuscita a estrarre workflow validi dal transcript. Prova con una registrazione più chiara.";
     }
 
-    return res.status(statusCode).json({
-      error: userMessage,
-      details: error.message,
-      type: error.constructor.name,
-    });
+    // Don't expose internal error details in production
+    const response: any = {
+      error: userMessage
+    };
+
+    // Only include details in development mode
+    if (process.env.NODE_ENV === 'development') {
+      response.details = error.message;
+      response.type = error.constructor.name;
+    }
+
+    return res.status(statusCode).json(response);
   }
 }
+
+// Export handler with 50-second timeout (audio processing can take time)
+export default withTimeout(handler, {
+  timeoutMs: 50000, // 50 seconds for audio transcription + AI processing
+  message: 'Audio processing took too long. Try with a shorter audio file.'
+});
