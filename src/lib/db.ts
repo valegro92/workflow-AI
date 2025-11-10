@@ -97,7 +97,7 @@ export interface ApiUsage {
 // Helper to check if tables exist
 export async function tablesExist(): Promise<boolean> {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('users')
       .select('id')
       .limit(1);
