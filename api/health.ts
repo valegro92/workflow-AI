@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../src/lib/db';
+import { withHeaders, CacheStrategy } from './middleware/headers';
 
 /**
  * Health Check Endpoint
@@ -12,7 +13,7 @@ import { supabase } from '../src/lib/db';
  * - 200: All systems operational
  * - 503: Service unavailable (database or critical service down)
  */
-export default async function handler(
+async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -70,11 +71,6 @@ export default async function handler(
     // Add environment (without exposing sensitive info)
     response.environment = process.env.NODE_ENV || 'production';
 
-    // Set cache headers (don't cache health checks)
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
     return res.status(statusCode).json(response);
 
   } catch (error: any) {
@@ -88,3 +84,11 @@ export default async function handler(
     });
   }
 }
+
+// Export handler with no-cache headers (health checks should always be fresh)
+export default withHeaders(handler, {
+  cache: CacheStrategy.NO_CACHE,
+  security: true,
+  csp: false,
+  json: true
+});
