@@ -1,12 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
 import { withTimeout } from './middleware/timeout';
+import { withCSRF } from './middleware/csrf';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
 
-// OpenRouter client
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-});
+// Initialize OpenAI client inside handler to avoid serverless memory leaks
 
 const WORKFLOW_EXTRACTION_PROMPT = `Sei un assistente esperto nell'analisi di processi aziendali.
 
@@ -65,11 +63,33 @@ async function handler(
   try {
     console.log('=== AI WORKFLOW EXTRACT START ===');
 
+    // Rate limiting - 10 requests per minute per IP
+    const rateLimit = checkRateLimit(req, {
+      maxAttempts: 10,
+      windowMs: 60 * 1000, // 1 minute
+      keyPrefix: 'workflow-extract:',
+    });
+
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for workflow extraction`);
+      return sendRateLimitError(res, rateLimit.retryAfter || 60);
+    }
+
+    if (rateLimit.remaining !== undefined) {
+      addRateLimitHeaders(res, rateLimit.remaining, 10);
+    }
+
     // Check API key
     if (!process.env.OPENROUTER_KEY) {
       console.error('OPENROUTER_KEY not configured');
       return res.status(500).json({ error: 'Server misconfiguration' });
     }
+
+    // Initialize client inside handler for serverless best practices
+    const openrouter = new OpenAI({
+      apiKey: process.env.OPENROUTER_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+    });
 
     const { description } = req.body;
 
@@ -114,15 +134,17 @@ async function handler(
       extractedData = JSON.parse(jsonMatch[0]);
     } catch (parseError: any) {
       console.error('JSON parse error:', parseError.message);
-      console.error('Raw response:', responseText);
+      // Don't expose raw AI response to client for security
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Raw response:', responseText);
+      }
       return res.status(500).json({
         error: 'Failed to parse AI response',
-        details: parseError.message,
-        raw: responseText
+        details: 'Invalid JSON structure in AI response'
       });
     }
 
-    // Validate required fields
+    // Validate required fields and data types
     const required = ['fase', 'titolo', 'descrizione', 'tool', 'input', 'output', 'tempoMedio', 'frequenza'];
     const missing = required.filter(field => !(field in extractedData));
 
@@ -130,8 +152,38 @@ async function handler(
       console.error('Missing required fields:', missing);
       return res.status(500).json({
         error: 'Incomplete extraction',
-        missing,
-        extracted: extractedData
+        message: `Missing fields: ${missing.join(', ')}`
+      });
+    }
+
+    // Validate data types and bounds
+    if (typeof extractedData.tempoMedio !== 'number' || extractedData.tempoMedio < 0 || extractedData.tempoMedio > 10000) {
+      return res.status(500).json({
+        error: 'Invalid tempoMedio',
+        message: 'tempoMedio must be a number between 0 and 10000 minutes'
+      });
+    }
+
+    if (typeof extractedData.frequenza !== 'number' || extractedData.frequenza < 0 || extractedData.frequenza > 1000) {
+      return res.status(500).json({
+        error: 'Invalid frequenza',
+        message: 'frequenza must be a number between 0 and 1000'
+      });
+    }
+
+    // Validate arrays
+    if (!Array.isArray(extractedData.tool) || !Array.isArray(extractedData.input) || !Array.isArray(extractedData.output)) {
+      return res.status(500).json({
+        error: 'Invalid array fields',
+        message: 'tool, input, and output must be arrays'
+      });
+    }
+
+    // Validate strings
+    if (typeof extractedData.titolo !== 'string' || extractedData.titolo.length > 100) {
+      return res.status(500).json({
+        error: 'Invalid titolo',
+        message: 'titolo must be a string with max 100 characters'
       });
     }
 
@@ -171,8 +223,10 @@ async function handler(
   }
 }
 
-// Export handler with 15-second timeout (workflow extraction is usually fast)
-export default withTimeout(handler, {
-  timeoutMs: 15000, // 15 seconds
-  message: 'Workflow extraction took too long. Please try again.'
-});
+// Export handler with CSRF protection and timeout
+export default withCSRF(
+  withTimeout(handler, {
+    timeoutMs: 15000, // 15 seconds
+    message: 'Workflow extraction took too long. Please try again.'
+  })
+);

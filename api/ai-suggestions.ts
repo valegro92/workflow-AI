@@ -1,12 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
 import { withTimeout } from './middleware/timeout';
+import { withCSRF } from './middleware/csrf';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
 
-// OpenRouter client
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-});
+// Initialize OpenAI client inside handler to avoid serverless memory leaks
 
 // Prompt per Piano Implementazione (DeepSeek-R1)
 const IMPLEMENTATION_PLAN_PROMPT = `Sei un esperto consulente di trasformazione digitale e AI.
@@ -89,11 +87,33 @@ async function handler(
   try {
     console.log('=== AI SUGGESTIONS START ===');
 
+    // Rate limiting - 5 requests per minute per IP (AI generation is resource intensive)
+    const rateLimit = checkRateLimit(req, {
+      maxAttempts: 5,
+      windowMs: 60 * 1000, // 1 minute
+      keyPrefix: 'ai-suggestions:',
+    });
+
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for AI suggestions`);
+      return sendRateLimitError(res, rateLimit.retryAfter || 60);
+    }
+
+    if (rateLimit.remaining !== undefined) {
+      addRateLimitHeaders(res, rateLimit.remaining, 5);
+    }
+
     // Check API key
     if (!process.env.OPENROUTER_KEY) {
       console.error('OPENROUTER_KEY not configured');
       return res.status(500).json({ error: 'Server misconfiguration' });
     }
+
+    // Initialize client inside handler for serverless best practices
+    const openrouter = new OpenAI({
+      apiKey: process.env.OPENROUTER_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+    });
 
     const { type, workflows, evaluations, costoOrario } = req.body;
 
@@ -231,8 +251,10 @@ ${workflowSummary}
   }
 }
 
-// Export handler with 30-second timeout (AI generation can take time)
-export default withTimeout(handler, {
-  timeoutMs: 30000, // 30 seconds for AI suggestion generation
-  message: 'AI suggestion generation took too long. Try again with fewer workflows.'
-});
+// Export handler with CSRF protection and timeout
+export default withCSRF(
+  withTimeout(handler, {
+    timeoutMs: 30000, // 30 seconds for AI suggestion generation
+    message: 'AI suggestion generation took too long. Try again with fewer workflows.'
+  })
+);
