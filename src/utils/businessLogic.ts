@@ -113,48 +113,7 @@ export function calculateStats(workflows: Workflow[], evaluations: Record<string
   };
 }
 
-// 8. Export JSON
-export function exportToJSON(
-  workflows: Workflow[],
-  evaluations: Record<string, Evaluation>,
-  nomeAzienda?: string
-): string {
-  const stats = calculateStats(workflows, evaluations);
-
-  const exportData = {
-    timestamp: new Date().toISOString(),
-    version: "2.0",  // Incrementato per multi-cliente
-    azienda: nomeAzienda || "Non specificata",
-    workflows,
-    evaluations: Object.values(evaluations),
-    stats
-  };
-
-  return JSON.stringify(exportData, null, 2);
-}
-
-// 9. Download file
-export function downloadJSON(data: string, nomeAzienda?: string): void {
-  // Sanitize nome azienda per filename (rimuovi caratteri speciali)
-  const sanitizedName = nomeAzienda
-    ? nomeAzienda.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()
-    : 'unknown';
-
-  const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  const filename = `workflow-ai-${sanitizedName}-${timestamp}.json`;
-
-  const blob = new Blob([data], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-// 10. Export PDF
+// 8. Export PDF
 export function exportToPDF(
   workflows: Workflow[],
   evaluations: Record<string, Evaluation>,
@@ -374,7 +333,7 @@ export function exportToPDF(
   doc.save(filename);
 }
 
-// 11. Get color for time (conditional formatting)
+// 9. Get color for time (conditional formatting)
 export function getTimeColor(timeInMinutes: number): string {
   if (timeInMinutes < 60) return '#28a745'; // verde
   if (timeInMinutes <= 120) return '#ffc107'; // giallo
