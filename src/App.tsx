@@ -1,11 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useAppContext } from './context/AppContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
 import { AziendaSelector } from './components/AziendaSelector';
 import { TabNavigation } from './components/TabNavigation';
 import { Step1Welcome } from './components/Step1Welcome';
@@ -15,7 +11,6 @@ import { Step4Results } from './components/Step4Results';
 
 const AppContent: React.FC = () => {
   const { state, currentAzienda, setCurrentStep, deselectAzienda } = useAppContext();
-  const { logout, user } = useAuth();
 
   // Se non c'è un'azienda selezionata, mostra il selettore
   if (!currentAzienda) {
@@ -47,16 +42,6 @@ const AppContent: React.FC = () => {
             <h1 className="text-xl font-bold">Workflow AI Analyzer</h1>
             <p className="text-xs opacity-90">
               <span className="font-semibold">🏢 {currentAzienda}</span>
-              {user && (
-                <span className="ml-2">
-                  | 👤 {user.email}
-                  {user.plan === 'pro' && (
-                    <span className="ml-1 bg-yellow-400 text-purple-900 px-2 py-0.5 rounded-full text-xs font-bold">
-                      PRO
-                    </span>
-                  )}
-                </span>
-              )}
             </p>
           </div>
           <div className="flex gap-2">
@@ -71,28 +56,6 @@ const AppContent: React.FC = () => {
             >
               🔄 Cambia Azienda
             </button>
-
-            {user ? (
-              <button
-                onClick={() => {
-                  if (window.confirm('Sei sicuro di voler uscire?')) {
-                    logout();
-                  }
-                }}
-                className="bg-red-500 bg-opacity-80 hover:bg-opacity-100 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
-                title="Logout"
-              >
-                🚪 Esci
-              </button>
-            ) : (
-              <a
-                href="/login"
-                className="bg-green-500 bg-opacity-80 hover:bg-opacity-100 px-4 py-2 rounded-lg font-semibold transition-all text-sm inline-flex items-center"
-                title="Accedi per salvare i tuoi dati nel cloud"
-              >
-                👤 Accedi
-              </a>
-            )}
           </div>
         </div>
       </header>
@@ -172,32 +135,24 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <AuthProvider>
-          <ErrorBoundary>
-            <AppProvider>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+        <ErrorBoundary>
+          <AppProvider>
+            <Routes>
+              {/* Main route - No authentication required (internal use only) */}
+              <Route
+                path="/"
+                element={
+                  <ErrorBoundary>
+                    <AppContent />
+                  </ErrorBoundary>
+                }
+              />
 
-                {/* Protected routes - Login required for data persistence and security */}
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <AppContent />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Catch all - redirect to home */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </AppProvider>
-          </ErrorBoundary>
-        </AuthProvider>
+              {/* Catch all - redirect to home */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AppProvider>
+        </ErrorBoundary>
       </BrowserRouter>
     </ErrorBoundary>
   );

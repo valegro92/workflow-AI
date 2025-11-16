@@ -2,10 +2,17 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
 import { Readable } from 'stream';
 import { withTimeout } from './middleware/timeout';
+import { withCSRF } from './middleware/csrf';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
 
 // Convert Buffer to Readable stream with filename
-function bufferToFile(buffer: Buffer, filename: string): any {
-  const stream = Readable.from(buffer) as any;
+// Returns a Readable stream with path property for OpenAI SDK
+interface ReadableWithPath extends Readable {
+  path: string;
+}
+
+function bufferToFile(buffer: Buffer, filename: string): ReadableWithPath {
+  const stream = Readable.from(buffer) as ReadableWithPath;
   stream.path = filename; // OpenAI SDK needs this
   return stream;
 }
@@ -69,7 +76,23 @@ async function handler(
   try {
     console.log('=== PROCESS AUDIO START ===');
 
-    // 1. Check API keys FIRST (before anything else)
+    // 1. Rate limiting - 5 requests per 5 minutes per IP (audio processing is expensive)
+    const rateLimit = checkRateLimit(req, {
+      maxAttempts: 5,
+      windowMs: 5 * 60 * 1000, // 5 minutes
+      keyPrefix: 'process-audio:',
+    });
+
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for audio processing`);
+      return sendRateLimitError(res, rateLimit.retryAfter || 300);
+    }
+
+    if (rateLimit.remaining !== undefined) {
+      addRateLimitHeaders(res, rateLimit.remaining, 5);
+    }
+
+    // 2. Check API keys FIRST (before anything else)
     if (!process.env.GROQ_API_KEY) {
       console.error('GROQ_API_KEY not configured');
       return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
@@ -201,11 +224,54 @@ async function handler(
       });
     }
 
-    const workflows = result.workflows.map((w: any, index: number) => ({
-      ...w,
-      id: `W${String(index + 1).padStart(3, '0')}`,
-      tempoTotale: w.tempoMedio * w.frequenza,
-    }));
+    // Validate and sanitize workflow data from AI
+    interface WorkflowInput {
+      titolo?: string;
+      tempoMedio?: number | string;
+      frequenza?: number | string;
+      tool?: string[];
+      input?: string[];
+      output?: string[];
+      [key: string]: unknown;
+    }
+
+    const workflows = result.workflows.map((w: WorkflowInput, index: number) => {
+      // Validate required fields
+      if (!w.titolo || !w.tempoMedio || !w.frequenza) {
+        console.warn(`Skipping invalid workflow at index ${index}: missing required fields`);
+        return null;
+      }
+
+      // Validate numeric bounds
+      const tempoMedio = typeof w.tempoMedio === 'number' ? w.tempoMedio : parseFloat(w.tempoMedio);
+      const frequenza = typeof w.frequenza === 'number' ? w.frequenza : parseFloat(w.frequenza);
+
+      if (isNaN(tempoMedio) || tempoMedio < 0 || tempoMedio > 10000) {
+        console.warn(`Skipping invalid workflow: tempoMedio out of bounds (${tempoMedio})`);
+        return null;
+      }
+
+      if (isNaN(frequenza) || frequenza < 0 || frequenza > 1000) {
+        console.warn(`Skipping invalid workflow: frequenza out of bounds (${frequenza})`);
+        return null;
+      }
+
+      // Validate arrays
+      const tool = Array.isArray(w.tool) ? w.tool : [];
+      const input = Array.isArray(w.input) ? w.input : [];
+      const output = Array.isArray(w.output) ? w.output : [];
+
+      return {
+        ...w,
+        id: `W${String(index + 1).padStart(3, '0')}`,
+        tempoMedio,
+        frequenza,
+        tempoTotale: tempoMedio * frequenza,
+        tool,
+        input,
+        output,
+      };
+    }).filter(Boolean); // Remove null entries from validation failures
 
     console.log(`✓ Created ${workflows.length} workflows`);
     console.log('=== PROCESS AUDIO SUCCESS ===');
@@ -236,7 +302,7 @@ async function handler(
     }
 
     // Don't expose internal error details in production
-    const response: any = {
+    const response: { error: string; details?: string; type?: string } = {
       error: userMessage
     };
 
@@ -250,8 +316,10 @@ async function handler(
   }
 }
 
-// Export handler with 50-second timeout (audio processing can take time)
-export default withTimeout(handler, {
-  timeoutMs: 50000, // 50 seconds for audio transcription + AI processing
-  message: 'Audio processing took too long. Try with a shorter audio file.'
-});
+// Export handler with CSRF protection and timeout
+export default withCSRF(
+  withTimeout(handler, {
+    timeoutMs: 50000, // 50 seconds for audio transcription + AI processing
+    message: 'Audio processing took too long. Try with a shorter audio file.'
+  })
+);

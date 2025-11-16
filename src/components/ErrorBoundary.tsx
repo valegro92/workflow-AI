@@ -31,9 +31,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error details to console (in production, this could send to error tracking service)
-    console.error('ErrorBoundary caught an error:', error);
-    console.error('Error component stack:', errorInfo.componentStack);
+    // Log error details (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('ErrorBoundary caught an error:', error);
+      console.error('Error component stack:', errorInfo.componentStack);
+    }
 
     // Update state with error details
     this.setState({
@@ -41,8 +43,8 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo
     });
 
-    // TODO: Send to error tracking service like Sentry
-    // Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
+    // In production, errors are logged to browser console for debugging
+    // Future: Integrate error tracking service (Sentry, LogRocket, etc.)
   }
 
   handleReset = (): void => {

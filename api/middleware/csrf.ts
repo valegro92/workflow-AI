@@ -74,8 +74,12 @@ function getRequestOrigin(req: VercelRequest): string | null {
 function isOriginAllowed(origin: string | null, allowedOrigins: string[]): boolean {
   if (!origin) {
     // No origin header - could be a non-browser client or same-origin request
-    // In development, allow; in production, should be stricter
-    return process.env.NODE_ENV === 'development';
+    // In development, allow; in production, reject for security
+    const isDev = process.env.NODE_ENV === 'development';
+    if (!isDev) {
+      console.warn('CSRF: Request missing Origin header in production - rejecting');
+    }
+    return isDev;
   }
 
   // Check exact match

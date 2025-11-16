@@ -94,6 +94,14 @@ export function setSecurityHeaders(res: VercelResponse): void {
 
   // Referrer policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // HSTS - Force HTTPS (only in production)
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  // Permissions Policy - Disable unused features
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
 }
 
 /**
@@ -102,16 +110,25 @@ export function setSecurityHeaders(res: VercelResponse): void {
  * Restricts what resources can be loaded to prevent XSS and injection attacks
  */
 export function setCSPHeaders(res: VercelResponse): void {
+  // Use different CSP for development vs production
+  const isDev = process.env.NODE_ENV === 'development';
+
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Vite in dev
+    // In production: no unsafe-inline/eval. In dev: allow for Vite HMR
+    isDev
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+      : "script-src 'self'",
+    // Allow inline styles only for framework requirements (React)
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.openrouter.ai https://api.groq.com https://*.supabase.co",
+    "connect-src 'self' https://api.openrouter.ai https://api.groq.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests"
   ].join('; ');
 
   res.setHeader('Content-Security-Policy', csp);

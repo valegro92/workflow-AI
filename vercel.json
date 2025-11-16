@@ -1,8 +1,14 @@
 {
   "functions": {
     "api/process-audio.ts": {
-      "maxDuration": 30,
+      "maxDuration": 50,
       "memory": 1024
+    },
+    "api/ai-suggestions.ts": {
+      "maxDuration": 30
+    },
+    "api/ai-workflow-extract.ts": {
+      "maxDuration": 15
     }
   },
   "buildCommand": "npm run build",
