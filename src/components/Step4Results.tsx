@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { exportToPDF, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
+import { workflowToBpmn, workflowsToBpmn, BPMNViewer } from '../integrations/bpmn';
 
 export const Step4Results: React.FC = () => {
   const { state, currentAzienda, setCurrentStep, resetApp, saveImplementationPlan } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('all');
 
   const handleExport = () => {
     if (!currentAzienda) {
@@ -87,6 +89,38 @@ export const Step4Results: React.FC = () => {
     return stats.totalSteps > 0
       ? Math.round((count / stats.totalSteps) * 100)
       : 0;
+  };
+
+  // Generate BPMN XML based on selected workflow(s)
+  const bpmnXml = useMemo(() => {
+    if (state.workflows.length === 0) return '';
+
+    if (selectedWorkflowId === 'all') {
+      return workflowsToBpmn(state.workflows);
+    } else {
+      const workflow = state.workflows.find(w => w.id === selectedWorkflowId);
+      return workflow ? workflowToBpmn(workflow) : '';
+    }
+  }, [selectedWorkflowId, state.workflows]);
+
+  // Download BPMN XML file
+  const handleDownloadBPMN = () => {
+    if (!bpmnXml) return;
+
+    const blob = new Blob([bpmnXml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+
+    const filename = selectedWorkflowId === 'all'
+      ? `workflow-all-${Date.now()}.bpmn`
+      : `workflow-${selectedWorkflowId}-${Date.now()}.bpmn`;
+
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -416,6 +450,70 @@ export const Step4Results: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* BPMN Diagram Viewer */}
+      {state.workflows.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                🗺️ Diagramma BPMN Workflow
+              </h3>
+              <p className="text-sm text-gray-600">
+                Visualizzazione dei processi secondo lo standard BPMN 2.0
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-semibold text-gray-700">
+                Visualizza:
+              </label>
+              <select
+                value={selectedWorkflowId}
+                onChange={(e) => setSelectedWorkflowId(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-medium"
+              >
+                <option value="all">Tutti i workflow (sequenza)</option>
+                {state.workflows.map((workflow) => (
+                  <option key={workflow.id} value={workflow.id}>
+                    {workflow.id} - {workflow.titolo}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {bpmnXml && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <BPMNViewer
+                bpmnXml={bpmnXml}
+                height={450}
+                onError={(error) => {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.error('BPMN Viewer Error:', error);
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 flex-1">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Info:</strong> Il diagramma BPMN mostra il flusso dei processi con notazione standard.
+                Seleziona un workflow specifico dal menu a tendina per visualizzarlo in dettaglio, oppure visualizza
+                tutti i workflow come sequenza completa.
+              </p>
+            </div>
+            <button
+              onClick={handleDownloadBPMN}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg whitespace-nowrap"
+              title="Scarica il diagramma BPMN in formato XML"
+            >
+              📥 Scarica BPMN
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Lista Dettagliata Step */}
       <h3 className="text-2xl font-bold text-gray-900 mb-4">
