@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { exportToPDF, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
-import { workflowToBpmn, workflowsToBpmn, BPMNViewer } from '../integrations/bpmn';
+import { workflowToBpmn, workflowsToBpmn, BPMNViewer, BPMNModeler } from '../integrations/bpmn';
 
 export const Step4Results: React.FC = () => {
   const { state, currentAzienda, setCurrentStep, resetApp, saveImplementationPlan } = useAppContext();
@@ -11,6 +11,8 @@ export const Step4Results: React.FC = () => {
   const [aiBpmnXml, setAiBpmnXml] = useState<string | null>(null);
   const [bpmnLoading, setBpmnLoading] = useState(false);
   const [bpmnError, setBpmnError] = useState<string>('');
+  const [editMode, setEditMode] = useState(false);
+  const [editedBpmnXml, setEditedBpmnXml] = useState<string | null>(null);
 
   const handleExport = () => {
     if (!currentAzienda) {
@@ -577,15 +579,62 @@ export const Step4Results: React.FC = () => {
             </div>
           )}
 
+          {/* Mode Toggle */}
+          {bpmnXml && (
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setEditMode(false)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    !editMode
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  👁️ Visualizza
+                </button>
+                <button
+                  onClick={() => setEditMode(true)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    editMode
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  ✏️ Modifica
+                </button>
+              </div>
+              {editMode && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2 text-sm text-blue-800">
+                  <span>💡</span>
+                  <span>Trascina elementi dalla palette, clicca per modificare proprietà</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {bpmnXml && (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <BPMNViewer
-                bpmnXml={bpmnXml}
-                height={450}
-                onError={(error) => {
-                  console.error('BPMN Viewer Error:', error);
-                }}
-              />
+              {editMode ? (
+                <BPMNModeler
+                  bpmnXml={editedBpmnXml || bpmnXml}
+                  height={600}
+                  onXmlChange={(xml) => {
+                    setEditedBpmnXml(xml);
+                  }}
+                  onError={(error) => {
+                    console.error('BPMN Modeler Error:', error);
+                  }}
+                />
+              ) : (
+                <BPMNViewer
+                  bpmnXml={editedBpmnXml || bpmnXml}
+                  height={450}
+                  onError={(error) => {
+                    console.error('BPMN Viewer Error:', error);
+                  }}
+                />
+              )}
             </div>
           )}
 

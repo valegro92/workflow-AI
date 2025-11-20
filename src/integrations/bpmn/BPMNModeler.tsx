@@ -31,10 +31,12 @@ export function BPMNModeler({
   readOnly = false
 }: BPMNModelerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const propertiesPanelRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showPropertiesPanel, setShowPropertiesPanel] = useState(true);
 
   // Export current diagram as XML
   const exportXML = useCallback(async () => {
@@ -131,9 +133,20 @@ export function BPMNModeler({
 
         await modeler.importXML(bpmnXml);
 
-        // Fit diagram to viewport
-        const canvas = modeler.get('canvas') as any;
-        canvas.zoom('fit-viewport');
+        // Fit diagram to viewport con try-catch per errore SVGMatrix
+        try {
+          const canvas = modeler.get('canvas') as any;
+          if (canvas && typeof canvas.zoom === 'function') {
+            try {
+              canvas.zoom('fit-viewport');
+            } catch (zoomError) {
+              console.warn('Fit-viewport failed in modeler, using fallback zoom:', zoomError);
+              canvas.zoom(0.8);
+            }
+          }
+        } catch (canvasError) {
+          console.warn('Canvas zoom error in modeler (non-critical):', canvasError);
+        }
 
         // Listen for changes
         const eventBus = modeler.get('eventBus') as any;
@@ -175,7 +188,7 @@ export function BPMNModeler({
   }, [bpmnXml, width, height, onError, onXmlChange, exportXML]);
 
   return (
-    <div className={`bpmn-modeler-container ${className}`}>
+    <div className={`bpmn-modeler-container relative ${className}`}>
       {/* Toolbar */}
       {!readOnly && (
         <div className="bg-white border border-gray-200 rounded-t-lg p-3 flex items-center justify-between">
@@ -254,17 +267,49 @@ export function BPMNModeler({
         </div>
       )}
 
-      <div
-        ref={containerRef}
-        className={`bpmn-canvas ${isLoading || error ? 'hidden' : ''} ${readOnly ? 'rounded-lg' : 'rounded-b-lg'}`}
-        style={{
-          width: typeof width === 'number' ? `${width}px` : width,
-          height: typeof height === 'number' ? `${height}px` : height,
-          border: '1px solid #e5e7eb',
-          borderTop: readOnly ? '1px solid #e5e7eb' : 'none',
-          backgroundColor: '#ffffff'
-        }}
-      />
+      {/* Editor Layout: Canvas + Properties Panel */}
+      <div className={`flex ${isLoading || error ? 'hidden' : ''}`}>
+        {/* Canvas */}
+        <div
+          ref={containerRef}
+          className={`flex-1 bpmn-canvas ${readOnly ? 'rounded-lg' : 'rounded-bl-lg'}`}
+          style={{
+            height: typeof height === 'number' ? `${height}px` : height,
+            border: '1px solid #e5e7eb',
+            borderTop: readOnly ? '1px solid #e5e7eb' : 'none',
+            borderRight: showPropertiesPanel && !readOnly ? 'none' : '1px solid #e5e7eb',
+            backgroundColor: '#ffffff'
+          }}
+        />
+
+        {/* Properties Panel */}
+        {!readOnly && showPropertiesPanel && (
+          <div
+            ref={propertiesPanelRef}
+            className="properties-panel-parent rounded-br-lg"
+            style={{
+              width: '300px',
+              height: typeof height === 'number' ? `${height}px` : height,
+              border: '1px solid #e5e7eb',
+              borderTop: 'none',
+              borderLeft: 'none',
+              backgroundColor: '#f9fafb',
+              overflowY: 'auto'
+            }}
+          />
+        )}
+      </div>
+
+      {/* Toggle Properties Panel */}
+      {!readOnly && !isLoading && !error && (
+        <button
+          onClick={() => setShowPropertiesPanel(!showPropertiesPanel)}
+          className="absolute top-16 right-4 z-10 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-50 shadow-sm"
+          title={showPropertiesPanel ? 'Nascondi pannello proprietà' : 'Mostra pannello proprietà'}
+        >
+          {showPropertiesPanel ? '➡️ Nascondi Proprietà' : '⬅️ Mostra Proprietà'}
+        </button>
+      )}
     </div>
   );
 }
