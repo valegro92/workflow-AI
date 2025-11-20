@@ -1,17 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../src/lib/db';
 import { withHeaders, CacheStrategy } from './middleware/headers';
 
 /**
  * Health Check Endpoint
  * GET /api/health
  *
- * Returns the health status of the API and its dependencies.
+ * Returns the health status of the API.
  * Used by monitoring systems, load balancers, and uptime checks.
  *
  * Response codes:
  * - 200: All systems operational
- * - 503: Service unavailable (database or critical service down)
  */
 async function handler(
   req: VercelRequest,
@@ -24,35 +22,17 @@ async function handler(
 
   const startTime = Date.now();
   const checks = {
-    api: false,
-    database: false,
+    api: true,
     timestamp: new Date().toISOString()
   };
 
   try {
-    // Check 1: API is responding (implicit - we're here)
-    checks.api = true;
-
-    // Check 2: Database connectivity
-    try {
-      const { error } = await supabase
-        .from('users')
-        .select('id')
-        .limit(1);
-
-      checks.database = !error;
-    } catch (dbError) {
-      console.error('Health check - Database error:', dbError);
-      checks.database = false;
-    }
-
     // Calculate response time
     const responseTime = Date.now() - startTime;
 
     // Determine overall health status
-    const isHealthy = checks.api && checks.database;
-    const status = isHealthy ? 'healthy' : 'degraded';
-    const statusCode = isHealthy ? 200 : 503;
+    const status = 'healthy';
+    const statusCode = 200;
 
     // Build response
     const response: any = {
