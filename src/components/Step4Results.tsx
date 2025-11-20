@@ -8,6 +8,9 @@ export const Step4Results: React.FC = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('all');
+  const [aiBpmnXml, setAiBpmnXml] = useState<string | null>(null);
+  const [bpmnLoading, setBpmnLoading] = useState(false);
+  const [bpmnError, setBpmnError] = useState<string>('');
 
   const handleExport = () => {
     if (!currentAzienda) {
@@ -72,6 +75,64 @@ export const Step4Results: React.FC = () => {
     }
   };
 
+  const handleGenerateAIBpmn = async () => {
+    if (selectedWorkflowId === 'all') {
+      setBpmnError('⚠️ Per generare con AI, seleziona un workflow specifico (non "Tutti")');
+      return;
+    }
+
+    const workflow = state.workflows.find(w => w.id === selectedWorkflowId);
+    if (!workflow) {
+      setBpmnError('Workflow non trovato');
+      return;
+    }
+
+    setBpmnLoading(true);
+    setBpmnError('');
+    setAiBpmnXml(null);
+
+    try {
+      const response = await fetch('/api/ai-generate-bpmn', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workflow: {
+            titolo: workflow.titolo,
+            descrizione: workflow.descrizione,
+            tool: workflow.tool,
+            input: workflow.input,
+            output: workflow.output,
+            painPoints: workflow.painPoints,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Errore durante la generazione BPMN';
+        try {
+          const error = JSON.parse(errorText);
+          errorMessage = error.details || error.error || errorMessage;
+        } catch {
+          errorMessage = `Server error (${response.status})`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setAiBpmnXml(data.bpmnXml);
+      setBpmnError('');
+
+    } catch (error: any) {
+      console.error('Error generating AI BPMN:', error);
+      setBpmnError(error.message);
+    } finally {
+      setBpmnLoading(false);
+    }
+  };
+
   const { stats } = state;
 
   const getWorkflowsForStrategy = (strategyName: string) => {
@@ -91,8 +152,20 @@ export const Step4Results: React.FC = () => {
       : 0;
   };
 
+  // Reset AI BPMN when workflow selection changes
+  React.useEffect(() => {
+    setAiBpmnXml(null);
+    setBpmnError('');
+  }, [selectedWorkflowId]);
+
   // Generate BPMN XML based on selected workflow(s)
+  // Use AI-generated BPMN if available, otherwise fall back to simple generation
   const bpmnXml = useMemo(() => {
+    // Priorità all'AI BPMN se disponibile
+    if (aiBpmnXml) {
+      return aiBpmnXml;
+    }
+
     if (state.workflows.length === 0) return '';
 
     if (selectedWorkflowId === 'all') {
@@ -101,7 +174,7 @@ export const Step4Results: React.FC = () => {
       const workflow = state.workflows.find(w => w.id === selectedWorkflowId);
       return workflow ? workflowToBpmn(workflow) : '';
     }
-  }, [selectedWorkflowId, state.workflows]);
+  }, [selectedWorkflowId, state.workflows, aiBpmnXml]);
 
   // Download BPMN XML file
   const handleDownloadBPMN = () => {
@@ -482,35 +555,83 @@ export const Step4Results: React.FC = () => {
             </div>
           </div>
 
+          {/* BPMN Error Message */}
+          {bpmnError && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+              <p className="text-sm text-yellow-800">
+                <strong>⚠️ Attenzione:</strong> {bpmnError}
+              </p>
+            </div>
+          )}
+
+          {/* AI Generated Badge */}
+          {aiBpmnXml && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 flex items-center gap-2">
+              <span className="text-2xl">🤖</span>
+              <div>
+                <p className="text-sm font-semibold text-green-900">Diagramma Generato con AI</p>
+                <p className="text-xs text-green-700">
+                  Questo diagramma è stato creato intelligentemente dall'AI analizzando la descrizione del workflow.
+                </p>
+              </div>
+            </div>
+          )}
+
           {bpmnXml && (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <BPMNViewer
                 bpmnXml={bpmnXml}
                 height={450}
                 onError={(error) => {
-                  if (process.env.NODE_ENV === 'development') {
-                    console.error('BPMN Viewer Error:', error);
-                  }
+                  console.error('BPMN Viewer Error:', error);
                 }}
               />
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="mt-4 flex items-start justify-between gap-4">
             <div className="bg-blue-50 border-l-4 border-blue-400 p-4 flex-1">
               <p className="text-sm text-blue-800">
                 <strong>💡 Info:</strong> Il diagramma BPMN mostra il flusso dei processi con notazione standard.
                 Seleziona un workflow specifico dal menu a tendina per visualizzarlo in dettaglio, oppure visualizza
                 tutti i workflow come sequenza completa.
+                {selectedWorkflowId !== 'all' && (
+                  <span className="block mt-2 font-semibold">
+                    🤖 Usa "Genera con AI" per creare un diagramma più dettagliato e realistico!
+                  </span>
+                )}
               </p>
             </div>
-            <button
-              onClick={handleDownloadBPMN}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg whitespace-nowrap"
-              title="Scarica il diagramma BPMN in formato XML"
-            >
-              📥 Scarica BPMN
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleGenerateAIBpmn}
+                disabled={bpmnLoading || selectedWorkflowId === 'all'}
+                className={`${
+                  selectedWorkflowId === 'all'
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
+                } text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg whitespace-nowrap flex items-center gap-2`}
+                title={selectedWorkflowId === 'all' ? 'Seleziona un workflow specifico per generare con AI' : 'Genera diagramma BPMN intelligente con AI'}
+              >
+                {bpmnLoading ? (
+                  <>
+                    <span className="animate-spin">⚙️</span>
+                    Generazione...
+                  </>
+                ) : (
+                  <>
+                    🤖 Genera con AI
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleDownloadBPMN}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg whitespace-nowrap"
+                title="Scarica il diagramma BPMN in formato XML"
+              >
+                📥 Scarica BPMN
+              </button>
+            </div>
           </div>
         </div>
       )}

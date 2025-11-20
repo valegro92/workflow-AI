@@ -49,11 +49,36 @@ export function BPMNViewer({
         setIsLoading(true);
         setError(null);
 
+        // Valida XML prima di importare
+        if (!bpmnXml || bpmnXml.trim() === '') {
+          throw new Error('BPMN XML vuoto');
+        }
+
+        if (!bpmnXml.includes('bpmn:definitions')) {
+          throw new Error('BPMN XML non valido: manca bpmn:definitions');
+        }
+
         await viewer.importXML(bpmnXml);
 
-        // Fit diagram to viewport
-        const canvas = viewer.get('canvas') as any;
-        canvas.zoom('fit-viewport');
+        // Fit diagram to viewport con try-catch per errore SVGMatrix
+        try {
+          const canvas = viewer.get('canvas') as any;
+
+          // Verifica che il canvas sia valido
+          if (canvas && typeof canvas.zoom === 'function') {
+            // Usa zoom sicuro con fallback
+            try {
+              canvas.zoom('fit-viewport');
+            } catch (zoomError) {
+              // Fallback: zoom manuale sicuro
+              console.warn('Fit-viewport failed, using fallback zoom:', zoomError);
+              canvas.zoom(0.8); // Zoom fisso 80%
+            }
+          }
+        } catch (canvasError) {
+          console.warn('Canvas zoom error (non-critical):', canvasError);
+          // Non bloccare il caricamento per errori di zoom
+        }
 
         setIsLoading(false);
       } catch (err) {
@@ -65,9 +90,7 @@ export function BPMNViewer({
           onError(err);
         }
 
-        if (process.env.NODE_ENV === 'development') {
-          console.error('BPMN Viewer Error:', err);
-        }
+        console.error('BPMN Viewer Error:', err);
       }
     };
 
@@ -76,7 +99,11 @@ export function BPMNViewer({
     // Cleanup
     return () => {
       if (viewerRef.current) {
-        viewerRef.current.destroy();
+        try {
+          viewerRef.current.destroy();
+        } catch (destroyError) {
+          console.warn('Error destroying viewer:', destroyError);
+        }
         viewerRef.current = null;
       }
     };
