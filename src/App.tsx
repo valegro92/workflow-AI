@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -8,9 +8,14 @@ import { Step1Welcome } from './components/Step1Welcome';
 import { Step2Mapping } from './components/Step2Mapping';
 import { Step3Evaluation } from './components/Step3Evaluation';
 import { Step4Results } from './components/Step4Results';
+import ImportExport from './components/ImportExport';
+import TemplateLibrary from './components/TemplateLibrary';
+import AIChat from './components/AIChat';
 
 const AppContent: React.FC = () => {
-  const { state, currentAzienda, setCurrentStep, deselectAzienda } = useAppContext();
+  const { state, currentAzienda, setCurrentStep, deselectAzienda, bulkAddWorkflows, addWorkflow } = useAppContext();
+  const [showImportExport, setShowImportExport] = useState(false);
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
 
   // Se non c'è un'azienda selezionata, mostra il selettore
   if (!currentAzienda) {
@@ -45,6 +50,20 @@ const AppContent: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowTemplateLibrary(true)}
+              className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
+              title="Template Library"
+            >
+              📚 Template
+            </button>
+            <button
+              onClick={() => setShowImportExport(true)}
+              className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
+              title="Import/Export"
+            >
+              📤 Import/Export
+            </button>
             <button
               onClick={() => {
                 if (window.confirm(`Vuoi tornare alla selezione aziende?\n\nI dati di "${currentAzienda}" sono salvati automaticamente.`)) {
@@ -127,6 +146,46 @@ const AppContent: React.FC = () => {
           </p>
         </div>
       </footer>
+
+      {/* Modals */}
+      {showImportExport && (
+        <ImportExport
+          workflows={state.workflows}
+          evaluations={state.evaluations}
+          onImport={(workflows, evaluations) => {
+            bulkAddWorkflows(workflows);
+            if (evaluations) {
+              // TODO: Implementare merge evaluations se necessario
+              console.log('Evaluations imported:', evaluations);
+            }
+          }}
+          onClose={() => setShowImportExport(false)}
+        />
+      )}
+
+      {showTemplateLibrary && (
+        <TemplateLibrary
+          onSelectTemplate={(workflow) => {
+            // Genera id e tempoTotale per il nuovo workflow
+            const newId = `W${String(state.workflows.length + 1).padStart(3, '0')}`;
+            const tempoTotale = workflow.tempoMedio * workflow.frequenza;
+            addWorkflow({
+              ...workflow,
+              id: newId,
+              tempoTotale,
+            });
+            setCurrentStep(2); // Vai al mapping per vedere/modificare il workflow
+          }}
+          onClose={() => setShowTemplateLibrary(false)}
+        />
+      )}
+
+      {/* AI Chat Assistant - Always available */}
+      <AIChat
+        currentWorkflow={state.workflows[state.workflows.length - 1]}
+        allWorkflows={state.workflows}
+        currentStep={state.currentStep}
+      />
     </div>
   );
 };
