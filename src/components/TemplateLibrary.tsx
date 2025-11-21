@@ -10,13 +10,16 @@ import {
 
 interface TemplateLibraryProps {
   onSelectTemplate: (workflow: Omit<Workflow, 'id' | 'tempoTotale'>) => void;
+  onSelectMultiple?: (workflows: Omit<Workflow, 'id' | 'tempoTotale'>[]) => void;
   onClose: () => void;
 }
 
-export default function TemplateLibrary({ onSelectTemplate, onClose }: TemplateLibraryProps) {
+export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, onClose }: TemplateLibraryProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplate | null>(null);
+  const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set());
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
 
   // Filtra template in base a categoria e ricerca
   const getFilteredTemplates = () => {
@@ -34,6 +37,38 @@ export default function TemplateLibrary({ onSelectTemplate, onClose }: TemplateL
   const handleUseTemplate = (template: WorkflowTemplate) => {
     onSelectTemplate(template.workflow);
     onClose();
+  };
+
+  const handleToggleTemplate = (templateId: string) => {
+    setSelectedTemplates((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(templateId)) {
+        newSet.delete(templateId);
+      } else {
+        newSet.add(templateId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleImportSelected = () => {
+    if (selectedTemplates.size === 0 || !onSelectMultiple) return;
+
+    const workflows = workflowTemplates
+      .filter((t) => selectedTemplates.has(t.id))
+      .map((t) => t.workflow);
+
+    onSelectMultiple(workflows);
+    onClose();
+  };
+
+  const handleSelectAll = () => {
+    const allIds = filteredTemplates.map((t) => t.id);
+    setSelectedTemplates(new Set(allIds));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTemplates(new Set());
   };
 
   const getCategoryColor = (categoryId: string) => {
@@ -56,20 +91,72 @@ export default function TemplateLibrary({ onSelectTemplate, onClose }: TemplateL
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold">📚 Template Library</h2>
-            <p className="text-sm opacity-90 mt-1">
-              {workflowTemplates.length} template pre-configurati per iniziare rapidamente
-            </p>
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h2 className="text-2xl font-bold">📚 Template Library</h2>
+              <p className="text-sm opacity-90 mt-1">
+                {workflowTemplates.length} template pre-configurati per iniziare rapidamente
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-gray-200 text-2xl font-bold"
+              aria-label="Chiudi"
+            >
+              ×
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white hover:text-gray-200 text-2xl font-bold"
-            aria-label="Chiudi"
-          >
-            ×
-          </button>
+
+          {/* Multi-Select Controls */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setMultiSelectMode(!multiSelectMode);
+                  if (multiSelectMode) {
+                    setSelectedTemplates(new Set());
+                  }
+                }}
+                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                  multiSelectMode
+                    ? 'bg-white text-purple-600'
+                    : 'bg-white/20 hover:bg-white/30 text-white'
+                }`}
+              >
+                {multiSelectMode ? '✅ Selezione Multipla' : '☑️ Abilita Selezione Multipla'}
+              </button>
+
+              {multiSelectMode && selectedTemplates.size > 0 && (
+                <>
+                  <div className="bg-white/20 px-3 py-2 rounded-lg">
+                    <span className="font-bold">{selectedTemplates.size}</span> selezionati
+                  </div>
+                  <button
+                    onClick={handleSelectAll}
+                    className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded transition-colors"
+                  >
+                    Seleziona tutti ({filteredTemplates.length})
+                  </button>
+                  <button
+                    onClick={handleClearSelection}
+                    className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded transition-colors"
+                  >
+                    Deseleziona tutti
+                  </button>
+                </>
+              )}
+            </div>
+
+            {multiSelectMode && selectedTemplates.size > 0 && (
+              <button
+                onClick={handleImportSelected}
+                className="bg-white text-purple-600 px-6 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors shadow-lg"
+              >
+                📥 Importa {selectedTemplates.size} Template
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -138,16 +225,40 @@ export default function TemplateLibrary({ onSelectTemplate, onClose }: TemplateL
               {filteredTemplates.map((template) => {
                 const categoryInfo = templateCategories.find((c) => c.id === template.categoria);
                 const colors = colorMap[getCategoryColor(template.categoria)];
+                const isSelected = selectedTemplates.has(template.id);
 
                 return (
                   <div
                     key={template.id}
-                    className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer"
-                    onClick={() => setSelectedTemplate(template)}
+                    className={`bg-white border-2 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer relative ${
+                      isSelected && multiSelectMode
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-400'
+                    }`}
+                    onClick={() => {
+                      if (multiSelectMode) {
+                        handleToggleTemplate(template.id);
+                      } else {
+                        setSelectedTemplate(template);
+                      }
+                    }}
                   >
+                    {/* Checkbox for Multi-Select */}
+                    {multiSelectMode && (
+                      <div className="absolute top-2 left-2 z-10">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleTemplate(template.id)}
+                          className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    )}
+
                     {/* Template Header */}
                     <div className="flex items-start justify-between mb-3">
-                      <div className="text-3xl">{template.icon}</div>
+                      <div className={`text-3xl ${multiSelectMode ? 'ml-7' : ''}`}>{template.icon}</div>
                       <span
                         className={`px-2 py-1 rounded text-xs font-semibold ${colors.bg} ${colors.text}`}
                       >

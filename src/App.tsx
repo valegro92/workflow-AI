@@ -176,6 +176,22 @@ const AppContent: React.FC = () => {
             });
             setCurrentStep(2); // Vai al mapping per vedere/modificare il workflow
           }}
+          onSelectMultiple={(workflows) => {
+            // Importa tutti i template selezionati in blocco
+            const workflowsToAdd = workflows.map((workflow, index) => {
+              const newId = `W${String(state.workflows.length + index + 1).padStart(3, '0')}`;
+              const tempoTotale = workflow.tempoMedio * workflow.frequenza;
+              return {
+                ...workflow,
+                id: newId,
+                tempoTotale,
+              };
+            });
+
+            bulkAddWorkflows(workflowsToAdd);
+            setCurrentStep(1); // Torna al dashboard per vedere tutti i workflow importati
+            setShowTemplateLibrary(false); // Chiudi automaticamente dopo l'import
+          }}
           onClose={() => setShowTemplateLibrary(false)}
         />
       )}
