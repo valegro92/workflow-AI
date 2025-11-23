@@ -10,12 +10,14 @@ import { Step3Evaluation } from './components/Step3Evaluation';
 import { Step4Results } from './components/Step4Results';
 import ImportExport from './components/ImportExport';
 import TemplateLibrary from './components/TemplateLibrary';
+import WordImport from './components/WordImport';
 import AIChat from './components/AIChat';
 
 const AppContent: React.FC = () => {
   const { state, currentAzienda, setCurrentStep, deselectAzienda, bulkAddWorkflows, addWorkflow } = useAppContext();
   const [showImportExport, setShowImportExport] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [showWordImport, setShowWordImport] = useState(false);
 
   // Se non c'è un'azienda selezionata, mostra il selettore
   if (!currentAzienda) {
@@ -56,6 +58,13 @@ const AppContent: React.FC = () => {
               title="Template Library"
             >
               📚 Template
+            </button>
+            <button
+              onClick={() => setShowWordImport(true)}
+              className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
+              title="Import da Word"
+            >
+              📄 Import Word
             </button>
             <button
               onClick={() => setShowImportExport(true)}
@@ -193,6 +202,28 @@ const AppContent: React.FC = () => {
             setShowTemplateLibrary(false); // Chiudi automaticamente dopo l'import
           }}
           onClose={() => setShowTemplateLibrary(false)}
+        />
+      )}
+
+      {showWordImport && (
+        <WordImport
+          onImportMultiple={(workflows) => {
+            // Importa tutti i workflow estratti dal Word (ogni step diventa un workflow)
+            const workflowsToAdd = workflows.map((workflow, index) => {
+              const newId = `W${String(state.workflows.length + index + 1).padStart(3, '0')}`;
+              const tempoTotale = workflow.tempoMedio * workflow.frequenza;
+              return {
+                ...workflow,
+                id: newId,
+                tempoTotale,
+              };
+            });
+
+            bulkAddWorkflows(workflowsToAdd);
+            setCurrentStep(1); // Torna al dashboard per vedere tutti i workflow importati
+            setShowWordImport(false); // Chiudi automaticamente dopo l'import
+          }}
+          onClose={() => setShowWordImport(false)}
         />
       )}
 
