@@ -94,6 +94,20 @@ export const Step4Results: React.FC = () => {
     setAiBpmnXml(null);
 
     try {
+      // Trova workflow correlati con stessa fase ma owner diversi per creare lane
+      const relatedWorkflows = state.workflows
+        .filter(w =>
+          w.id !== workflow.id &&
+          w.fase === workflow.fase &&
+          w.owner &&
+          w.owner !== workflow.owner
+        )
+        .map(w => ({
+          titolo: w.titolo,
+          descrizione: w.descrizione,
+          owner: w.owner,
+        }));
+
       const response = await fetch('/api/ai-generate-bpmn', {
         method: 'POST',
         headers: {
@@ -107,7 +121,9 @@ export const Step4Results: React.FC = () => {
             input: workflow.input,
             output: workflow.output,
             painPoints: workflow.painPoints,
+            owner: workflow.owner,
           },
+          relatedWorkflows: relatedWorkflows.length > 0 ? relatedWorkflows : undefined,
         }),
       });
 

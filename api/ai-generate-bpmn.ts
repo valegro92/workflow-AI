@@ -32,7 +32,13 @@ interface BPMNRequest {
     input?: string[];
     output?: string[];
     painPoints?: string;
+    owner?: string;
   };
+  relatedWorkflows?: Array<{
+    titolo: string;
+    descrizione: string;
+    owner?: string;
+  }>;
 }
 
 async function handler(req: VercelRequest, res: VercelResponse) {
@@ -48,7 +54,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Costruisci prompt per l'AI
-    const prompt = buildBPMNPrompt(workflow);
+    const prompt = buildBPMNPrompt(workflow, req.body.relatedWorkflows);
 
     // Chiama AI (Groq per velocità)
     const bpmnXml = await generateBPMNWithAI(prompt);
@@ -78,65 +84,147 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Costruisce prompt per AI
+ * Costruisce prompt avanzato per AI con layout professionale e Pool/Lane support
  */
-function buildBPMNPrompt(workflow: any): string {
-  return `Sei un esperto di BPMN 2.0. Genera un diagramma BPMN XML valido e COMPLESSO basato su questo workflow:
+function buildBPMNPrompt(workflow: any, relatedWorkflows?: any[]): string {
+  // Determina se serve multi-pool/lane basandoti su owner diversi
+  const owners = new Set<string>();
+  if (workflow.owner) owners.add(workflow.owner);
+  if (relatedWorkflows) {
+    relatedWorkflows.forEach(w => {
+      if (w.owner) owners.add(w.owner);
+    });
+  }
 
+  const needsMultiLane = owners.size > 1;
+  const ownersList = Array.from(owners);
+
+  return `Sei il miglior ingegnere di processo BPMN al mondo. Analizza questa descrizione e genera un XML BPMN 2.0 completo, professionale e VALIDO.
+
+**PROCESSO PRINCIPALE:**
 Titolo: ${workflow.titolo}
 Descrizione: ${workflow.descrizione}
 ${workflow.tool ? `Tool usati: ${workflow.tool.join(', ')}` : ''}
 ${workflow.input ? `Input: ${workflow.input.join(', ')}` : ''}
 ${workflow.output ? `Output: ${workflow.output.join(', ')}` : ''}
 ${workflow.painPoints ? `Pain Points: ${workflow.painPoints}` : ''}
+${workflow.owner ? `Responsabile: ${workflow.owner}` : ''}
 
-REQUISITI IMPORTANTI:
-1. Analizza la descrizione e identifica gli step reali del processo
-2. Usa elementi BPMN appropriati:
-   - bpmn:task per attività manuali
-   - bpmn:serviceTask per automazioni
-   - bpmn:exclusiveGateway per decisioni (rombi)
-   - bpmn:parallelGateway per attività parallele
-   - bpmn:subProcess se ci sono sotto-processi
-3. Crea un diagramma REALISTICO con 5-10 elementi
-4. Layout orizzontale left-to-right
-5. Coordinate valide (x: 100-1500, y: 50-400)
-6. Ogni elemento deve avere dimensioni standard:
-   - startEvent/endEvent: 36x36
-   - task: 100x80
-   - gateway: 50x50
-7. Waypoints delle edges devono collegare correttamente gli elementi
+${relatedWorkflows && relatedWorkflows.length > 0 ? `**PROCESSI CORRELATI:**
+${relatedWorkflows.map((w, i) => `${i + 1}. ${w.titolo} - ${w.descrizione}${w.owner ? ` (Responsabile: ${w.owner})` : ''}`).join('\n')}
+` : ''}
 
-FORMATO OUTPUT:
-Restituisci SOLO il codice XML BPMN 2.0 completo, senza spiegazioni.
-Includi sia la sezione <bpmn:process> che <bpmndi:BPMNDiagram>.
-Usa nomi descrittivi italiani per gli elementi.
+${needsMultiLane ? `**IMPORTANTE:** Ci sono ${owners.size} responsabili diversi: ${ownersList.join(', ')}.
+DEVI creare un POOL con ${owners.size} LANE, una per ogni responsabile.` : ''}
 
-ESEMPIO STRUTTURA (espandi basandoti sul workflow):
+**REQUISITI CRITICI:**
+
+1. **STRUTTURA XML BPMN 2.0 VALIDA:**
+   - Namespace completi: bpmn, bpmndi, dc, di
+   ${needsMultiLane ? `- USA <bpmn:collaboration> con <bpmn:participant> per pool/lane` : '- Usa <bpmn:process> semplice'}
+   ${needsMultiLane ? `- Ogni lane in <bpmn:laneSet> con proprio <bpmn:flowNodeRef>` : ''}
+   - ID univoci per tutti gli elementi
+
+2. **ELEMENTI SUPPORTATI:**
+   - bpmn:startEvent (inizio processo)
+   - bpmn:task (attività manuali)
+   - bpmn:serviceTask (attività automatizzate/sistemi)
+   - bpmn:userTask (attività utente)
+   - bpmn:exclusiveGateway (decisioni, rombi)
+   - bpmn:parallelGateway (attività parallele)
+   - bpmn:endEvent (fine processo)
+   ${needsMultiLane ? `- bpmn:messageFlow per comunicazione tra lane` : ''}
+
+3. **SPECIFICHE GRAFICHE PRECISE:**
+   - **Pool**: altezza ${needsMultiLane ? '500-600px' : '300-400px'}
+   ${needsMultiLane ? `- **Lane**: altezza ${Math.floor(500 / owners.size)}-${Math.floor(600 / owners.size)}px ciascuna` : ''}
+   - **Task**: width="100" height="80"
+   - **Gateway**: width="50" height="50"
+   - **Event**: width="36" height="36"
+   - **Distanza orizzontale tra task**: 180-200px
+   - **Margine iniziale**: x="160" per startEvent
+   - **Coordinate Y centrali per ogni elemento**
+
+4. **LAYOUT ORIZZONTALE PROFESSIONALE:**
+   - Flusso left-to-right
+   - StartEvent → Task1 → Gateway? → Task2 → ... → EndEvent
+   - Calcola coordinate esatte:
+     * StartEvent: x="160" y="[centrato nella lane]"
+     * Task1: x="340" y="[centrato]"
+     * Task2: x="540" y="[centrato]"
+     * Gateway: x="740" y="[centrato]"
+     * EndEvent: x="940" y="[centrato]"
+
+5. **WAYPOINTS PRECISI:**
+   - Per ogni <bpmndi:BPMNEdge>, calcola waypoints che collegano il centro degli elementi
+   - Esempio: Task (x=340, w=100) → centro x=390
+   - Gateway (x=540, w=50) → centro x=565
+   - Waypoint: <di:waypoint x="390" y="[y-task]" /><di:waypoint x="565" y="[y-gateway]" />
+
+6. **NOMI ITALIANI:**
+   - Usa nomi descrittivi in italiano
+   - Esempi: "Ricevi richiesta", "Verifica dati", "Invia email", "Decisione: Approvato?"
+
+**FORMATO OUTPUT:**
+RISPONDI SOLO CON XML VALIDO, SENZA MARKDOWN O SPIEGAZIONI.
+
+**TEMPLATE BASE:**
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions ...>
-  <bpmn:process id="Process_1" name="${workflow.titolo}">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+${needsMultiLane ? `
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_1" name="${workflow.titolo}" processRef="Process_1" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_1" name="${workflow.titolo}" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+${ownersList.map((owner, i) => `      <bpmn:lane id="Lane_${i + 1}" name="${owner}">
+        <bpmn:flowNodeRef><!-- Inserisci qui i task di ${owner} --></bpmn:flowNodeRef>
+      </bpmn:lane>`).join('\n')}
+    </bpmn:laneSet>
+
+    <!-- Elementi del processo -->
     <bpmn:startEvent id="StartEvent_1" name="Inizio">
-      <bpmn:outgoing>Flow1</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
+    <!-- ... altri elementi ... -->
+  </bpmn:process>` : `
+  <bpmn:process id="Process_1" name="${workflow.titolo}" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" name="Inizio">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <!-- ... altri elementi ... -->
+  </bpmn:process>`}
 
-    <!-- Aggiungi task, gateway, ecc. basati sulla descrizione -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="${needsMultiLane ? 'Collaboration_1' : 'Process_1'}">
+${needsMultiLane ? `      <bpmndi:BPMNShape id="Shape_Participant_1" bpmnElement="Participant_1" isHorizontal="true">
+        <dc:Bounds x="120" y="80" width="1200" height="600" />
+      </bpmndi:BPMNShape>
+${ownersList.map((owner, i) => `      <bpmndi:BPMNShape id="Shape_Lane_${i + 1}" bpmnElement="Lane_${i + 1}" isHorizontal="true">
+        <dc:Bounds x="150" y="${80 + i * Math.floor(600 / owners.size)}" width="1170" height="${Math.floor(600 / owners.size)}" />
+      </bpmndi:BPMNShape>`).join('\n')}
+` : ''}
+      <!-- Shapes degli elementi con coordinate PRECISE -->
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="160" y="[calcola y centrale]" width="36" height="36" />
+      </bpmndi:BPMNShape>
 
-    <bpmn:endEvent id="EndEvent_1" name="Fine">
-      <bpmn:incoming>FlowN</bpmn:incoming>
-    </bpmn:endEvent>
-
-    <!-- Sequence flows -->
-  </bpmn:process>
-
-  <bpmndi:BPMNDiagram>
-    <bpmndi:BPMNPlane bpmnElement="Process_1">
-      <!-- Shapes e Edges con coordinate valide -->
+      <!-- Edges con waypoints PRECISI -->
+      <bpmndi:BPMNEdge id="Edge_Flow_1" bpmnElement="Flow_1">
+        <di:waypoint x="196" y="[y-start]" />
+        <di:waypoint x="340" y="[y-task]" />
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
 
-Genera il BPMN XML ora:`;
+**GENERA ORA IL BPMN XML COMPLETO E PROFESSIONALE:**`;
 }
 
 /**
@@ -167,8 +255,8 @@ async function generateBPMNWithAI(prompt: string): Promise<string> {
           content: prompt,
         },
       ],
-      temperature: 0.3, // Bassa per output strutturato
-      max_tokens: 3000,
+      temperature: 0.2, // Molto bassa per output preciso
+      max_tokens: 5000, // Aumentato per layout complessi e multi-lane
     }),
   });
 
