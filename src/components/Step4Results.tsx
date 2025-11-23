@@ -14,6 +14,11 @@ export const Step4Results: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [editedBpmnXml, setEditedBpmnXml] = useState<string | null>(null);
 
+  // VBA Generation State
+  const [outputType, setOutputType] = useState<'bpmn' | 'vba'>('bpmn');
+  const [vbaCode, setVbaCode] = useState<string | null>(null);
+  const [vbaFilename, setVbaFilename] = useState<string>('');
+
   const handleExport = () => {
     if (!currentAzienda) {
       alert('Errore: nessuna azienda selezionata');
@@ -149,6 +154,80 @@ export const Step4Results: React.FC = () => {
     } finally {
       setBpmnLoading(false);
     }
+  };
+
+  const handleGenerateAIVBA = async () => {
+    if (selectedWorkflowId === 'all') {
+      setBpmnError('⚠️ Per generare VBA, seleziona un workflow specifico (non "Tutti")');
+      return;
+    }
+
+    const workflow = state.workflows.find(w => w.id === selectedWorkflowId);
+    if (!workflow) {
+      setBpmnError('Workflow non trovato');
+      return;
+    }
+
+    setBpmnLoading(true);
+    setBpmnError('');
+    setVbaCode(null);
+
+    try {
+      const response = await fetch('/api/ai-generate-vba', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workflow: {
+            titolo: workflow.titolo,
+            descrizione: workflow.descrizione,
+            tool: workflow.tool,
+            input: workflow.input,
+            output: workflow.output,
+            painPoints: workflow.painPoints,
+            tempoMedio: workflow.tempoMedio,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Errore durante la generazione VBA';
+        try {
+          const error = JSON.parse(errorText);
+          errorMessage = error.details || error.error || errorMessage;
+        } catch {
+          errorMessage = `Server error (${response.status})`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setVbaCode(data.vbaCode);
+      setVbaFilename(data.filename);
+      setBpmnError('');
+
+    } catch (error: any) {
+      console.error('Error generating AI VBA:', error);
+      setBpmnError(error.message);
+    } finally {
+      setBpmnLoading(false);
+    }
+  };
+
+  const handleDownloadVBA = () => {
+    if (!vbaCode) return;
+
+    const blob = new Blob([vbaCode], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = vbaFilename || 'workflow.bas';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const { stats } = state;
@@ -542,21 +621,47 @@ export const Step4Results: React.FC = () => {
         </div>
       </div>
 
-      {/* BPMN Diagram Viewer */}
+      {/* BPMN/VBA Generator */}
       {state.workflows.length > 0 && (
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                🗺️ Diagramma BPMN Workflow
+                {outputType === 'bpmn' ? '🗺️ Diagramma BPMN Workflow' : '💻 Automazione VBA'}
               </h3>
               <p className="text-sm text-gray-600">
-                Visualizzazione dei processi secondo lo standard BPMN 2.0
+                {outputType === 'bpmn'
+                  ? 'Visualizzazione dei processi secondo lo standard BPMN 2.0'
+                  : 'Codice VBA professionale per automatizzare il workflow in Excel/Office'}
               </p>
             </div>
             <div className="flex items-center gap-3">
+              {/* Output Type Toggle */}
+              <div className="flex items-center bg-gray-100 rounded-lg p-1 mr-3">
+                <button
+                  onClick={() => setOutputType('bpmn')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    outputType === 'bpmn'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  📊 BPMN
+                </button>
+                <button
+                  onClick={() => setOutputType('vba')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    outputType === 'vba'
+                      ? 'bg-green-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  💻 VBA
+                </button>
+              </div>
+
               <label className="text-sm font-semibold text-gray-700">
-                Visualizza:
+                Workflow:
               </label>
               <select
                 value={selectedWorkflowId}
@@ -573,7 +678,7 @@ export const Step4Results: React.FC = () => {
             </div>
           </div>
 
-          {/* BPMN Error Message */}
+          {/* Error Message */}
           {bpmnError && (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
               <p className="text-sm text-yellow-800">
@@ -581,6 +686,10 @@ export const Step4Results: React.FC = () => {
               </p>
             </div>
           )}
+
+          {/* BPMN Content */}
+          {outputType === 'bpmn' && (
+            <>
 
           {/* AI Generated Badge */}
           {aiBpmnXml && (
@@ -698,6 +807,98 @@ export const Step4Results: React.FC = () => {
               </button>
             </div>
           </div>
+            </>
+          )}
+
+          {/* VBA Content */}
+          {outputType === 'vba' && (
+            <>
+              {vbaCode ? (
+                <>
+                  {/* VBA Code Viewer */}
+                  <div className="mb-4">
+                    <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                      <pre className="text-sm text-green-400 font-mono leading-relaxed">
+                        <code>{vbaCode}</code>
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-start justify-between gap-4">
+                    <div className="bg-green-50 border-l-4 border-green-400 p-4 flex-1">
+                      <p className="text-sm text-green-800">
+                        <strong>💡 Codice VBA Generato:</strong> Questo codice è stato creato dall'AI seguendo le best practices VBA enterprise.
+                        Include error handling robusto, logging dettagliato, e performance optimization.
+                        <span className="block mt-2 font-semibold">
+                          📥 Scarica il file .bas e importalo nel tuo progetto VBA (Alt+F11 in Excel).
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={handleDownloadVBA}
+                        className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg whitespace-nowrap flex items-center gap-2"
+                        title="Scarica il codice VBA come file .bas"
+                      >
+                        📥 Scarica VBA
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVbaCode(null);
+                          setBpmnError('');
+                        }}
+                        className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg whitespace-nowrap"
+                        title="Cancella e rigenera"
+                      >
+                        🔄 Rigenera
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-4 flex items-start justify-between gap-4">
+                  <div className="bg-blue-50 border-l-4 border-blue-400 p-4 flex-1">
+                    <p className="text-sm text-blue-800">
+                      <strong>💡 Genera Codice VBA:</strong> Seleziona un workflow specifico dal menu a tendina e clicca
+                      "Genera VBA con AI" per creare codice professionale che automatizza completamente il processo.
+                      <span className="block mt-2">
+                        Il codice generato include:
+                      </span>
+                      <ul className="list-disc ml-5 mt-1 space-y-1">
+                        <li>Struttura modulare e best practices</li>
+                        <li>Error handling e logging robusti</li>
+                        <li>Integrazione Excel/Outlook/Word</li>
+                        <li>Performance optimization</li>
+                      </ul>
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleGenerateAIVBA}
+                      disabled={bpmnLoading || selectedWorkflowId === 'all'}
+                      className={`${
+                        selectedWorkflowId === 'all'
+                          ? 'bg-gray-300 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700'
+                      } text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg whitespace-nowrap flex items-center gap-2`}
+                      title={selectedWorkflowId === 'all' ? 'Seleziona un workflow specifico per generare VBA' : 'Genera codice VBA professionale con AI'}
+                    >
+                      {bpmnLoading ? (
+                        <>
+                          <span className="animate-spin">⚙️</span>
+                          Generazione...
+                        </>
+                      ) : (
+                        <>
+                          🤖 Genera VBA con AI
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
