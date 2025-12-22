@@ -117,9 +117,9 @@ async function handler(
       console.error('GROQ_API_KEY not configured');
       return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
     }
-    if (!process.env.OPENROUTER_KEY) {
-      console.error('OPENROUTER_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: OPENROUTER_KEY missing' });
+    if (!process.env.OPENTOUTER_KEY) {
+      console.error('OPENTOUTER_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: OPENTOUTER_KEY missing' });
     }
 
     // Initialize API clients (must be done inside handler on Vercel)
@@ -129,7 +129,7 @@ async function handler(
     });
 
     const openrouter = new OpenAI({
-      apiKey: process.env.OPENROUTER_KEY,
+      apiKey: process.env.OPENTOUTER_KEY,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 
