@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import TranscriptionImport from './TranscriptionImport';
 
 export const Step1Welcome: React.FC = () => {
   const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows } = useAppContext();
@@ -9,6 +10,7 @@ export const Step1Welcome: React.FC = () => {
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
+  const [showTranscriptionImport, setShowTranscriptionImport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,7 +146,7 @@ export const Step1Welcome: React.FC = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <button
           onClick={() => setCurrentStep(2)}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
@@ -166,6 +168,14 @@ export const Step1Welcome: React.FC = () => {
           <span className="text-2xl">🎤</span>
           <span>{isProcessing ? 'Elaborazione...' : 'Importa da Audio'}</span>
         </label>
+
+        <button
+          onClick={() => setShowTranscriptionImport(true)}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-3"
+        >
+          <span className="text-2xl">📝</span>
+          <span>Importa Trascrizione</span>
+        </button>
 
         <input
           ref={fileInputRef}
@@ -315,6 +325,17 @@ export const Step1Welcome: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Transcription Import Modal */}
+      {showTranscriptionImport && (
+        <TranscriptionImport
+          onImportMultiple={(workflows) => {
+            bulkAddWorkflows(workflows);
+            setUploadStatus(`✅ ${workflows.length} workflow importati dalla trascrizione!`);
+          }}
+          onClose={() => setShowTranscriptionImport(false)}
+        />
       )}
     </div>
   );
