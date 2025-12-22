@@ -1,13 +1,15 @@
 /**
  * Transcription Parser Utility
  *
- * Parses various transcription formats (TXT, VTT, SRT) into clean text
+ * Parses various transcription formats (TXT, VTT, SRT, DOCX) into clean text
  * for workflow extraction. Handles common formats from Teams, Zoom, Google Meet.
  */
 
+import mammoth from 'mammoth';
+
 export interface TranscriptionParseResult {
   text: string;
-  format: 'txt' | 'vtt' | 'srt' | 'unknown';
+  format: 'txt' | 'vtt' | 'srt' | 'docx' | 'unknown';
   speakers: string[];
   duration?: string;
   segments?: TranscriptionSegment[];
@@ -23,12 +25,12 @@ export interface TranscriptionSegment {
 /**
  * Supported file extensions for transcription import
  */
-export const SUPPORTED_TRANSCRIPTION_EXTENSIONS = ['.txt', '.vtt', '.srt', '.md'];
+export const SUPPORTED_TRANSCRIPTION_EXTENSIONS = ['.txt', '.vtt', '.srt', '.md', '.docx'];
 
 /**
- * Max file size for transcription files (5MB)
+ * Max file size for transcription files (10MB for Word documents)
  */
-export const MAX_TRANSCRIPTION_SIZE = 5 * 1024 * 1024;
+export const MAX_TRANSCRIPTION_SIZE = 10 * 1024 * 1024;
 
 /**
  * Validates a transcription file before parsing
@@ -365,8 +367,17 @@ export function parseTranscription(content: string): TranscriptionParseResult {
 
 /**
  * Reads a transcription file and parses it
+ * Handles both text files and Word documents
  */
 export async function readAndParseTranscription(file: File): Promise<TranscriptionParseResult> {
+  const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+  // Handle Word documents separately using mammoth
+  if (extension === '.docx') {
+    return parseWordDocument(file);
+  }
+
+  // Handle text-based files
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -386,6 +397,72 @@ export async function readAndParseTranscription(file: File): Promise<Transcripti
 
     reader.readAsText(file, 'UTF-8');
   });
+}
+
+/**
+ * Parses Word document (.docx) transcription using mammoth
+ */
+export async function parseWordDocument(file: File): Promise<TranscriptionParseResult> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const text = result.value;
+
+    if (!text || text.trim().length === 0) {
+      return {
+        text: '',
+        format: 'docx',
+        speakers: []
+      };
+    }
+
+    // Parse the extracted text to find speakers
+    const lines = text.split('\n');
+    const speakers = new Set<string>();
+    const processedLines: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      // Try to extract speaker from common formats
+      // Format: "Speaker Name: text"
+      const speakerMatch = trimmed.match(/^([^:]{1,40}):\s*(.+)$/);
+      if (speakerMatch) {
+        const potentialSpeaker = speakerMatch[1].trim();
+        const lineText = speakerMatch[2].trim();
+        if (potentialSpeaker.length < 40 &&
+            potentialSpeaker.match(/^[\p{L}\s.''-]+$/u) &&
+            !potentialSpeaker.match(/^(http|www|nota|note|step|fase|input|output|tool)/i)) {
+          speakers.add(potentialSpeaker);
+          processedLines.push(`${potentialSpeaker}: ${lineText}`);
+          continue;
+        }
+      }
+
+      // Format: "[Speaker Name] text"
+      const bracketMatch = trimmed.match(/^\[([^\]]+)\]\s*(.*)$/);
+      if (bracketMatch) {
+        const speaker = bracketMatch[1].trim();
+        const lineText = bracketMatch[2].trim();
+        if (speaker && lineText && speaker.length < 40) {
+          speakers.add(speaker);
+          processedLines.push(`${speaker}: ${lineText}`);
+          continue;
+        }
+      }
+
+      processedLines.push(trimmed);
+    }
+
+    return {
+      text: processedLines.join('\n'),
+      format: 'docx',
+      speakers: Array.from(speakers)
+    };
+  } catch (error) {
+    throw new Error(`Errore nel parsing del documento Word: ${error instanceof Error ? error.message : 'unknown'}`);
+  }
 }
 
 /**

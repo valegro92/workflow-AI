@@ -229,6 +229,8 @@ const TranscriptionImport: React.FC<TranscriptionImportProps> = ({ onImportMulti
         return 'SubRip (SRT)';
       case 'txt':
         return 'Testo semplice';
+      case 'docx':
+        return 'Microsoft Word';
       default:
         return format.toUpperCase();
     }
@@ -484,14 +486,18 @@ const TranscriptionImport: React.FC<TranscriptionImportProps> = ({ onImportMulti
           {previews.length === 0 && (
             <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
               <h4 className="font-semibold text-purple-900 mb-2">Formati supportati</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-800">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-purple-800">
+                <div>
+                  <h5 className="font-semibold mb-1">.docx - Microsoft Word</h5>
+                  <p className="text-xs">Trascrizioni e note meeting esportate da Teams, documenti di processo aziendali</p>
+                </div>
                 <div>
                   <h5 className="font-semibold mb-1">.txt - Testo semplice</h5>
-                  <p className="text-xs">Trascrizioni da qualsiasi fonte. Riconosce automaticamente speaker nel formato "Nome: testo"</p>
+                  <p className="text-xs">Trascrizioni da qualsiasi fonte. Riconosce speaker nel formato "Nome: testo"</p>
                 </div>
                 <div>
                   <h5 className="font-semibold mb-1">.vtt - WebVTT</h5>
-                  <p className="text-xs">Sottotitoli da YouTube, Teams, Google Meet. Include timestamp e speaker</p>
+                  <p className="text-xs">Sottotitoli da YouTube, Teams, Google Meet con timestamp</p>
                 </div>
                 <div>
                   <h5 className="font-semibold mb-1">.srt - SubRip</h5>
@@ -504,8 +510,9 @@ const TranscriptionImport: React.FC<TranscriptionImportProps> = ({ onImportMulti
               </div>
               <div className="mt-4 pt-3 border-t border-purple-200">
                 <p className="text-xs text-purple-700">
-                  <strong>Suggerimento:</strong> Per risultati ottimali, le trascrizioni dovrebbero contenere descrizioni
-                  di processi, attivita, tool utilizzati e responsabili.
+                  <strong>Creazione Flussi:</strong> L'AI identifica automaticamente i flussi di processo completi,
+                  collegando gli step in sequenza (l'output di uno diventa input del successivo).
+                  Per risultati ottimali, descrivi processi end-to-end con attivita, tool, input/output e responsabili.
                 </p>
               </div>
             </div>

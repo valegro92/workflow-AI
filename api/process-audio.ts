@@ -17,26 +17,42 @@ function bufferToFile(buffer: Buffer, filename: string): ReadableWithPath {
   return stream;
 }
 
-// Prompt per estrarre workflows dal transcript
-const EXTRACTION_PROMPT = `Sei un esperto di mappatura processi aziendali.
+// Prompt ottimizzato per estrarre workflow con focus sui FLUSSI di processo
+const EXTRACTION_PROMPT = `Sei un esperto di Business Process Engineering e mappatura processi aziendali.
 
-Analizza questa trascrizione di un workshop e estrai i workflow/processi menzionati.
+OBIETTIVO: Analizza questa trascrizione e mappa i FLUSSI DI PROCESSO completi.
+Devi identificare non solo le singole attività, ma come si collegano tra loro formando flussi end-to-end.
 
-Per ogni workflow identificato, estrai:
-- fase: la fase del processo (es: "Analisi", "Produzione", "Controllo", "Pianificazione", etc.)
-- titolo: un titolo breve e chiaro (max 50 caratteri)
-- descrizione: descrizione dettagliata di cosa viene fatto (2-3 frasi)
-- tool: array di strumenti/software utilizzati (es: ["Excel", "Jira", "Email"])
-- input: array di input necessari (es: ["Dati vendite", "Report precedente"])
-- output: array di output prodotti (es: ["Report mensile", "Dashboard"])
-- tempoMedio: tempo medio in minuti per singola esecuzione (stima ragionevole se non menzionato)
-- frequenza: quante volte al mese viene eseguito (stima ragionevole se non menzionato)
-- painPoints: problemi/difficoltà menzionati (stringa, può essere vuota)
-- pii: true se gestisce dati personali, false altrimenti
-- hitl: true se richiede supervisione umana, false altrimenti
-- citazioni: true se necessita citazioni fonti, false altrimenti
-- owner: chi è responsabile (se menzionato, altrimenti stringa vuota)
-- note: eventuali note aggiuntive (stringa, può essere vuota)
+REGOLE FONDAMENTALI PER LA CREAZIONE DEI FLUSSI:
+1. SEQUENZIALITA': Ordina i workflow nell'ordine in cui vengono eseguiti (l'output di uno diventa input del successivo)
+2. RAGGRUPPAMENTO: Usa la stessa "fase" per workflow che appartengono allo stesso macro-processo
+3. DIPENDENZE: L'output di un workflow deve corrispondere all'input del workflow successivo nel flusso
+4. GRANULARITA': Ogni workflow deve essere un'attività atomica e misurabile (15-120 minuti tipicamente)
+5. COMPLETEZZA: Mappa l'intero flusso dall'input iniziale all'output finale
+
+Per ogni workflow/step del flusso, estrai:
+- fase: il nome del MACRO-PROCESSO a cui appartiene (es: "Gestione Ordini", "Onboarding Cliente", "Reportistica Mensile")
+- titolo: titolo breve dell'attività specifica (max 50 caratteri, usa verbi all'infinito: "Verificare...", "Elaborare...", "Inviare...")
+- descrizione: cosa viene fatto esattamente, con quale scopo (2-3 frasi chiare)
+- tool: array di strumenti/software utilizzati (es: ["Excel", "SAP", "Email", "CRM"])
+- input: array di input necessari - DEVE includere gli output del workflow precedente se fa parte di un flusso
+- output: array di output prodotti - questi diventano input del workflow successivo
+- tempoMedio: tempo medio in MINUTI per singola esecuzione (stima realistica: 15-480 min)
+- frequenza: quante volte al MESE viene eseguito (1-100 tipicamente)
+- painPoints: problemi, colli di bottiglia, frustrazioni menzionati (stringa descrittiva)
+- pii: true se gestisce dati personali/sensibili (nomi, email, dati finanziari personali)
+- hitl: true se richiede decisione/approvazione umana critica
+- citazioni: true se necessita fonti esterne verificabili
+- owner: ruolo o nome del responsabile (se menzionato)
+- note: dipendenze, vincoli, eccezioni importanti (es: "Precede l'approvazione del manager", "Richiede dati dal CRM")
+
+ESEMPIO DI FLUSSO BEN MAPPATO:
+Processo "Gestione Preventivi":
+1. Ricezione richiesta → Output: "Richiesta preventivo registrata"
+2. Analisi requisiti → Input: "Richiesta preventivo registrata" → Output: "Specifiche tecniche definite"
+3. Calcolo costi → Input: "Specifiche tecniche definite" → Output: "Preventivo elaborato"
+4. Approvazione interna → Input: "Preventivo elaborato" → Output: "Preventivo approvato"
+5. Invio al cliente → Input: "Preventivo approvato" → Output: "Preventivo inviato"
 
 Rispondi SOLO con un JSON valido nel formato:
 {
@@ -60,9 +76,13 @@ Rispondi SOLO con un JSON valido nel formato:
   ]
 }
 
-Se la trascrizione non contiene processi chiari, ritorna array vuoto.
+IMPORTANTE:
+- I workflow devono essere ordinati nella sequenza logica del flusso
+- Workflow della stessa fase devono essere consecutivi
+- Se identifichi più processi distinti, raggruppali per fase diversa
+- Se la trascrizione non contiene processi chiari, ritorna array vuoto
 
-TRASCRIZIONE:
+TRASCRIZIONE DA ANALIZZARE:
 `;
 
 async function handler(
