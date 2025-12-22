@@ -152,12 +152,35 @@ const TranscriptionImport: React.FC<TranscriptionImportProps> = ({ onImportMulti
         }),
       });
 
+      // Handle non-OK responses with proper error parsing
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Errore HTTP ${response.status}`);
+        let errorMessage = `Errore HTTP ${response.status}`;
+        try {
+          const errorText = await response.text();
+          // Try to parse as JSON first
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // If not JSON, use text directly (truncated)
+            if (errorText && errorText.length > 0) {
+              errorMessage = errorText.substring(0, 200);
+            }
+          }
+        } catch {
+          // Ignore read errors
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      // Parse successful response
+      let data;
+      try {
+        const responseText = await response.text();
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error('Risposta del server non valida. Riprova tra qualche minuto.');
+      }
 
       if (!data.success || !data.workflows || data.workflows.length === 0) {
         throw new Error('Nessun workflow estratto dalla trascrizione. Verifica che contenga descrizioni di processi.');
