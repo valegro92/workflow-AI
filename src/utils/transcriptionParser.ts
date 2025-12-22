@@ -28,9 +28,9 @@ export interface TranscriptionSegment {
 export const SUPPORTED_TRANSCRIPTION_EXTENSIONS = ['.txt', '.vtt', '.srt', '.md', '.docx'];
 
 /**
- * Max file size for transcription files (10MB for Word documents)
+ * Max file size for transcription files (25MB for Word documents)
  */
-export const MAX_TRANSCRIPTION_SIZE = 10 * 1024 * 1024;
+export const MAX_TRANSCRIPTION_SIZE = 25 * 1024 * 1024;
 
 /**
  * Validates a transcription file before parsing

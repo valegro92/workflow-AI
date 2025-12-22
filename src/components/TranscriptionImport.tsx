@@ -293,7 +293,7 @@ const TranscriptionImport: React.FC<TranscriptionImportProps> = ({ onImportMulti
               Trascina qui i tuoi file di trascrizione
             </p>
             <p className="text-sm text-gray-500 mb-4">
-              Supportati: {SUPPORTED_TRANSCRIPTION_EXTENSIONS.join(', ')} (max 5MB)
+              Supportati: {SUPPORTED_TRANSCRIPTION_EXTENSIONS.join(', ')} (max 25MB)
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
