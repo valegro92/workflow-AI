@@ -99,27 +99,54 @@ async function handler(
 
     console.log(`Description length: ${description.length} chars`);
 
-    // Use Gemini 2.0 Flash (fast + free)
-    const model = 'google/gemini-2.0-flash-exp:free';
+    // Lista di modelli da provare in ordine (più stabili e affidabili)
+    const modelsToTry = [
+      'google/gemini-2.0-flash-001:free',      // Gemini 2.0 Flash stabile
+      'google/gemini-flash-1.5-8b:free',       // Gemini 1.5 Flash 8B
+      'meta-llama/llama-3.2-3b-instruct:free', // Llama 3.2 3B (leggero e veloce)
+      'qwen/qwen-2.5-7b-instruct:free',        // Qwen 2.5 7B
+    ];
 
-    console.log(`Calling OpenRouter with model: ${model}`);
+    let completion;
+    let modelUsed = '';
+    let lastError: any = null;
 
-    const completion = await openrouter.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: WORKFLOW_EXTRACTION_PROMPT,
-        },
-        {
-          role: 'user',
-          content: `DESCRIZIONE WORKFLOW:\n\n${description}`,
-        },
-      ],
-      temperature: 0.3, // Low temperature for consistent extraction
-    });
+    for (const model of modelsToTry) {
+      try {
+        console.log(`Trying model: ${model}`);
+        completion = await openrouter.chat.completions.create({
+          model: model,
+          messages: [
+            {
+              role: 'system',
+              content: WORKFLOW_EXTRACTION_PROMPT,
+            },
+            {
+              role: 'user',
+              content: `DESCRIZIONE WORKFLOW:\n\n${description}`,
+            },
+          ],
+          temperature: 0.3,
+          max_tokens: 2000,
+        });
+        modelUsed = model;
+        console.log(`✓ Model ${model} succeeded`);
+        break; // Success, exit loop
+      } catch (error: any) {
+        console.warn(`Model ${model} failed:`, error.message || error.status);
+        lastError = error;
+        // Continue to next model
+      }
+    }
+
+    // If all models failed, throw the last error
+    if (!completion) {
+      console.error('All models failed. Last error:', lastError?.message);
+      throw lastError || new Error('Tutti i modelli AI sono temporaneamente non disponibili');
+    }
 
     const responseText = completion.choices[0]?.message?.content || '';
+    console.log(`✓ Extraction completed with ${modelUsed}`);
 
     console.log(`AI response length: ${responseText.length} chars`);
 

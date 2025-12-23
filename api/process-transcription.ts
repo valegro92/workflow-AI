@@ -143,44 +143,49 @@ async function handler(
     console.log(`Transcription length: ${transcription.length} chars`);
     console.log(`Preview: ${transcription.substring(0, 150)}...`);
 
-    // 4. Extract workflows with OpenRouter (with fallback)
+    // 4. Extract workflows with OpenRouter (with multiple fallbacks)
     console.log('Calling OpenRouter for workflow extraction...');
 
+    // Lista di modelli da provare in ordine (più stabili e affidabili)
+    const modelsToTry = [
+      'google/gemini-2.0-flash-001:free',      // Gemini 2.0 Flash stabile
+      'google/gemini-flash-1.5-8b:free',       // Gemini 1.5 Flash 8B
+      'meta-llama/llama-3.2-3b-instruct:free', // Llama 3.2 3B (leggero e veloce)
+      'qwen/qwen-2.5-7b-instruct:free',        // Qwen 2.5 7B
+    ];
+
     let completion;
-    let modelUsed = 'google/gemini-2.0-flash-exp:free';
+    let modelUsed = '';
+    let lastError: any = null;
 
-    try {
-      console.log('Trying primary model: google/gemini-2.0-flash-exp:free');
-      completion = await openrouter.chat.completions.create({
-        model: 'google/gemini-2.0-flash-exp:free',
-        messages: [
-          {
-            role: 'user',
-            content: EXTRACTION_PROMPT + '\n\n' + transcription,
-          },
-        ],
-        response_format: { type: 'json_object' },
-      });
-    } catch (primaryError: any) {
-      // If rate limited (429) or capacity issue, try fallback model
-      if (primaryError.status === 429 || primaryError.message?.includes('rate') || primaryError.message?.includes('capacity')) {
-        console.log('Primary model saturated (429), trying fallback: meta-llama/llama-3.3-70b-instruct:free');
-        modelUsed = 'meta-llama/llama-3.3-70b-instruct:free';
-
+    for (const model of modelsToTry) {
+      try {
+        console.log(`Trying model: ${model}`);
         completion = await openrouter.chat.completions.create({
-          model: 'meta-llama/llama-3.3-70b-instruct:free',
+          model: model,
           messages: [
             {
               role: 'user',
               content: EXTRACTION_PROMPT + '\n\n' + transcription,
             },
           ],
-          response_format: { type: 'json_object' },
+          temperature: 0.3,
+          max_tokens: 4000,
         });
-      } else {
-        // Re-throw if not a rate limit error
-        throw primaryError;
+        modelUsed = model;
+        console.log(`✓ Model ${model} succeeded`);
+        break; // Success, exit loop
+      } catch (error: any) {
+        console.warn(`Model ${model} failed:`, error.message || error.status);
+        lastError = error;
+        // Continue to next model
       }
+    }
+
+    // If all models failed, throw the last error
+    if (!completion) {
+      console.error('All models failed. Last error:', lastError?.message);
+      throw lastError || new Error('Tutti i modelli AI sono temporaneamente non disponibili');
     }
 
     const extractedText = completion.choices[0]?.message?.content || '{}';
