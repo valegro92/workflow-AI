@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withHeaders } from './middleware/headers';
-import { withValidation } from './middleware/validation';
-import { withRateLimit } from './middleware/rateLimit';
 import { withTimeout } from './middleware/timeout';
+import { withCSRF } from './middleware/csrf';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
 
 /**
  * AI Chat Assistant Endpoint
@@ -46,13 +45,31 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { message, context, conversationHistory = [] } = req.body as ChatRequest;
-
-  if (!message || typeof message !== 'string') {
-    return res.status(400).json({ error: 'Message is required' });
-  }
-
   try {
+    console.log('=== AI CHAT START ===');
+
+    // Rate limiting - 20 requests per minute per IP (generoso per una chat)
+    const rateLimit = checkRateLimit(req, {
+      maxAttempts: 20,
+      windowMs: 60 * 1000, // 1 minute
+      keyPrefix: 'ai-chat:',
+    });
+
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for AI chat`);
+      return sendRateLimitError(res, rateLimit.retryAfter || 60);
+    }
+
+    if (rateLimit.remaining !== undefined) {
+      addRateLimitHeaders(res, rateLimit.remaining, 20);
+    }
+
+    const { message, context, conversationHistory = [] } = req.body as ChatRequest;
+
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
     // Costruisci system prompt context-aware
     const systemPrompt = buildSystemPrompt(context);
 
@@ -63,38 +80,44 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       { role: 'user', content: message },
     ];
 
-    // Chiama API AI (Groq con Llama 3.3 70B - veloce e gratuito)
-    const response = await callGroqAPI(messages);
+    // Prova prima Groq (veloce), poi fallback a OpenRouter
+    let response: string;
+    let usedFallback = false;
+
+    try {
+      response = await callGroqAPI(messages);
+    } catch (groqError: any) {
+      console.warn('Groq API failed, trying OpenRouter fallback:', groqError.message);
+      usedFallback = true;
+      response = await callOpenRouterAPI(messages);
+    }
+
+    console.log(`✓ AI Chat completed (fallback: ${usedFallback})`);
+    console.log('=== AI CHAT SUCCESS ===');
 
     return res.status(200).json({
       response,
       timestamp: new Date().toISOString(),
+      fallback: usedFallback,
     });
+
   } catch (error: any) {
-    console.error('AI Chat error:', error);
+    console.error('=== AI CHAT ERROR ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
 
-    // Fallback a OpenRouter se Groq fallisce
-    try {
-      const systemPrompt = buildSystemPrompt(context);
-      const messages: ChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        ...conversationHistory.slice(-10),
-        { role: 'user', content: message },
-      ];
+    let userMessage = 'Errore AI Chat';
+    let statusCode = 500;
 
-      const response = await callOpenRouterAPI(messages);
-      return res.status(200).json({
-        response,
-        timestamp: new Date().toISOString(),
-        fallback: true,
-      });
-    } catch (fallbackError: any) {
-      console.error('Fallback AI Chat error:', fallbackError);
-      return res.status(500).json({
-        error: 'Errore AI Chat',
-        details: fallbackError.message,
-      });
+    if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('capacity')) {
+      userMessage = 'Servizio AI temporaneamente non disponibile. Riprova tra qualche minuto.';
+      statusCode = 503;
     }
+
+    return res.status(statusCode).json({
+      error: userMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
   }
 }
 
@@ -124,13 +147,13 @@ Rispondi in modo:
 
   // Aggiungi contesto specifico se disponibile
   if (context?.currentStep) {
-    const stepNames = {
+    const stepNames: Record<number, string> = {
       1: 'Dashboard',
       2: 'Mappatura Workflow',
       3: 'Valutazione Workflow',
       4: 'Risultati e Strategie AI',
     };
-    prompt += `\nL'utente è nello step: ${context.currentStep} - ${stepNames[context.currentStep as keyof typeof stepNames]}\n`;
+    prompt += `\nL'utente è nello step: ${context.currentStep} - ${stepNames[context.currentStep] || 'Unknown'}\n`;
   }
 
   if (context?.currentWorkflow) {
@@ -170,13 +193,13 @@ async function callGroqAPI(messages: ChatMessage[]): Promise<string> {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile', // Velocissimo e gratuito
+      model: 'llama-3.3-70b-versatile',
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
       })),
       temperature: 0.7,
-      max_tokens: 500, // Risposte concise
+      max_tokens: 500,
       top_p: 0.9,
     }),
   });
@@ -191,13 +214,13 @@ async function callGroqAPI(messages: ChatMessage[]): Promise<string> {
 }
 
 /**
- * Chiama OpenRouter API (fallback)
+ * Chiama OpenRouter API (fallback) - usa OPENTOUTER_KEY
  */
 async function callOpenRouterAPI(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.OPENTOUTER_KEY;
 
   if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY non configurata');
+    throw new Error('OPENTOUTER_KEY non configurata');
   }
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -209,7 +232,7 @@ async function callOpenRouterAPI(messages: ChatMessage[]): Promise<string> {
       'X-Title': 'Workflow AI Analyzer - Chat Assistant',
     },
     body: JSON.stringify({
-      model: 'meta-llama/llama-3.3-70b-instruct:free', // Gratuito
+      model: 'meta-llama/llama-3.3-70b-instruct:free',
       messages: messages.map((m) => ({
         role: m.role,
         content: m.content,
@@ -228,23 +251,10 @@ async function callOpenRouterAPI(messages: ChatMessage[]): Promise<string> {
   return data.choices[0]?.message?.content || 'Nessuna risposta disponibile.';
 }
 
-// Applica middleware
-export default withTimeout(
-  withRateLimit(
-    withValidation(
-      withHeaders(handler, {
-        cache: { strategy: 'no-cache' },
-        security: true,
-      }),
-      {
-        requiredFields: ['message'],
-        maxSize: 50 * 1024, // 50KB max
-      }
-    ),
-    {
-      maxRequests: 20, // 20 richieste per minuto (generoso per una chat)
-      windowMs: 60 * 1000,
-    }
-  ),
-  25000 // 25 secondi timeout (Groq è veloce)
+// Export handler with CSRF protection and timeout
+export default withCSRF(
+  withTimeout(handler, {
+    timeoutMs: 25000, // 25 secondi timeout (Groq è veloce)
+    message: 'AI Chat took too long. Please try again.'
+  })
 );

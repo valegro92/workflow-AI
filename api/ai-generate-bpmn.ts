@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withHeaders } from './middleware/headers';
-import { withValidation } from './middleware/validation';
-import { withRateLimit } from './middleware/rateLimit';
 import { withTimeout } from './middleware/timeout';
+import { withCSRF } from './middleware/csrf';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
 
 /**
  * AI BPMN Generator Endpoint
@@ -46,29 +45,56 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { workflow } = req.body as BPMNRequest;
-
-  if (!workflow || !workflow.titolo || !workflow.descrizione) {
-    return res.status(400).json({ error: 'Workflow with titolo and descrizione required' });
-  }
-
   try {
+    console.log('=== AI GENERATE BPMN START ===');
+
+    // Rate limiting - 5 requests per minute per IP (genera XML lungo)
+    const rateLimit = checkRateLimit(req, {
+      maxAttempts: 5,
+      windowMs: 60 * 1000, // 1 minute
+      keyPrefix: 'ai-bpmn:',
+    });
+
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for BPMN generation`);
+      return sendRateLimitError(res, rateLimit.retryAfter || 60);
+    }
+
+    if (rateLimit.remaining !== undefined) {
+      addRateLimitHeaders(res, rateLimit.remaining, 5);
+    }
+
+    const { workflow, relatedWorkflows } = req.body as BPMNRequest;
+
+    if (!workflow || !workflow.titolo || !workflow.descrizione) {
+      return res.status(400).json({ error: 'Workflow with titolo and descrizione required' });
+    }
+
     // Costruisci prompt per l'AI
-    const prompt = buildBPMNPrompt(workflow, req.body.relatedWorkflows);
+    const prompt = buildBPMNPrompt(workflow, relatedWorkflows);
 
     // Chiama AI (Groq per velocità)
     const bpmnXml = await generateBPMNWithAI(prompt);
+
+    console.log(`✓ BPMN generated: ${bpmnXml.length} chars`);
+    console.log('=== AI GENERATE BPMN SUCCESS ===');
 
     return res.status(200).json({
       bpmnXml,
       timestamp: new Date().toISOString(),
     });
+
   } catch (error: any) {
-    console.error('AI BPMN Generation error:', error);
+    console.error('=== AI GENERATE BPMN ERROR ===');
+    console.error('Error:', error.message);
 
     // Fallback: genera BPMN semplice manualmente
     try {
+      const { workflow } = req.body as BPMNRequest;
       const fallbackBpmn = generateSimpleBPMN(workflow);
+
+      console.log('Using fallback BPMN');
+
       return res.status(200).json({
         bpmnXml: fallbackBpmn,
         timestamp: new Date().toISOString(),
@@ -77,7 +103,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (fallbackError: any) {
       return res.status(500).json({
         error: 'Errore generazione BPMN',
-        details: fallbackError.message,
+        details: process.env.NODE_ENV === 'development' ? fallbackError.message : undefined,
       });
     }
   }
@@ -356,23 +382,10 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Applica middleware
-export default withTimeout(
-  withRateLimit(
-    withValidation(
-      withHeaders(handler, {
-        cache: { strategy: 'no-cache' },
-        security: true,
-      }),
-      {
-        requiredFields: ['workflow'],
-        maxSize: 50 * 1024,
-      }
-    ),
-    {
-      maxRequests: 5, // Limitato perché genera XML lungo
-      windowMs: 60 * 1000,
-    }
-  ),
-  30000 // 30 secondi timeout
+// Export handler with CSRF protection and timeout
+export default withCSRF(
+  withTimeout(handler, {
+    timeoutMs: 30000, // 30 secondi timeout
+    message: 'BPMN generation took too long. Please try again.'
+  })
 );
