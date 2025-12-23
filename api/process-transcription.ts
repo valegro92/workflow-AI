@@ -103,14 +103,14 @@ async function handler(
     }
 
     // 2. Check API key
-    if (!process.env.OPENTOUTER_KEY) {
-      console.error('OPENTOUTER_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: OPENTOUTER_KEY missing' });
+    if (!process.env.OPENROUTER_KEY) {
+      console.error('OPENROUTER_KEY not configured');
+      return res.status(500).json({ error: 'Server misconfiguration: OPENROUTER_KEY missing' });
     }
 
     // Initialize OpenRouter client
     const openrouter = new OpenAI({
-      apiKey: process.env.OPENTOUTER_KEY,
+      apiKey: process.env.OPENROUTER_KEY,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 

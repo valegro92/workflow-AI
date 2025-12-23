@@ -214,13 +214,13 @@ async function callGroqAPI(messages: ChatMessage[]): Promise<string> {
 }
 
 /**
- * Chiama OpenRouter API (fallback) - usa OPENTOUTER_KEY
+ * Chiama OpenRouter API (fallback) - usa OPENROUTER_KEY
  */
 async function callOpenRouterAPI(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.OPENTOUTER_KEY;
+  const apiKey = process.env.OPENROUTER_KEY;
 
   if (!apiKey) {
-    throw new Error('OPENTOUTER_KEY non configurata');
+    throw new Error('OPENROUTER_KEY non configurata');
   }
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
