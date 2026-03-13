@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { AziendaSelector } from './components/AziendaSelector';
 import { TabNavigation } from './components/TabNavigation';
 import { Step1Welcome } from './components/Step1Welcome';
 import { Step2Mapping } from './components/Step2Mapping';
@@ -14,15 +13,10 @@ import WordImport from './components/WordImport';
 import AIChat from './components/AIChat';
 
 const AppContent: React.FC = () => {
-  const { state, currentAzienda, setCurrentStep, deselectAzienda, bulkAddWorkflows, addWorkflow } = useAppContext();
+  const { state, setCurrentStep, bulkAddWorkflows, addWorkflow } = useAppContext();
   const [showImportExport, setShowImportExport] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   const [showWordImport, setShowWordImport] = useState(false);
-
-  // Se non c'è un'azienda selezionata, mostra il selettore
-  if (!currentAzienda) {
-    return <AziendaSelector />;
-  }
 
   // Mappiamo gli step ai tab:
   // Tab 1 (step: 1) → step 1 o 2 (Workflow/Mapping)
@@ -47,9 +41,7 @@ const AppContent: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold">Workflow AI Analyzer</h1>
-            <p className="text-xs opacity-90">
-              <span className="font-semibold">🏢 {currentAzienda}</span>
-            </p>
+            <p className="text-xs opacity-90">Mappa processi e scopri opportunità AI</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -72,17 +64,6 @@ const AppContent: React.FC = () => {
               title="Import/Export"
             >
               📤 Import/Export
-            </button>
-            <button
-              onClick={() => {
-                if (window.confirm(`Vuoi tornare alla selezione aziende?\n\nI dati di "${currentAzienda}" sono salvati automaticamente.`)) {
-                  deselectAzienda();
-                }
-              }}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg font-semibold transition-all text-sm"
-              title="Cambia azienda"
-            >
-              🔄 Cambia Azienda
             </button>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { exportToPDF, calculateMonthlySavings, calculateROI } from '../utils/bus
 import { workflowToBpmn, workflowsToBpmn, BPMNViewer, BPMNModeler } from '../integrations/bpmn';
 
 export const Step4Results: React.FC = () => {
-  const { state, currentAzienda, setCurrentStep, resetApp, saveImplementationPlan } = useAppContext();
+  const { state, setCurrentStep, resetApp, saveImplementationPlan } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('all');
@@ -15,14 +15,10 @@ export const Step4Results: React.FC = () => {
   const [editedBpmnXml, setEditedBpmnXml] = useState<string | null>(null);
 
   const handleExport = () => {
-    if (!currentAzienda) {
-      alert('Errore: nessuna azienda selezionata');
-      return;
-    }
     exportToPDF(
       state.workflows,
       state.evaluations,
-      currentAzienda,
+      'Workflow AI Analyzer',
       state.costoOrario,
       state.implementationPlan
     );
