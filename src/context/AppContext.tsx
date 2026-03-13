@@ -1,20 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppState, Workflow, Evaluation, ClientRepository, AziendaData } from '../types';
+import { AppState, Workflow, Evaluation } from '../types';
 import { calculateStats } from '../utils/businessLogic';
 
 interface AppContextType {
-  // Stato corrente
   state: AppState;
-  currentAzienda: string | null;
-
-  // Gestione aziende
-  getAllAziende: () => AziendaData[];
-  createAzienda: (nomeAzienda: string) => void;
-  selectAzienda: (nomeAzienda: string) => void;
-  deselectAzienda: () => void;
-  deleteAzienda: (nomeAzienda: string) => void;
-
-  // Metodi workflow (esistenti)
   setCurrentStep: (step: number) => void;
   setCostoOrario: (costo: number | undefined) => void;
   addWorkflow: (workflow: Workflow) => void;
@@ -29,8 +18,8 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'ai-collaboration-canvas-multi-client';
-const OLD_STORAGE_KEY = 'ai-collaboration-canvas-data'; // per migrazione
+const STORAGE_KEY = 'ai-collaboration-canvas-data';
+const MULTI_CLIENT_KEY = 'ai-collaboration-canvas-multi-client';
 
 const initialState: AppState = {
   currentStep: 1,
@@ -48,170 +37,85 @@ const initialState: AppState = {
   }
 };
 
-const initialRepository: ClientRepository = {
-  currentAzienda: null,
-  aziende: {}
-};
+/**
+ * Migra dati dal vecchio formato multi-client al formato singolo.
+ * Prende lo state dell'azienda corrente o la prima disponibile.
+ */
+function migrateFromMultiClient(data: any): AppState | null {
+  try {
+    if (!data || typeof data !== 'object') return null;
+
+    const { currentAzienda, aziende } = data;
+    if (!aziende || typeof aziende !== 'object') return null;
+
+    const aziendaNames = Object.keys(aziende);
+    if (aziendaNames.length === 0) return null;
+
+    // Usa l'azienda corrente se esiste, altrimenti la prima per data di aggiornamento
+    let targetName = currentAzienda && aziende[currentAzienda]
+      ? currentAzienda
+      : aziendaNames.sort((a, b) => {
+          const dateA = new Date(aziende[a]?.updatedAt || 0).getTime();
+          const dateB = new Date(aziende[b]?.updatedAt || 0).getTime();
+          return dateB - dateA;
+        })[0];
+
+    const targetState = aziende[targetName]?.state;
+    if (!targetState) return null;
+
+    // Ricalcola stats per sicurezza
+    return {
+      ...targetState,
+      stats: calculateStats(targetState.workflows || [], targetState.evaluations || {})
+    };
+  } catch (error) {
+    console.error('Error migrating from multi-client format:', error);
+    return null;
+  }
+}
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Repository multi-cliente
-  const [repository, setRepository] = useState<ClientRepository>(() => {
+  const [state, setState] = useState<AppState>(() => {
     try {
-      // Prova a caricare nuovo formato multi-cliente
-      const savedRepo = localStorage.getItem(STORAGE_KEY);
-      if (savedRepo) {
-        return JSON.parse(savedRepo);
+      // 1. Prova il formato singolo
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        if (parsed && parsed.workflows) {
+          return {
+            ...parsed,
+            stats: calculateStats(parsed.workflows || [], parsed.evaluations || {})
+          };
+        }
       }
 
-      // Migrazione da vecchio formato (singolo cliente)
-      const oldData = localStorage.getItem(OLD_STORAGE_KEY);
-      if (oldData) {
-        const oldState = JSON.parse(oldData);
-        const now = new Date().toISOString();
-
-        // Crea azienda "Cliente Importato" con i vecchi dati
-        const migratedRepo: ClientRepository = {
-          currentAzienda: 'Cliente Importato',
-          aziende: {
-            'Cliente Importato': {
-              nomeAzienda: 'Cliente Importato',
-              state: {
-                ...oldState,
-                stats: calculateStats(oldState.workflows || [], oldState.evaluations || {})
-              },
-              createdAt: now,
-              updatedAt: now
-            }
-          }
-        };
-
-        // Salva nuovo formato e rimuovi vecchio
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedRepo));
-        localStorage.removeItem(OLD_STORAGE_KEY);
-
-        return migratedRepo;
+      // 2. Prova migrazione dal formato multi-client
+      const multiData = localStorage.getItem(MULTI_CLIENT_KEY);
+      if (multiData) {
+        const parsed = JSON.parse(multiData);
+        const migrated = migrateFromMultiClient(parsed);
+        if (migrated) {
+          // Salva nel nuovo formato e rimuovi il vecchio
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+          localStorage.removeItem(MULTI_CLIENT_KEY);
+          console.log('Migrated from multi-client to single-client format');
+          return migrated;
+        }
       }
     } catch (error) {
-      console.error('Error loading repository:', error);
-    }
-    return initialRepository;
-  });
-
-  // Stato dell'azienda corrente
-  const [state, setState] = useState<AppState>(() => {
-    if (repository.currentAzienda && repository.aziende[repository.currentAzienda]) {
-      return repository.aziende[repository.currentAzienda].state;
+      console.error('Error loading state:', error);
     }
     return initialState;
   });
 
-  // Sincronizza state → repository e salva su localStorage
-  // Combined effect to avoid circular dependencies and reduce re-renders
-  useEffect(() => {
-    if (!repository.currentAzienda) return;
-
-    // Update repository with current state
-    setRepository(prev => {
-      // Check if state actually changed to avoid unnecessary updates
-      const currentAziendaData = prev.aziende[prev.currentAzienda!];
-      if (currentAziendaData && JSON.stringify(currentAziendaData.state) === JSON.stringify(state)) {
-        return prev; // No change, don't trigger update
-      }
-
-      const updatedAziende = {
-        ...prev.aziende,
-        [prev.currentAzienda!]: {
-          ...prev.aziende[prev.currentAzienda!],
-          state: state,
-          updatedAt: new Date().toISOString()
-        }
-      };
-
-      return {
-        ...prev,
-        aziende: updatedAziende
-      };
-    });
-  }, [state, repository.currentAzienda]);
-
-  // Save repository to localStorage (separate effect to handle all repository changes)
+  // Salva stato su localStorage ad ogni cambiamento
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(repository));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
-      console.error('Error saving repository:', error);
+      console.error('Error saving state:', error);
     }
-  }, [repository]);
-
-  // === GESTIONE AZIENDE ===
-
-  const getAllAziende = (): AziendaData[] => {
-    return Object.values(repository.aziende).sort((a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
-  };
-
-  const createAzienda = (nomeAzienda: string) => {
-    const now = new Date().toISOString();
-    const newAzienda: AziendaData = {
-      nomeAzienda,
-      state: initialState,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    setRepository(prev => ({
-      currentAzienda: nomeAzienda,
-      aziende: {
-        ...prev.aziende,
-        [nomeAzienda]: newAzienda
-      }
-    }));
-
-    setState(initialState);
-  };
-
-  const selectAzienda = (nomeAzienda: string) => {
-    if (repository.aziende[nomeAzienda]) {
-      setRepository(prev => ({
-        ...prev,
-        currentAzienda: nomeAzienda
-      }));
-      setState(repository.aziende[nomeAzienda].state);
-    }
-  };
-
-  const deselectAzienda = () => {
-    setRepository(prev => ({
-      ...prev,
-      currentAzienda: null
-    }));
-    setState(initialState);
-  };
-
-  const deleteAzienda = (nomeAzienda: string) => {
-    setRepository(prev => {
-      const newAziende = { ...prev.aziende };
-      delete newAziende[nomeAzienda];
-
-      // Se eliminiamo l'azienda corrente, resettiamo
-      const newCurrentAzienda = prev.currentAzienda === nomeAzienda
-        ? null
-        : prev.currentAzienda;
-
-      return {
-        currentAzienda: newCurrentAzienda,
-        aziende: newAziende
-      };
-    });
-
-    // Se abbiamo eliminato l'azienda corrente, resettiamo lo stato
-    if (repository.currentAzienda === nomeAzienda) {
-      setState(initialState);
-    }
-  };
-
-  // === METODI WORKFLOW (invariati, operano su state) ===
+  }, [state]);
 
   const setCurrentStep = (step: number) => {
     setState(prev => ({ ...prev, currentStep: step }));
@@ -225,11 +129,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setState(prev => {
       const newWorkflows = [...prev.workflows, workflow];
       const newStats = calculateStats(newWorkflows, prev.evaluations);
-      return {
-        ...prev,
-        workflows: newWorkflows,
-        stats: newStats
-      };
+      return { ...prev, workflows: newWorkflows, stats: newStats };
     });
   };
 
@@ -237,11 +137,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setState(prev => {
       const newWorkflows = [...prev.workflows, ...workflows];
       const newStats = calculateStats(newWorkflows, prev.evaluations);
-      return {
-        ...prev,
-        workflows: newWorkflows,
-        stats: newStats
-      };
+      return { ...prev, workflows: newWorkflows, stats: newStats };
     });
   };
 
@@ -249,11 +145,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setState(prev => {
       const newWorkflows = prev.workflows.map(w => w.id === id ? workflow : w);
       const newStats = calculateStats(newWorkflows, prev.evaluations);
-      return {
-        ...prev,
-        workflows: newWorkflows,
-        stats: newStats
-      };
+      return { ...prev, workflows: newWorkflows, stats: newStats };
     });
   };
 
@@ -263,42 +155,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const newEvaluations = { ...prev.evaluations };
       delete newEvaluations[id];
       const newStats = calculateStats(newWorkflows, newEvaluations);
-      return {
-        ...prev,
-        workflows: newWorkflows,
-        evaluations: newEvaluations,
-        stats: newStats
-      };
+      return { ...prev, workflows: newWorkflows, evaluations: newEvaluations, stats: newStats };
     });
   };
 
   const addEvaluation = (evaluation: Evaluation) => {
     setState(prev => {
-      const newEvaluations = {
-        ...prev.evaluations,
-        [evaluation.workflowId]: evaluation
-      };
+      const newEvaluations = { ...prev.evaluations, [evaluation.workflowId]: evaluation };
       const newStats = calculateStats(prev.workflows, newEvaluations);
-      return {
-        ...prev,
-        evaluations: newEvaluations,
-        stats: newStats
-      };
+      return { ...prev, evaluations: newEvaluations, stats: newStats };
     });
   };
 
   const updateEvaluation = (workflowId: string, evaluation: Evaluation) => {
     setState(prev => {
-      const newEvaluations = {
-        ...prev.evaluations,
-        [workflowId]: evaluation
-      };
+      const newEvaluations = { ...prev.evaluations, [workflowId]: evaluation };
       const newStats = calculateStats(prev.workflows, newEvaluations);
-      return {
-        ...prev,
-        evaluations: newEvaluations,
-        stats: newStats
-      };
+      return { ...prev, evaluations: newEvaluations, stats: newStats };
     });
   };
 
@@ -307,20 +180,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const resetApp = () => {
-    if (repository.currentAzienda) {
-      // Reset solo l'azienda corrente
-      setRepository(prev => ({
-        ...prev,
-        aziende: {
-          ...prev.aziende,
-          [repository.currentAzienda!]: {
-            ...prev.aziende[repository.currentAzienda!],
-            state: initialState,
-            updatedAt: new Date().toISOString()
-          }
-        }
-      }));
-    }
     setState(initialState);
   };
 
@@ -328,12 +187,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     <AppContext.Provider
       value={{
         state,
-        currentAzienda: repository.currentAzienda,
-        getAllAziende,
-        createAzienda,
-        selectAzienda,
-        deselectAzienda,
-        deleteAzienda,
         setCurrentStep,
         setCostoOrario,
         addWorkflow,

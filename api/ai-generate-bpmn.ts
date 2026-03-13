@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withHeaders } from './middleware/headers';
-import { withValidation } from './middleware/validation';
-import { withRateLimit } from './middleware/rateLimit';
 import { withTimeout } from './middleware/timeout';
+import { withCSRF } from './middleware/csrf';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
 
 /**
  * AI BPMN Generator Endpoint
@@ -44,6 +43,21 @@ interface BPMNRequest {
 async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Rate limiting - 5 requests per minute
+  const rateLimit = checkRateLimit(req, {
+    maxAttempts: 5,
+    windowMs: 60 * 1000,
+    keyPrefix: 'ai-bpmn:',
+  });
+
+  if (!rateLimit.allowed) {
+    return sendRateLimitError(res, rateLimit.retryAfter || 60);
+  }
+
+  if (rateLimit.remaining !== undefined) {
+    addRateLimitHeaders(res, rateLimit.remaining, 5);
   }
 
   const { workflow } = req.body as BPMNRequest;
@@ -356,23 +370,10 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Applica middleware
-export default withTimeout(
-  withRateLimit(
-    withValidation(
-      withHeaders(handler, {
-        cache: { strategy: 'no-cache' },
-        security: true,
-      }),
-      {
-        requiredFields: ['workflow'],
-        maxSize: 50 * 1024,
-      }
-    ),
-    {
-      maxRequests: 5, // Limitato perché genera XML lungo
-      windowMs: 60 * 1000,
-    }
-  ),
-  30000 // 30 secondi timeout
+// Export handler with CSRF protection and timeout
+export default withCSRF(
+  withTimeout(handler, {
+    timeoutMs: 30000,
+    message: 'BPMN generation timed out.',
+  })
 );

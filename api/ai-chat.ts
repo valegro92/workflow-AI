@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withHeaders } from './middleware/headers';
-import { withValidation } from './middleware/validation';
-import { withRateLimit } from './middleware/rateLimit';
 import { withTimeout } from './middleware/timeout';
+import { withCSRF } from './middleware/csrf';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
 
 /**
  * AI Chat Assistant Endpoint
@@ -44,6 +43,21 @@ interface ChatRequest {
 async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Rate limiting - 20 requests per minute
+  const rateLimit = checkRateLimit(req, {
+    maxAttempts: 20,
+    windowMs: 60 * 1000,
+    keyPrefix: 'ai-chat:',
+  });
+
+  if (!rateLimit.allowed) {
+    return sendRateLimitError(res, rateLimit.retryAfter || 60);
+  }
+
+  if (rateLimit.remaining !== undefined) {
+    addRateLimitHeaders(res, rateLimit.remaining, 20);
   }
 
   const { message, context, conversationHistory = [] } = req.body as ChatRequest;
@@ -228,23 +242,10 @@ async function callOpenRouterAPI(messages: ChatMessage[]): Promise<string> {
   return data.choices[0]?.message?.content || 'Nessuna risposta disponibile.';
 }
 
-// Applica middleware
-export default withTimeout(
-  withRateLimit(
-    withValidation(
-      withHeaders(handler, {
-        cache: { strategy: 'no-cache' },
-        security: true,
-      }),
-      {
-        requiredFields: ['message'],
-        maxSize: 50 * 1024, // 50KB max
-      }
-    ),
-    {
-      maxRequests: 20, // 20 richieste per minuto (generoso per una chat)
-      windowMs: 60 * 1000,
-    }
-  ),
-  25000 // 25 secondi timeout (Groq è veloce)
+// Export handler with CSRF protection and timeout
+export default withCSRF(
+  withTimeout(handler, {
+    timeoutMs: 25000,
+    message: 'AI Chat request timed out.',
+  })
 );
