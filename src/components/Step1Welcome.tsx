@@ -410,6 +410,33 @@ export const Step1Welcome: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Directional CTA banner */}
+        {evaluatedCount < state.workflows.length ? (
+          <div className="mt-4 bg-brand-50 border border-brand/30 rounded-lg px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-brand-light">
+              Hai <strong className="text-white">{state.workflows.length - evaluatedCount} workflow da valutare</strong> su {state.workflows.length} totali
+            </p>
+            <button
+              onClick={() => setCurrentStep(3)}
+              className="bg-brand text-dark-bg font-semibold py-2 px-4 rounded-lg hover:bg-brand-light transition-colors text-sm whitespace-nowrap"
+            >
+              Vai alla Valutazione →
+            </button>
+          </div>
+        ) : evaluatedCount > 0 ? (
+          <div className="mt-4 bg-green-900/30 border border-green-600/30 rounded-lg px-4 py-3 flex items-center justify-between">
+            <p className="text-sm text-green-300">
+              Tutti i workflow valutati! Visualizza i risultati e il piano di implementazione.
+            </p>
+            <button
+              onClick={() => setCurrentStep(4)}
+              className="bg-brand text-dark-bg font-semibold py-2 px-4 rounded-lg hover:bg-brand-light transition-colors text-sm whitespace-nowrap"
+            >
+              Vedi i Risultati →
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
