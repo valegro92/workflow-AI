@@ -134,13 +134,13 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-dark-card rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-teal-600 text-white p-6">
+        <div className="bg-dark-hover border-b border-brand/30 text-white p-6">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold mb-2">📄 Import da Word</h2>
-              <p className="text-sm opacity-90">
+              <h2 className="text-2xl font-bold mb-2">Import da Word</h2>
+              <p className="text-sm text-gray-400">
                 Carica i tuoi file Word (.docx) già compilati e li trasformeremo in workflow automaticamente
               </p>
             </div>
@@ -162,8 +162,8 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
               dragActive
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
+                ? 'border-brand bg-brand-50'
+                : 'border-dark-border hover:border-brand hover:bg-dark-hover'
             }`}
             onDragEnter={handleDrag}
             onDragOver={handleDrag}
@@ -172,7 +172,7 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
           >
             <div className="mb-4">
               <svg
-                className="mx-auto h-12 w-12 text-gray-400"
+                className="mx-auto h-12 w-12 text-gray-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 48 48"
@@ -185,13 +185,13 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
                 />
               </svg>
             </div>
-            <p className="text-lg font-semibold text-gray-700 mb-2">
+            <p className="text-lg font-semibold text-gray-300 mb-2">
               Trascina qui i tuoi file Word o clicca per selezionarli
             </p>
-            <p className="text-sm text-gray-500 mb-4">Supportati: file .docx</p>
+            <p className="text-sm text-gray-400 mb-4">Supportati: file .docx</p>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all"
+              className="bg-brand text-dark-bg px-6 py-2 rounded-lg font-semibold hover:bg-brand-light transition-all"
             >
               Seleziona File
             </button>
@@ -209,11 +209,11 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
           {previews.length > 0 && (
             <div className="mt-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">File caricati ({previews.length})</h3>
+                <h3 className="text-lg font-bold text-white">File caricati ({previews.length})</h3>
                 {previews.some((p) => p.workflows.length > 0 && !p.error) && (
                   <button
                     onClick={handleImportAll}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all text-sm"
+                    className="bg-brand text-dark-bg px-4 py-2 rounded-lg font-semibold hover:bg-brand-light transition-all text-sm"
                   >
                     Importa Tutti ({previews.reduce((sum, p) => sum + (p.error ? 0 : p.workflows.length), 0)} workflow)
                   </button>
@@ -226,20 +226,20 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
                     key={index}
                     className={`border rounded-lg p-4 ${
                       preview.error
-                        ? 'border-red-300 bg-red-50'
+                        ? 'border-red-700 bg-red-900/30'
                         : preview.workflows.length > 0
-                        ? 'border-green-300 bg-green-50'
-                        : 'border-gray-300 bg-white'
+                        ? 'border-green-700 bg-green-900/30'
+                        : 'border-dark-border bg-dark-card'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-800">{preview.file.name}</h4>
-                        <p className="text-xs text-gray-500">{(preview.file.size / 1024).toFixed(1)} KB</p>
+                        <h4 className="font-semibold text-white">{preview.file.name}</h4>
+                        <p className="text-xs text-gray-400">{(preview.file.size / 1024).toFixed(1)} KB</p>
                       </div>
                       <button
                         onClick={() => handleRemovePreview(preview)}
-                        className="text-gray-400 hover:text-red-600 ml-2"
+                        className="text-gray-400 hover:text-red-400 ml-2"
                         title="Rimuovi"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,7 +249,7 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
                     </div>
 
                     {preview.loading && (
-                      <div className="flex items-center text-blue-600 text-sm">
+                      <div className="flex items-center text-brand text-sm">
                         <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path
@@ -263,39 +263,39 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
                     )}
 
                     {preview.error && (
-                      <div className="text-red-600 text-sm">
+                      <div className="text-red-300 text-sm">
                         <strong>Errore:</strong> {preview.error}
                       </div>
                     )}
 
                     {preview.workflows.length > 0 && (
                       <div className="mt-3">
-                        <div className="bg-white border border-gray-200 rounded-lg p-3">
-                          <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                        <div className="bg-dark-hover border border-dark-border rounded-lg p-3">
+                          <div className="grid grid-cols-2 gap-2 text-sm text-gray-300 mb-2">
                             <div>
-                              <span className="font-semibold">Processo:</span> {preview.workflows[0]?.fase || 'N/A'}
+                              <span className="font-semibold text-white">Processo:</span> {preview.workflows[0]?.fase || 'N/A'}
                             </div>
                             <div>
-                              <span className="font-semibold">Workflow estratti:</span> {preview.workflows.length}
+                              <span className="font-semibold text-white">Workflow estratti:</span> {preview.workflows.length}
                             </div>
                             <div>
-                              <span className="font-semibold">Frequenza:</span> {preview.workflows[0]?.frequenza || 0}x/anno
+                              <span className="font-semibold text-white">Frequenza:</span> {preview.workflows[0]?.frequenza || 0}x/anno
                             </div>
                             <div>
-                              <span className="font-semibold">Tempo totale:</span>{' '}
+                              <span className="font-semibold text-white">Tempo totale:</span>{' '}
                               {preview.workflows.reduce((sum, w) => sum + w.tempoMedio, 0)} min
                             </div>
                           </div>
 
                           <details className="mt-2">
-                            <summary className="cursor-pointer text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                            <summary className="cursor-pointer text-brand hover:text-brand-light font-semibold text-sm">
                               Vedi dettagli workflow ({preview.workflows.length})
                             </summary>
                             <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
                               {preview.workflows.map((workflow, idx) => (
-                                <div key={idx} className="bg-gray-50 p-2 rounded text-xs">
-                                  <div className="font-semibold">{workflow.titolo}</div>
-                                  <div className="text-gray-600 mt-1">
+                                <div key={idx} className="bg-dark-hover p-2 rounded text-xs">
+                                  <div className="font-semibold text-white">{workflow.titolo}</div>
+                                  <div className="text-gray-400 mt-1">
                                     <div>Tool: {workflow.tool.join(', ')}</div>
                                     <div>Tempo: {workflow.tempoMedio} min</div>
                                   </div>
@@ -306,9 +306,9 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
 
                           <button
                             onClick={() => handleImportWorkflows(preview)}
-                            className="mt-3 w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all text-sm"
+                            className="mt-3 w-full bg-brand text-dark-bg px-4 py-2 rounded-lg font-semibold hover:bg-brand-light transition-all text-sm"
                           >
-                            ✓ Importa {preview.workflows.length} Workflow
+                            Importa {preview.workflows.length} Workflow
                           </button>
                         </div>
                       </div>
@@ -321,10 +321,10 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
 
           {/* Info Box */}
           {previews.length === 0 && (
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2">📋 Struttura documento richiesta</h4>
-              <p className="text-sm text-blue-800 mb-2">Il parser riconosce automaticamente questi campi:</p>
-              <ul className="text-xs text-blue-700 space-y-1 ml-4 list-disc">
+            <div className="mt-6 bg-brand-50 border border-brand/30 rounded-lg p-4">
+              <h4 className="font-semibold text-brand-light mb-2">Struttura documento richiesta</h4>
+              <p className="text-sm text-brand-light mb-2">Il parser riconosce automaticamente questi campi:</p>
+              <ul className="text-xs text-brand-light space-y-1 ml-4 list-disc">
                 <li>
                   <strong>Nome workflow:</strong> "Quale processo sto mappando?"
                 </li>
@@ -341,11 +341,11 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
+        <div className="border-t border-dark-border p-4 bg-dark-hover">
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-100 transition-all"
+              className="px-6 py-2 border border-dark-border bg-dark-hover rounded-lg font-semibold text-gray-300 hover:bg-dark-card transition-all"
             >
               Chiudi
             </button>

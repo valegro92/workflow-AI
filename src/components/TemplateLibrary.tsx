@@ -21,7 +21,6 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set());
   const [multiSelectMode, setMultiSelectMode] = useState(false);
 
-  // Filtra template in base a categoria e ricerca
   const getFilteredTemplates = () => {
     if (searchQuery.trim() !== '') {
       return searchTemplates(searchQuery);
@@ -77,31 +76,31 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
   };
 
   const colorMap: Record<string, { bg: string; text: string; hover: string; border: string }> = {
-    blue: { bg: 'bg-blue-100', text: 'text-blue-800', hover: 'hover:bg-blue-200', border: 'border-blue-300' },
-    purple: { bg: 'bg-purple-100', text: 'text-purple-800', hover: 'hover:bg-purple-200', border: 'border-purple-300' },
-    green: { bg: 'bg-green-100', text: 'text-green-800', hover: 'hover:bg-green-200', border: 'border-green-300' },
-    yellow: { bg: 'bg-yellow-100', text: 'text-yellow-800', hover: 'hover:bg-yellow-200', border: 'border-yellow-300' },
-    indigo: { bg: 'bg-indigo-100', text: 'text-indigo-800', hover: 'hover:bg-indigo-200', border: 'border-indigo-300' },
-    orange: { bg: 'bg-orange-100', text: 'text-orange-800', hover: 'hover:bg-orange-200', border: 'border-orange-300' },
-    pink: { bg: 'bg-pink-100', text: 'text-pink-800', hover: 'hover:bg-pink-200', border: 'border-pink-300' },
-    gray: { bg: 'bg-gray-100', text: 'text-gray-800', hover: 'hover:bg-gray-200', border: 'border-gray-300' },
+    blue: { bg: 'bg-blue-900/30', text: 'text-blue-300', hover: 'hover:bg-blue-900/40', border: 'border-blue-500/50' },
+    purple: { bg: 'bg-purple-900/30', text: 'text-purple-300', hover: 'hover:bg-purple-900/40', border: 'border-purple-500/50' },
+    green: { bg: 'bg-green-900/30', text: 'text-green-300', hover: 'hover:bg-green-900/40', border: 'border-green-500/50' },
+    yellow: { bg: 'bg-yellow-900/30', text: 'text-yellow-300', hover: 'hover:bg-yellow-900/40', border: 'border-yellow-500/50' },
+    indigo: { bg: 'bg-indigo-900/30', text: 'text-indigo-300', hover: 'hover:bg-indigo-900/40', border: 'border-indigo-500/50' },
+    orange: { bg: 'bg-orange-900/30', text: 'text-orange-300', hover: 'hover:bg-orange-900/40', border: 'border-orange-500/50' },
+    pink: { bg: 'bg-pink-900/30', text: 'text-pink-300', hover: 'hover:bg-pink-900/40', border: 'border-pink-500/50' },
+    gray: { bg: 'bg-gray-700/30', text: 'text-gray-300', hover: 'hover:bg-gray-700/40', border: 'border-gray-500/50' },
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="bg-dark-card rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-dark-border">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4">
+        <div className="bg-dark-hover border-b border-brand/30 text-white px-6 py-4">
           <div className="flex justify-between items-start mb-3">
             <div>
-              <h2 className="text-2xl font-bold">📚 Template Library</h2>
-              <p className="text-sm opacity-90 mt-1">
+              <h2 className="text-2xl font-bold text-white">Template Library</h2>
+              <p className="text-sm text-gray-400 mt-1">
                 {workflowTemplates.length} template pre-configurati per iniziare rapidamente
               </p>
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-200 text-2xl font-bold"
+              className="text-gray-400 hover:text-white text-2xl font-bold transition-colors"
               aria-label="Chiudi"
             >
               ×
@@ -120,27 +119,27 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                 }}
                 className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                   multiSelectMode
-                    ? 'bg-white text-purple-600'
-                    : 'bg-white/20 hover:bg-white/30 text-white'
+                    ? 'bg-brand text-dark-bg'
+                    : 'bg-dark-border hover:bg-dark-card text-gray-300'
                 }`}
               >
-                {multiSelectMode ? '✅ Selezione Multipla' : '☑️ Abilita Selezione Multipla'}
+                {multiSelectMode ? 'Selezione Multipla' : 'Abilita Selezione Multipla'}
               </button>
 
               {multiSelectMode && selectedTemplates.size > 0 && (
                 <>
-                  <div className="bg-white/20 px-3 py-2 rounded-lg">
+                  <div className="bg-brand-50 text-brand-light px-3 py-2 rounded-lg">
                     <span className="font-bold">{selectedTemplates.size}</span> selezionati
                   </div>
                   <button
                     onClick={handleSelectAll}
-                    className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded transition-colors"
+                    className="text-sm bg-dark-border hover:bg-dark-card text-gray-300 px-3 py-1.5 rounded transition-colors"
                   >
                     Seleziona tutti ({filteredTemplates.length})
                   </button>
                   <button
                     onClick={handleClearSelection}
-                    className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded transition-colors"
+                    className="text-sm bg-dark-border hover:bg-dark-card text-gray-300 px-3 py-1.5 rounded transition-colors"
                   >
                     Deseleziona tutti
                   </button>
@@ -151,41 +150,41 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
             {multiSelectMode && selectedTemplates.size > 0 && (
               <button
                 onClick={handleImportSelected}
-                className="bg-white text-purple-600 px-6 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors shadow-lg"
+                className="bg-brand text-dark-bg px-6 py-2 rounded-lg font-bold hover:bg-brand-light transition-colors shadow-lg"
               >
-                📥 Importa {selectedTemplates.size} Template
+                Importa {selectedTemplates.size} Template
               </button>
             )}
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="px-6 py-4 border-b bg-gray-50">
+        <div className="px-6 py-4 border-b border-dark-border bg-dark-card">
           <input
             type="text"
-            placeholder="🔍 Cerca template... (es: 'onboarding', 'email', 'fatture')"
+            placeholder="Cerca template... (es: 'onboarding', 'email', 'fatture')"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
-              setSelectedCategory(null); // Reset category quando cerco
+              setSelectedCategory(null);
             }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 bg-dark-hover border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
 
         {/* Categories */}
         {!searchQuery && (
-          <div className="px-6 py-4 border-b bg-white overflow-x-auto">
+          <div className="px-6 py-4 border-b border-dark-border bg-dark-card overflow-x-auto">
             <div className="flex gap-2 min-w-max">
               <button
                 onClick={() => setSelectedCategory(null)}
                 className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                   selectedCategory === null
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-brand text-dark-bg'
+                    : 'bg-dark-hover text-gray-300 hover:bg-dark-border'
                 }`}
               >
-                🏠 Tutti ({workflowTemplates.length})
+                Tutti ({workflowTemplates.length})
               </button>
               {templateCategories.map((category) => {
                 const count = getTemplatesByCategory(category.id).length;
@@ -197,7 +196,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                     className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                       selectedCategory === category.id
                         ? `${colors.bg} ${colors.text} border ${colors.border}`
-                        : `bg-gray-100 text-gray-700 ${colors.hover}`
+                        : `bg-dark-hover text-gray-300 ${colors.hover}`
                     }`}
                   >
                     {category.icon} {category.name} ({count})
@@ -209,12 +208,11 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
         )}
 
         {/* Template Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 bg-dark-bg">
           {filteredTemplates.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">Nessun template trovato</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-300 mb-2">Nessun template trovato</h3>
+              <p className="text-gray-400">
                 {searchQuery
                   ? `Nessun risultato per "${searchQuery}"`
                   : 'Nessun template disponibile per questa categoria'}
@@ -230,10 +228,10 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                 return (
                   <div
                     key={template.id}
-                    className={`bg-white border-2 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer relative ${
+                    className={`bg-dark-card border-2 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer relative ${
                       isSelected && multiSelectMode
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-400'
+                        ? 'border-brand bg-brand-50/20'
+                        : 'border-dark-border hover:border-brand/50'
                     }`}
                     onClick={() => {
                       if (multiSelectMode) {
@@ -250,7 +248,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleTemplate(template.id)}
-                          className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                          className="w-5 h-5 text-brand rounded focus:ring-2 focus:ring-brand bg-dark-hover border-dark-border"
                           onClick={(e) => e.stopPropagation()}
                         />
                       </div>
@@ -267,15 +265,15 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                     </div>
 
                     {/* Template Info */}
-                    <h3 className="font-bold text-lg mb-2 text-gray-900">{template.titolo}</h3>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{template.descrizione}</p>
+                    <h3 className="font-bold text-lg mb-2 text-white">{template.titolo}</h3>
+                    <p className="text-sm text-gray-400 mb-3 line-clamp-2">{template.descrizione}</p>
 
                     {/* Template Stats */}
                     <div className="flex gap-2 text-xs text-gray-500 mb-3">
-                      <span>⏱️ {template.workflow.tempoMedio}min</span>
-                      <span>🔁 {template.workflow.frequenza}x/mese</span>
+                      <span>{template.workflow.tempoMedio}min</span>
+                      <span>{template.workflow.frequenza}x/mese</span>
                       <span>
-                        📊 {(template.workflow.tempoMedio * template.workflow.frequenza) / 60}h/mese
+                        {(template.workflow.tempoMedio * template.workflow.frequenza) / 60}h/mese
                       </span>
                     </div>
 
@@ -284,13 +282,13 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                       {template.workflow.tool.slice(0, 3).map((tool, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                          className="px-2 py-0.5 bg-dark-hover text-gray-300 rounded text-xs"
                         >
                           {tool}
                         </span>
                       ))}
                       {template.workflow.tool.length > 3 && (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
+                        <span className="px-2 py-0.5 bg-dark-hover text-gray-300 rounded text-xs">
                           +{template.workflow.tool.length - 3}
                         </span>
                       )}
@@ -302,9 +300,9 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                         e.stopPropagation();
                         handleUseTemplate(template);
                       }}
-                      className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
+                      className="w-full bg-brand text-dark-bg py-2 rounded-lg hover:bg-brand-light transition-colors font-semibold text-sm"
                     >
-                      ✨ Usa questo template
+                      Usa questo template
                     </button>
                   </div>
                 );
@@ -314,13 +312,13 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 border-t flex justify-between items-center">
-          <p className="text-sm text-gray-600">
-            💡 <strong>Tip:</strong> Puoi personalizzare il template dopo averlo selezionato
+        <div className="bg-dark-card px-6 py-4 border-t border-dark-border flex justify-between items-center">
+          <p className="text-sm text-gray-400">
+            <strong className="text-gray-300">Tip:</strong> Puoi personalizzare il template dopo averlo selezionato
           </p>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+            className="px-4 py-2 text-gray-300 hover:bg-dark-hover rounded-lg transition-colors"
           >
             Chiudi
           </button>
@@ -334,16 +332,16 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
           onClick={() => setSelectedTemplate(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            className="bg-dark-card rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-dark-border"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Detail Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4">
+            <div className="bg-dark-hover border-b border-brand/30 text-white px-6 py-4">
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-4xl">{selectedTemplate.icon}</span>
                 <div>
-                  <h3 className="text-2xl font-bold">{selectedTemplate.titolo}</h3>
-                  <p className="text-sm opacity-90">{selectedTemplate.descrizione}</p>
+                  <h3 className="text-2xl font-bold text-white">{selectedTemplate.titolo}</h3>
+                  <p className="text-sm text-gray-400">{selectedTemplate.descrizione}</p>
                 </div>
               </div>
             </div>
@@ -351,15 +349,15 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
             {/* Detail Content */}
             <div className="p-6 space-y-4">
               <div>
-                <h4 className="font-semibold text-gray-700 mb-2">📝 Descrizione Completa</h4>
-                <p className="text-gray-600">{selectedTemplate.workflow.descrizione}</p>
+                <h4 className="font-semibold text-gray-300 mb-2">Descrizione Completa</h4>
+                <p className="text-gray-400">{selectedTemplate.workflow.descrizione}</p>
               </div>
 
               <div>
-                <h4 className="font-semibold text-gray-700 mb-2">🛠️ Tool Utilizzati</h4>
+                <h4 className="font-semibold text-gray-300 mb-2">Tool Utilizzati</h4>
                 <div className="flex flex-wrap gap-2">
                   {selectedTemplate.workflow.tool.map((tool, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm">
+                    <span key={idx} className="px-3 py-1 bg-brand-50 text-brand-light rounded-lg text-sm">
                       {tool}
                     </span>
                   ))}
@@ -368,16 +366,16 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold text-gray-700 mb-2">📥 Input</h4>
-                  <ul className="list-disc list-inside text-sm text-gray-600">
+                  <h4 className="font-semibold text-gray-300 mb-2">Input</h4>
+                  <ul className="list-disc list-inside text-sm text-gray-400">
                     {selectedTemplate.workflow.input.map((item, idx) => (
                       <li key={idx}>{item}</li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-700 mb-2">📤 Output</h4>
-                  <ul className="list-disc list-inside text-sm text-gray-600">
+                  <h4 className="font-semibold text-gray-300 mb-2">Output</h4>
+                  <ul className="list-disc list-inside text-sm text-gray-400">
                     {selectedTemplate.workflow.output.map((item, idx) => (
                       <li key={idx}>{item}</li>
                     ))}
@@ -386,26 +384,26 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
               </div>
 
               <div>
-                <h4 className="font-semibold text-gray-700 mb-2">⚠️ Pain Points</h4>
-                <p className="text-gray-600 text-sm italic">"{selectedTemplate.workflow.painPoints}"</p>
+                <h4 className="font-semibold text-gray-300 mb-2">Pain Points</h4>
+                <p className="text-gray-400 text-sm italic">"{selectedTemplate.workflow.painPoints}"</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 bg-dark-hover p-4 rounded-lg">
                 <div>
-                  <div className="text-sm text-gray-600">Tempo Medio</div>
-                  <div className="text-xl font-bold text-gray-900">
+                  <div className="text-sm text-gray-400">Tempo Medio</div>
+                  <div className="text-xl font-bold text-white">
                     {selectedTemplate.workflow.tempoMedio} min
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600">Frequenza</div>
-                  <div className="text-xl font-bold text-gray-900">
+                  <div className="text-sm text-gray-400">Frequenza</div>
+                  <div className="text-xl font-bold text-white">
                     {selectedTemplate.workflow.frequenza}x / mese
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600">Tempo Totale Mensile</div>
-                  <div className="text-xl font-bold text-blue-600">
+                  <div className="text-sm text-gray-400">Tempo Totale Mensile</div>
+                  <div className="text-xl font-bold text-brand">
                     {((selectedTemplate.workflow.tempoMedio * selectedTemplate.workflow.frequenza) / 60).toFixed(
                       1
                     )}{' '}
@@ -413,25 +411,25 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600">Owner</div>
-                  <div className="text-xl font-bold text-gray-900">{selectedTemplate.workflow.owner}</div>
+                  <div className="text-sm text-gray-400">Owner</div>
+                  <div className="text-xl font-bold text-white">{selectedTemplate.workflow.owner}</div>
                 </div>
               </div>
             </div>
 
             {/* Detail Footer */}
-            <div className="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+            <div className="bg-dark-hover px-6 py-4 border-t border-dark-border flex justify-end gap-3">
               <button
                 onClick={() => setSelectedTemplate(null)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-4 py-2 text-gray-300 hover:bg-dark-border rounded-lg transition-colors"
               >
                 Indietro
               </button>
               <button
                 onClick={() => handleUseTemplate(selectedTemplate)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                className="px-6 py-2 bg-brand text-dark-bg rounded-lg hover:bg-brand-light transition-colors font-semibold"
               >
-                ✨ Usa questo template
+                Usa questo template
               </button>
             </div>
           </div>

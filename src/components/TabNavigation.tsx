@@ -7,78 +7,76 @@ interface TabNavigationProps {
   evaluationCount: number;
 }
 
+const steps = [
+  { step: 1, label: 'Panoramica', description: 'Dashboard workflow' },
+  { step: 2, label: 'Mappatura', description: 'Aggiungi workflow' },
+  { step: 3, label: 'Valutazione', description: 'Analizza con AI' },
+  { step: 4, label: 'Risultati', description: 'Report e piano' },
+];
+
 export const TabNavigation: React.FC<TabNavigationProps> = ({
   currentStep,
   onStepChange,
   workflowCount,
   evaluationCount,
 }) => {
-  const tabs = [
-    {
-      step: 1,
-      icon: '📝',
-      label: 'Workflow',
-      count: workflowCount,
-      description: 'Mappa processi'
-    },
-    {
-      step: 2,
-      icon: '⚖️',
-      label: 'Valuta',
-      count: evaluationCount,
-      description: 'Analizza automazione'
-    },
-    {
-      step: 3,
-      icon: '📊',
-      label: 'Risultati',
-      count: null,
-      description: 'Dashboard e export'
-    },
-  ];
+  const isCompleted = (step: number) => {
+    if (step === 1) return true;
+    if (step === 2) return workflowCount > 0;
+    if (step === 3) return evaluationCount > 0 && evaluationCount >= workflowCount && workflowCount > 0;
+    return false;
+  };
 
   return (
-    <div className="bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => {
-            const isActive = currentStep === tab.step;
+    <div className="bg-dark-card border-b border-dark-border">
+      <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="flex items-center">
+          {steps.map((s, index) => {
+            const active = currentStep === s.step;
+            const completed = isCompleted(s.step) && !active && currentStep > s.step;
+            const future = !active && !completed;
 
             return (
-              <button
-                key={tab.step}
-                onClick={() => onStepChange(tab.step)}
-                className={`
-                  flex items-center gap-2 px-6 py-4 border-b-2 transition-all whitespace-nowrap
-                  ${isActive
-                    ? 'border-blue-600 text-blue-600 font-semibold bg-blue-50'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <span className="text-xl">{tab.icon}</span>
-                <div className="flex flex-col items-start">
-                  <div className="flex items-center gap-2">
-                    <span className={isActive ? 'font-bold' : 'font-medium'}>
-                      {tab.label}
-                    </span>
-                    {tab.count !== null && tab.count > 0 && (
-                      <span className={`
-                        px-2 py-0.5 rounded-full text-xs font-bold
-                        ${isActive
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-700'
-                        }
-                      `}>
-                        {tab.count}
-                      </span>
+              <React.Fragment key={s.step}>
+                {/* Connector line */}
+                {index > 0 && (
+                  <div className={`flex-1 h-0.5 mx-2 ${
+                    currentStep > s.step || (completed && !future) ? 'bg-brand' : 'bg-dark-border'
+                  }`} />
+                )}
+
+                {/* Step circle + label */}
+                <button
+                  onClick={() => onStepChange(s.step)}
+                  className="flex flex-col items-center gap-1 group"
+                >
+                  <div className={`
+                    w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all
+                    ${active
+                      ? 'bg-brand text-dark-bg ring-2 ring-brand ring-offset-2 ring-offset-dark-card'
+                      : completed
+                        ? 'bg-brand text-dark-bg'
+                        : 'bg-dark-hover text-gray-400 group-hover:bg-dark-border group-hover:text-gray-300'
+                    }
+                  `}>
+                    {completed ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      s.step
                     )}
                   </div>
-                  <span className="text-xs text-gray-500 hidden md:block">
-                    {tab.description}
+                  <span className={`text-xs font-medium whitespace-nowrap ${
+                    active ? 'text-brand' : completed ? 'text-white' : 'text-gray-500'
+                  }`}>
+                    {s.label}
                   </span>
-                </div>
-              </button>
+                  <span className="text-[10px] text-gray-500 whitespace-nowrap hidden md:block">
+                    {s.description}
+                  </span>
+                </button>
+              </React.Fragment>
             );
           })}
         </div>

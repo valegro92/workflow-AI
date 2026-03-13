@@ -85,7 +85,7 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
     } else {
       setImportStatus({
         type: 'success',
-        message: `✅ ${importedWorkflows.length} workflow importati con successo!`,
+        message: `${importedWorkflows.length} workflow importati con successo!`,
       });
     }
 
@@ -158,13 +158,13 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-dark-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex justify-between items-center">
+        <div className="bg-dark-hover border-b border-brand/30 text-white px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold">Import / Export Workflow</h2>
           <button
             onClick={onClose}
-            className="text-white hover:text-gray-200 text-2xl font-bold"
+            className="text-gray-400 hover:text-white text-2xl font-bold"
             aria-label="Chiudi"
           >
             ×
@@ -172,40 +172,40 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b">
+        <div className="flex border-b border-dark-border">
           <button
             className={`flex-1 px-6 py-3 font-semibold ${
               activeTab === 'export'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-800'
+                ? 'border-b-2 border-brand text-brand'
+                : 'text-gray-400 hover:text-gray-300'
             }`}
             onClick={() => setActiveTab('export')}
           >
-            📤 Export
+            Export
           </button>
           <button
             className={`flex-1 px-6 py-3 font-semibold ${
               activeTab === 'import'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-800'
+                ? 'border-b-2 border-brand text-brand'
+                : 'text-gray-400 hover:text-gray-300'
             }`}
             onClick={() => setActiveTab('import')}
           >
-            📥 Import
+            Import
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] bg-dark-card text-gray-300">
           {/* Status Message */}
           {importStatus.type && (
             <div
               className={`mb-4 p-4 rounded-lg ${
                 importStatus.type === 'success'
-                  ? 'bg-green-50 border border-green-200 text-green-800'
+                  ? 'bg-green-900/50 border border-green-700 text-green-300'
                   : importStatus.type === 'warning'
-                  ? 'bg-yellow-50 border border-yellow-200 text-yellow-800'
-                  : 'bg-red-50 border border-red-200 text-red-800'
+                  ? 'bg-yellow-900/50 border border-yellow-700 text-yellow-300'
+                  : 'bg-red-900/50 border border-red-700 text-red-300'
               }`}
             >
               <p className="font-semibold">{importStatus.message}</p>
@@ -222,61 +222,61 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
           {/* EXPORT TAB */}
           {activeTab === 'export' && (
             <div className="space-y-4">
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-400 mb-4">
                 Esporta i tuoi {workflows.length} workflow in diversi formati:
               </p>
 
               <button
                 onClick={handleExportCSV}
-                className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-card hover:border-brand hover:bg-dark-hover transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">📄</span>
                   <div className="text-left">
-                    <h3 className="font-semibold">CSV (Comma-Separated Values)</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-semibold text-white">CSV (Comma-Separated Values)</h3>
+                    <p className="text-sm text-gray-400">
                       Compatibile con Excel, Google Sheets, e altri strumenti
                     </p>
                   </div>
                 </div>
-                <span className="text-blue-600 font-semibold">Esporta →</span>
+                <span className="text-brand font-semibold">Esporta →</span>
               </button>
 
               <button
                 onClick={handleExportExcel}
-                className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-card hover:border-brand hover:bg-dark-hover transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">📊</span>
                   <div className="text-left">
-                    <h3 className="font-semibold">Excel (.xlsx)</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-semibold text-white">Excel (.xlsx)</h3>
+                    <p className="text-sm text-gray-400">
                       File Excel nativo con colonne formattate
                     </p>
                   </div>
                 </div>
-                <span className="text-green-600 font-semibold">Esporta →</span>
+                <span className="text-brand font-semibold">Esporta →</span>
               </button>
 
               <button
                 onClick={handleExportJSON}
-                className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
+                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-card hover:border-brand hover:bg-dark-hover transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">🔧</span>
                   <div className="text-left">
-                    <h3 className="font-semibold">JSON Completo</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-semibold text-white">JSON Completo</h3>
+                    <p className="text-sm text-gray-400">
                       Include workflow + valutazioni (per backup completo)
                     </p>
                   </div>
                 </div>
-                <span className="text-purple-600 font-semibold">Esporta →</span>
+                <span className="text-brand font-semibold">Esporta →</span>
               </button>
 
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <p className="text-sm text-gray-600 mb-3">
-                  💡 <strong>Suggerimento:</strong> Usa CSV o Excel per condividere con colleghi o importare in altri strumenti.
+              <div className="mt-8 pt-6 border-t border-dark-border">
+                <p className="text-sm text-gray-400 mb-3">
+                  <strong className="text-gray-300">Suggerimento:</strong> Usa CSV o Excel per condividere con colleghi o importare in altri strumenti.
                   Usa JSON per backup completi che includono anche le valutazioni.
                 </p>
               </div>
@@ -286,7 +286,7 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
           {/* IMPORT TAB */}
           {activeTab === 'import' && (
             <div className="space-y-4">
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-400 mb-4">
                 Importa workflow da file CSV, Excel o JSON:
               </p>
 
@@ -300,17 +300,17 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
                   transition-colors
                   ${
                     isDragging
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                      ? 'border-brand bg-brand-50'
+                      : 'border-dark-border hover:border-gray-500 hover:bg-dark-hover'
                   }
                 `}
                 onClick={() => fileInputRef.current?.click()}
               >
                 <div className="text-5xl mb-4">📁</div>
-                <p className="text-lg font-semibold mb-2">
+                <p className="text-lg font-semibold text-white mb-2">
                   Trascina qui il file o clicca per selezionare
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-400">
                   Formati supportati: CSV, Excel (.xlsx, .xls), JSON
                 </p>
                 <input
@@ -323,19 +323,18 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
               </div>
 
               {/* Template Download */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-brand-50 border border-brand/30 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">💡</span>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-blue-900 mb-1">
+                    <h4 className="font-semibold text-brand-light mb-1">
                       Prima volta che importi?
                     </h4>
-                    <p className="text-sm text-blue-800 mb-3">
+                    <p className="text-sm text-brand-light mb-3">
                       Scarica il template CSV per vedere la struttura corretta dei dati.
                     </p>
                     <button
                       onClick={handleDownloadTemplate}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
+                      className="bg-brand text-dark-bg px-4 py-2 rounded-lg hover:opacity-90 transition-colors text-sm font-semibold"
                     >
                       📥 Scarica Template CSV
                     </button>
@@ -344,12 +343,12 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
               </div>
 
               {/* Import Instructions */}
-              <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
-                <h4 className="font-semibold mb-2">📋 Istruzioni per l'import:</h4>
+              <div className="bg-dark-hover rounded-lg p-4 text-sm text-gray-300">
+                <h4 className="font-semibold mb-2">Istruzioni per l'import:</h4>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Campi obbligatori: titolo, descrizione, tempoMedio, frequenza</li>
                   <li>Array (tool, input, output): separa con virgola (es: "Excel, Word")</li>
-                  <li>Booleani (pii, hitl, citazioni): usa "Sì" o "No"</li>
+                  <li>Booleani (pii, hitl, citazioni): usa "Si" o "No"</li>
                   <li>I workflow importati si <strong>aggiungeranno</strong> a quelli esistenti</li>
                 </ul>
               </div>
@@ -358,10 +357,10 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t">
+        <div className="bg-dark-hover px-6 py-4 flex justify-end gap-3 border-t border-dark-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+            className="px-4 py-2 text-gray-300 hover:bg-dark-border rounded-lg transition-colors"
           >
             Chiudi
           </button>
