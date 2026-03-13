@@ -104,10 +104,12 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       });
     } catch (fallbackError: any) {
       console.error('Fallback AI Chat error:', fallbackError);
-      return res.status(500).json({
-        error: 'Errore AI Chat',
-        details: fallbackError.message,
-      });
+
+      const response: any = { error: 'Errore AI Chat' };
+      if (process.env.NODE_ENV === 'development') {
+        response.details = fallbackError.message;
+      }
+      return res.status(500).json(response);
     }
   }
 }
@@ -208,10 +210,10 @@ async function callGroqAPI(messages: ChatMessage[]): Promise<string> {
  * Chiama OpenRouter API (fallback)
  */
 async function callOpenRouterAPI(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.OPENROUTER_KEY;
 
   if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY non configurata');
+    throw new Error('OPENROUTER_KEY non configurata');
   }
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

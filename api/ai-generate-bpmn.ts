@@ -89,10 +89,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         fallback: true,
       });
     } catch (fallbackError: any) {
-      return res.status(500).json({
-        error: 'Errore generazione BPMN',
-        details: fallbackError.message,
-      });
+      const response: any = { error: 'Errore generazione BPMN' };
+      if (process.env.NODE_ENV === 'development') {
+        response.details = fallbackError.message;
+      }
+      return res.status(500).json(response);
     }
   }
 }
