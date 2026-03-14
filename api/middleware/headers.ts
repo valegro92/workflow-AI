@@ -123,7 +123,7 @@ export function setCSPHeaders(res: VercelResponse): void {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.openrouter.ai https://api.groq.com",
+    "connect-src 'self' https://api.openrouter.ai",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

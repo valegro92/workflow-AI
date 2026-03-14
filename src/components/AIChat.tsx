@@ -50,7 +50,7 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
     }
   };
 
-  const handleKeySaved = (key: string, _groqKey?: string) => {
+  const handleKeySaved = (key: string) => {
     try {
       const saved = localStorage.getItem('ai-collaboration-canvas-data');
       const data = saved ? JSON.parse(saved) : {};

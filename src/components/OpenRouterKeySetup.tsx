@@ -1,22 +1,19 @@
 import { useState } from 'react';
 
 interface OpenRouterKeySetupProps {
-  onKeySaved: (key: string, groqKey?: string) => void;
+  onKeySaved: (key: string) => void;
   onCancel?: () => void;
   inline?: boolean; // true = renders as inline card, false = renders as overlay
-  showGroqKey?: boolean; // true = also ask for Groq key (for audio import)
 }
 
-export default function OpenRouterKeySetup({ onKeySaved, onCancel, inline = false, showGroqKey = false }: OpenRouterKeySetupProps) {
+export default function OpenRouterKeySetup({ onKeySaved, onCancel, inline = false }: OpenRouterKeySetupProps) {
   const [key, setKey] = useState('');
-  const [groqKey, setGroqKey] = useState('');
   const [showKey, setShowKey] = useState(false);
 
   const handleSave = () => {
     const trimmed = key.trim();
-    const trimmedGroq = groqKey.trim();
     if (trimmed) {
-      onKeySaved(trimmed, trimmedGroq || undefined);
+      onKeySaved(trimmed);
     }
   };
 
@@ -69,7 +66,6 @@ export default function OpenRouterKeySetup({ onKeySaved, onCancel, inline = fals
       {/* Input */}
       <div className={`${inline ? '' : 'px-5 pb-5'}`}>
         <div className="relative mb-3">
-          <label className="text-xs text-gray-400 mb-1 block">Chiave OpenRouter</label>
           <input
             type={showKey ? 'text' : 'password'}
             value={key}
@@ -82,7 +78,7 @@ export default function OpenRouterKeySetup({ onKeySaved, onCancel, inline = fals
           <button
             type="button"
             onClick={() => setShowKey(!showKey)}
-            className="absolute right-2 bottom-2.5 text-gray-500 hover:text-gray-300 p-1"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 p-1"
             title={showKey ? 'Nascondi' : 'Mostra'}
           >
             {showKey ? (
@@ -97,33 +93,10 @@ export default function OpenRouterKeySetup({ onKeySaved, onCancel, inline = fals
             )}
           </button>
         </div>
-
-        {showGroqKey && (
-          <div className="mb-3">
-            <label className="text-xs text-gray-400 mb-1 block">
-              Chiave Groq <span className="text-gray-500">(per trascrizione audio)</span>
-            </label>
-            <input
-              type={showKey ? 'text' : 'password'}
-              value={groqKey}
-              onChange={(e) => setGroqKey(e.target.value)}
-              placeholder="gsk_..."
-              className="w-full px-3 py-2.5 bg-dark-hover border border-dark-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand text-sm placeholder-gray-500"
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Ottienila gratis su{' '}
-              <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-brand underline hover:text-brand-light">
-                console.groq.com/keys
-              </a>
-            </p>
-          </div>
-        )}
-
         <div className="flex gap-2">
           <button
             onClick={handleSave}
-            disabled={!key.trim() || (showGroqKey && !groqKey.trim())}
+            disabled={!key.trim()}
             className="flex-1 bg-brand text-dark-bg py-2 px-4 rounded-lg font-semibold hover:bg-brand-light disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
           >
             Salva e continua
@@ -138,7 +111,7 @@ export default function OpenRouterKeySetup({ onKeySaved, onCancel, inline = fals
           )}
         </div>
         <p className="text-xs text-gray-500 mt-2 text-center">
-          Le chiavi restano solo nel tuo browser. Non le salviamo sui nostri server.
+          La chiave resta solo nel tuo browser. Non la salviamo sui nostri server.
         </p>
       </div>
     </div>

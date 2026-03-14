@@ -255,7 +255,7 @@ ${ownersList.map((owner, i) => `      <bpmndi:BPMNShape id="Shape_Lane_${i + 1}"
 }
 
 /**
- * Genera BPMN usando AI (Groq)
+ * Genera BPMN usando AI (OpenRouter)
  */
 async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<string> {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

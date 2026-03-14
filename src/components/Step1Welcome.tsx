@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import OpenRouterKeySetup from './OpenRouterKeySetup';
 
 export const Step1Welcome: React.FC = () => {
-  const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows, setOpenRouterKey, setGroqKey } = useAppContext();
+  const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows, setOpenRouterKey } = useAppContext();
   const [showROI, setShowROI] = useState(false);
   const [costoInput, setCostoInput] = useState<string>(
     state.costoOrario ? state.costoOrario.toString() : ''
@@ -11,34 +11,92 @@ export const Step1Welcome: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [showKeySetup, setShowKeySetup] = useState(false);
-  const [pendingAudioFile, setPendingAudioFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processAudioFile = async (file: File) => {
+  // Dictation state
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [pendingTranscript, setPendingTranscript] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Start/stop live dictation using Web Speech API (free, no server needed)
+  const toggleDictation = useCallback(() => {
+    if (isRecording) {
+      // Stop recording
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setUploadStatus('Il tuo browser non supporta la dettatura vocale. Usa Chrome o Edge.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'it-IT';
+
+    let finalTranscript = transcript;
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript + ' ';
+        } else {
+          interim += event.results[i][0].transcript;
+        }
+      }
+      setTranscript(finalTranscript + interim);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error !== 'no-speech') {
+        setUploadStatus(`Errore dettatura: ${event.error}`);
+      }
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setTranscript(finalTranscript);
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+    setUploadStatus('');
+  }, [isRecording, transcript]);
+
+  // Process transcript: send to AI for workflow extraction
+  const processTranscript = async (text: string) => {
+    if (!text || text.trim().length < 20) {
+      setUploadStatus('Trascrizione troppo breve. Dettata almeno qualche frase sui tuoi processi.');
+      return;
+    }
+
+    if (!state.openRouterKey) {
+      setPendingTranscript(text);
+      setShowKeySetup(true);
+      return;
+    }
+
     setIsProcessing(true);
-    setUploadStatus('Trascrizione audio in corso...');
+    setUploadStatus('Estrazione workflow dalla trascrizione...');
 
     try {
-      // Check file size client-side (max 4MB to stay within Vercel body limit)
-      if (file.size > 4 * 1024 * 1024) {
-        throw new Error('File troppo grande. Massimo 4MB per la trascrizione. Comprimi il file audio o usa un formato più leggero (es. MP3 a basso bitrate).');
-      }
-
-      const formData = new FormData();
-      formData.append('audio', file);
-
-      const headers: Record<string, string> = {};
-      if (state.openRouterKey) {
-        headers['X-OpenRouter-Key'] = state.openRouterKey;
-      }
-      if (state.groqKey) {
-        headers['X-Groq-Key'] = state.groqKey;
-      }
-
       const response = await fetch('/api/process-audio', {
         method: 'POST',
-        headers,
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(state.openRouterKey ? { 'X-OpenRouter-Key': state.openRouterKey } : {}),
+        },
+        body: JSON.stringify({ transcript: text }),
       });
 
       if (!response.ok) {
@@ -54,75 +112,99 @@ export const Step1Welcome: React.FC = () => {
       }
 
       const data = await response.json();
-      setUploadStatus('Estrazione workflow in corso...');
 
       if (data.workflows && data.workflows.length > 0) {
         bulkAddWorkflows(data.workflows);
         setUploadStatus(`${data.workflows.length} workflow importati con successo!`);
+        setTranscript('');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        setUploadStatus('Nessun workflow trovato nella trascrizione');
+        setUploadStatus('Nessun workflow trovato nella trascrizione. Prova a descrivere i processi in modo piu\' dettagliato.');
       }
     } catch (error: any) {
-      console.error('Error processing audio:', error);
+      console.error('Error processing transcript:', error);
       setUploadStatus(`Errore: ${error.message}`);
     } finally {
       setIsProcessing(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
-  const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/wav'];
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|mp4|m4a|wav)$/i)) {
-      setUploadStatus('Formato file non valido. Usa MP3, MP4, M4A o WAV');
-      return;
-    }
-
-    if (file.size > 4 * 1024 * 1024) {
-      setUploadStatus('File troppo grande. Massimo 4MB. Comprimi il file o usa MP3 a basso bitrate.');
-      return;
-    }
-
-    // If no OpenRouter or Groq key, show setup modal and save file for later
-    if (!state.openRouterKey || !state.groqKey) {
-      setPendingAudioFile(file);
-      setShowKeySetup(true);
-      return;
-    }
-
-    await processAudioFile(file);
-  };
-
-  const handleKeySaved = (key: string, groqApiKey?: string) => {
+  const handleKeySaved = (key: string) => {
     setOpenRouterKey(key);
-    if (groqApiKey) {
-      setGroqKey(groqApiKey);
-    }
     setShowKeySetup(false);
-    if (pendingAudioFile) {
-      const file = pendingAudioFile;
-      setPendingAudioFile(null);
-      // Wait for state to update before processing
-      setTimeout(() => processAudioFile(file), 100);
+    if (pendingTranscript) {
+      const text = pendingTranscript;
+      setPendingTranscript(null);
+      setTimeout(() => processTranscript(text), 100);
     }
   };
 
   useEffect(() => {
-    if (!uploadStatus || uploadStatus.startsWith('Errore') || uploadStatus.startsWith('Nessun') || uploadStatus.startsWith('Formato') || uploadStatus.startsWith('File troppo')) {
+    if (!uploadStatus || uploadStatus.startsWith('Errore') || uploadStatus.startsWith('Nessun') || uploadStatus.startsWith('Formato') || uploadStatus.startsWith('File troppo') || uploadStatus.startsWith('Trascrizione troppo') || uploadStatus.startsWith('Il tuo browser')) {
       return;
     }
     const timer = setTimeout(() => setUploadStatus(''), 5000);
     return () => clearTimeout(timer);
   }, [uploadStatus]);
 
+  // Cleanup speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
   const evaluatedCount = Object.keys(state.evaluations).length;
   const hasWorkflows = state.workflows.length > 0;
+
+  // Dictation section component (reused in both views)
+  const DictationSection = () => (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <button
+          onClick={toggleDictation}
+          disabled={isProcessing}
+          className={`flex-1 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${
+            isRecording
+              ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+              : 'bg-dark-card border border-dark-border hover:border-brand text-white'
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+          <span>{isRecording ? 'Stop Dettatura' : 'Inizia Dettatura'}</span>
+        </button>
+        {transcript && !isRecording && (
+          <button
+            onClick={() => processTranscript(transcript)}
+            disabled={isProcessing}
+            className="bg-brand hover:bg-brand-light text-dark-bg font-bold py-3 px-4 rounded-lg transition-all disabled:opacity-50"
+          >
+            {isProcessing ? 'Elaborazione...' : 'Estrai Workflow'}
+          </button>
+        )}
+      </div>
+      {(transcript || isRecording) && (
+        <div className="bg-dark-hover border border-dark-border rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Trascrizione {isRecording ? '(in corso...)' : ''}</p>
+          <p className="text-sm text-gray-300 min-h-[2rem]">
+            {transcript || (isRecording ? 'Parla ora...' : '')}
+          </p>
+        </div>
+      )}
+      {transcript && !isRecording && (
+        <button
+          onClick={() => setTranscript('')}
+          className="text-xs text-gray-500 hover:text-gray-300"
+        >
+          Cancella trascrizione
+        </button>
+      )}
+    </div>
+  );
 
   // Onboarding view for first-time users
   if (!hasWorkflows) {
@@ -198,7 +280,6 @@ export const Step1Welcome: React.FC = () => {
 
           <button
             onClick={() => {
-              // Trigger template library via custom event
               window.dispatchEvent(new CustomEvent('openTemplateLibrary'));
             }}
             className="bg-dark-card border-2 border-brand/40 hover:border-brand text-white font-bold py-6 px-6 rounded-xl transition-all flex flex-col items-center gap-3"
@@ -211,30 +292,24 @@ export const Step1Welcome: React.FC = () => {
           </button>
 
           <div className="bg-dark-card border-2 border-dark-border hover:border-brand/40 text-white font-bold py-6 px-6 rounded-xl transition-all flex flex-col items-center gap-3">
-            <label htmlFor="audio-upload-onboarding" className={`flex flex-col items-center gap-3 cursor-pointer w-full ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-              <span className="text-lg">{isProcessing ? 'Elaborazione...' : 'Importa da Audio'}</span>
-              <span className="text-sm text-gray-400 font-normal">Carica una registrazione</span>
-            </label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".mp3,.mp4,.m4a,.wav,audio/*"
-              onChange={handleAudioUpload}
-              disabled={isProcessing}
-              className="hidden"
-              id="audio-upload-onboarding"
-            />
+            <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            <span className="text-lg">Dettatura Vocale</span>
+            <span className="text-sm text-gray-400 font-normal">Descrivi i tuoi processi a voce</span>
           </div>
+        </div>
+
+        {/* Dictation Section */}
+        <div className="mb-8">
+          <DictationSection />
         </div>
 
         {/* Upload Status */}
         {uploadStatus && (
           <div className={`p-4 rounded-lg text-sm font-medium text-center ${
             uploadStatus.includes('successo') ? 'bg-green-900/50 text-green-300 border border-green-700' :
-            uploadStatus.startsWith('Errore') || uploadStatus.startsWith('Formato') || uploadStatus.startsWith('File troppo') ? 'bg-red-900/50 text-red-300 border border-red-700' :
+            uploadStatus.startsWith('Errore') || uploadStatus.startsWith('Il tuo browser') || uploadStatus.startsWith('Trascrizione troppo') ? 'bg-red-900/50 text-red-300 border border-red-700' :
             uploadStatus.startsWith('Nessun') ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-700' :
             'bg-brand-50 text-brand-light border border-brand/30'
           }`}>
@@ -245,7 +320,7 @@ export const Step1Welcome: React.FC = () => {
         {showKeySetup && (
           <OpenRouterKeySetup
             onKeySaved={handleKeySaved}
-            onCancel={() => { setShowKeySetup(false); setPendingAudioFile(null); }}
+            onCancel={() => { setShowKeySetup(false); setPendingTranscript(null); }}
           />
         )}
       </div>
@@ -311,38 +386,58 @@ export const Step1Welcome: React.FC = () => {
           <span>Aggiungi Workflow</span>
         </button>
 
-        <label
-          htmlFor="audio-upload"
-          className={`
-            text-white font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-3 cursor-pointer
-            ${isProcessing
-              ? 'bg-dark-hover cursor-not-allowed'
-              : 'bg-dark-card border border-dark-border hover:border-brand'
-            }
-          `}
+        <button
+          onClick={toggleDictation}
+          disabled={isProcessing}
+          className={`font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-3 ${
+            isRecording
+              ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+              : 'bg-dark-card border border-dark-border hover:border-brand text-white'
+          }`}
         >
           <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
           </svg>
-          <span>{isProcessing ? 'Elaborazione...' : 'Importa da Audio'}</span>
-        </label>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".mp3,.mp4,.m4a,.wav,audio/*"
-          onChange={handleAudioUpload}
-          disabled={isProcessing}
-          className="hidden"
-          id="audio-upload"
-        />
+          <span>{isRecording ? 'Stop Dettatura' : 'Dettatura Vocale'}</span>
+        </button>
       </div>
+
+      {/* Dictation transcript */}
+      {(transcript || isRecording) && (
+        <div className="mb-6">
+          <div className="bg-dark-hover border border-dark-border rounded-lg p-3 mb-2">
+            <p className="text-xs text-gray-500 mb-1">Trascrizione {isRecording ? '(in corso...)' : ''}</p>
+            <p className="text-sm text-gray-300 min-h-[2rem]">
+              {transcript || 'Parla ora...'}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {!isRecording && transcript && (
+              <>
+                <button
+                  onClick={() => processTranscript(transcript)}
+                  disabled={isProcessing}
+                  className="bg-brand hover:bg-brand-light text-dark-bg font-semibold py-2 px-4 rounded-lg transition-all disabled:opacity-50 text-sm"
+                >
+                  {isProcessing ? 'Elaborazione...' : 'Estrai Workflow'}
+                </button>
+                <button
+                  onClick={() => setTranscript('')}
+                  className="text-xs text-gray-500 hover:text-gray-300 px-2"
+                >
+                  Cancella
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Upload Status */}
       {uploadStatus && (
         <div className={`mb-6 p-4 rounded-lg text-sm font-medium text-center ${
           uploadStatus.includes('successo') ? 'bg-green-900/50 text-green-300 border border-green-700' :
-          uploadStatus.startsWith('Errore') || uploadStatus.startsWith('Formato') || uploadStatus.startsWith('File troppo') ? 'bg-red-900/50 text-red-300 border border-red-700' :
+          uploadStatus.startsWith('Errore') || uploadStatus.startsWith('Il tuo browser') || uploadStatus.startsWith('Trascrizione troppo') ? 'bg-red-900/50 text-red-300 border border-red-700' :
           uploadStatus.startsWith('Nessun') ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-700' :
           'bg-brand-50 text-brand-light border border-brand/30'
         }`}>
@@ -492,8 +587,7 @@ export const Step1Welcome: React.FC = () => {
       {showKeySetup && (
         <OpenRouterKeySetup
           onKeySaved={handleKeySaved}
-          onCancel={() => { setShowKeySetup(false); setPendingAudioFile(null); }}
-          showGroqKey={!!pendingAudioFile}
+          onCancel={() => { setShowKeySetup(false); setPendingTranscript(null); }}
         />
       )}
     </div>
