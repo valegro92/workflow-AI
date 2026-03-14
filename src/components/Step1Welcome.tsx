@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import OpenRouterKeySetup from './OpenRouterKeySetup';
 
 export const Step1Welcome: React.FC = () => {
-  const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows, setOpenRouterKey } = useAppContext();
+  const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows, setOpenRouterKey, setGroqKey } = useAppContext();
   const [showROI, setShowROI] = useState(false);
   const [costoInput, setCostoInput] = useState<string>(
     state.costoOrario ? state.costoOrario.toString() : ''
@@ -32,6 +32,9 @@ export const Step1Welcome: React.FC = () => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (state.openRouterKey) {
         headers['X-OpenRouter-Key'] = state.openRouterKey;
+      }
+      if (state.groqKey) {
+        headers['X-Groq-Key'] = state.groqKey;
       }
 
       const response = await fetch('/api/process-audio', {
@@ -88,8 +91,8 @@ export const Step1Welcome: React.FC = () => {
       return;
     }
 
-    // If no OpenRouter key, show setup modal and save file for later
-    if (!state.openRouterKey) {
+    // If no OpenRouter or Groq key, show setup modal and save file for later
+    if (!state.openRouterKey || !state.groqKey) {
       setPendingAudioFile(file);
       setShowKeySetup(true);
       return;
@@ -98,12 +101,16 @@ export const Step1Welcome: React.FC = () => {
     await processAudioFile(file);
   };
 
-  const handleKeySaved = (key: string) => {
+  const handleKeySaved = (key: string, groqApiKey?: string) => {
     setOpenRouterKey(key);
+    if (groqApiKey) {
+      setGroqKey(groqApiKey);
+    }
     setShowKeySetup(false);
     if (pendingAudioFile) {
       const file = pendingAudioFile;
       setPendingAudioFile(null);
+      // Wait for state to update before processing
       setTimeout(() => processAudioFile(file), 100);
     }
   };
@@ -488,6 +495,7 @@ export const Step1Welcome: React.FC = () => {
         <OpenRouterKeySetup
           onKeySaved={handleKeySaved}
           onCancel={() => { setShowKeySetup(false); setPendingAudioFile(null); }}
+          showGroqKey={!!pendingAudioFile}
         />
       )}
     </div>
