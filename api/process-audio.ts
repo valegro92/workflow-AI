@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
-import { withTimeout } from './middleware/timeout';
-import { withCSRF } from './middleware/csrf';
-import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
+import { withTimeout } from './middleware/timeout.js';
+import { withCSRF } from './middleware/csrf.js';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit.js';
 
 // Prompt per estrarre workflows dal transcript
 const EXTRACTION_PROMPT = `Sei un esperto di mappatura processi aziendali.
