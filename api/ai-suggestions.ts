@@ -103,9 +103,9 @@ async function handler(
       addRateLimitHeaders(res, rateLimit.remaining, 5);
     }
 
-    // User-provided key from header (required)
+    // User-provided key from header (required - no server fallback)
     const userKey = req.headers['x-openrouter-key'];
-    const apiKey = typeof userKey === 'string' ? userKey : process.env.OPENROUTER_KEY;
+    const apiKey = typeof userKey === 'string' ? userKey : undefined;
 
     if (!apiKey) {
       return res.status(400).json({

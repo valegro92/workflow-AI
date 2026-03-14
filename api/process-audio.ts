@@ -92,31 +92,36 @@ async function handler(
       addRateLimitHeaders(res, rateLimit.remaining, 5);
     }
 
-    // 2. Check API keys FIRST (before anything else)
-    if (!process.env.GROQ_API_KEY) {
-      console.error('GROQ_API_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
-    }
-    // User-provided key from header, fallback to server env
-    const userKey = req.headers['x-openrouter-key'];
-    const openrouterKey = typeof userKey === 'string' ? userKey : process.env.OPENROUTER_KEY;
+    // 2. Check API keys FIRST - user-provided only, no server fallback
+    const userGroqKey = typeof req.headers['x-groq-key'] === 'string'
+      ? req.headers['x-groq-key']
+      : undefined;
+    const userOpenRouterKey = typeof req.headers['x-openrouter-key'] === 'string'
+      ? req.headers['x-openrouter-key']
+      : undefined;
 
-    if (!openrouterKey) {
-      console.error('No OpenRouter key available (neither user-provided nor server env)');
+    if (!userGroqKey) {
+      return res.status(400).json({
+        error: 'NO_GROQ_KEY',
+        message: 'Per usare l\'import audio serve una chiave Groq gratuita. Vai su console.groq.com per ottenerla.'
+      });
+    }
+
+    if (!userOpenRouterKey) {
       return res.status(400).json({
         error: 'NO_API_KEY',
         message: 'Per usare l\'import audio, inserisci la tua chiave OpenRouter gratuita.'
       });
     }
 
-    // Initialize API clients (must be done inside handler on Vercel)
+    // Initialize API clients with user-provided keys only
     const groq = new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
+      apiKey: userGroqKey,
       baseURL: 'https://api.groq.com/openai/v1',
     });
 
     const openrouter = new OpenAI({
-      apiKey: openrouterKey,
+      apiKey: userOpenRouterKey,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 

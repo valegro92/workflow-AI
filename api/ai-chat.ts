@@ -66,10 +66,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  // User-provided OpenRouter key (required for AI features)
+  // User-provided OpenRouter key (required - no server fallback)
   const userOpenRouterKey = typeof req.headers['x-openrouter-key'] === 'string'
     ? req.headers['x-openrouter-key']
-    : process.env.OPENROUTER_KEY;
+    : undefined;
 
   if (!userOpenRouterKey) {
     return res.status(400).json({
@@ -99,7 +99,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error: any) {
     console.error('AI Chat error:', error);
 
-    // Fallback a OpenRouter se Groq fallisce
+    // Fallback: retry with same user key
     try {
       const systemPrompt = buildSystemPrompt(context);
       const messages: ChatMessage[] = [
@@ -108,7 +108,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         { role: 'user', content: message },
       ];
 
-      const response = await callOpenRouterAPI(messages);
+      const response = await callOpenRouterAPI(messages, userOpenRouterKey);
       return res.status(200).json({
         response,
         timestamp: new Date().toISOString(),
@@ -182,51 +182,13 @@ Rispondi in modo:
 }
 
 /**
- * Chiama Groq API (Llama 3.3 70B - veloce e gratuito)
- */
-async function callGroqAPI(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('GROQ_API_KEY non configurata');
-  }
-
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile', // Velocissimo e gratuito
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      temperature: 0.7,
-      max_tokens: 500, // Risposte concise
-      top_p: 0.9,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Groq API error: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || 'Nessuna risposta disponibile.';
-}
-
-/**
- * Chiama OpenRouter API (fallback)
+ * Chiama OpenRouter API (user key only - no server key)
  */
 async function callOpenRouterAPI(messages: ChatMessage[], userKey?: string): Promise<string> {
-  const apiKey = userKey || process.env.OPENROUTER_KEY;
-
-  if (!apiKey) {
+  if (!userKey) {
     throw new Error('Chiave OpenRouter non disponibile. Inserisci la tua chiave nelle impostazioni.');
   }
+  const apiKey = userKey;
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',

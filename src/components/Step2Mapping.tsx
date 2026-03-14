@@ -110,9 +110,13 @@ export const Step2Mapping: React.FC = () => {
     setAiError('');
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (state.openRouterKey) {
+        headers['X-OpenRouter-Key'] = state.openRouterKey;
+      }
       const response = await fetch('/api/ai-workflow-extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ description: freeTextDescription }),
       });
 

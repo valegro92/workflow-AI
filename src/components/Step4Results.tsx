@@ -17,7 +17,7 @@ const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
 );
 
 export const Step4Results: React.FC = () => {
-  const { state, setCurrentStep, resetApp, saveImplementationPlan, setNomeAzienda, setOpenRouterKey } = useAppContext();
+  const { state, setCurrentStep, resetApp, saveImplementationPlan, setNomeAzienda, setOpenRouterKey, setGroqKey } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('all');
@@ -41,7 +41,7 @@ export const Step4Results: React.FC = () => {
     setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleKeySaved = (key: string) => {
+  const handleKeySaved = (key: string, _groqKey?: string) => {
     setOpenRouterKey(key);
     setShowKeySetup(false);
     // Execute the pending action after key is saved
@@ -1141,6 +1141,29 @@ export const Step4Results: React.FC = () => {
           />
           <p className="text-xs text-gray-500 mt-1">
             La chiave resta nel tuo browser. Viene usata solo per chiamare i modelli AI gratuiti su OpenRouter.
+          </p>
+        </div>
+
+        {/* Input chiave Groq */}
+        <div className="mb-4">
+          <label className="text-sm text-gray-400 mb-1 flex items-center gap-2">
+            <span>Chiave Groq <span className="text-gray-500">(per import audio)</span></span>
+            {state.groqKey && (
+              <span className="inline-flex items-center gap-1 text-green-400 text-xs">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                Configurata
+              </span>
+            )}
+          </label>
+          <input
+            type="password"
+            value={state.groqKey || ''}
+            onChange={(e) => setGroqKey(e.target.value)}
+            placeholder="gsk_..."
+            className="w-full px-4 py-2 bg-dark-hover border border-dark-border rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent font-mono text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Gratis su <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">console.groq.com/keys</a>. Serve per la trascrizione audio (Whisper).
           </p>
         </div>
 
