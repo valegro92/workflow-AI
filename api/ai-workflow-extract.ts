@@ -108,10 +108,10 @@ async function handler(
     // 5-model fallback chain (all free on OpenRouter)
     const models = [
       'google/gemini-2.0-flash-exp:free',
-      'openrouter/hunter-alpha',
-      'nvidia/nemotron-3-super:free',
       'meta-llama/llama-3.3-70b-instruct:free',
       'deepseek/deepseek-r1:free',
+      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'google/gemma-3-27b-it:free',
     ];
     const messages = [
       { role: 'system' as const, content: WORKFLOW_EXTRACTION_PROMPT },

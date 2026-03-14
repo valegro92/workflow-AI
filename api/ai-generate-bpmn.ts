@@ -261,10 +261,10 @@ async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<strin
   // 5-model fallback chain (all free on OpenRouter)
   const models = [
     'google/gemini-2.0-flash-exp:free',
-    'openrouter/hunter-alpha',
-    'nvidia/nemotron-3-super:free',
     'meta-llama/llama-3.3-70b-instruct:free',
     'deepseek/deepseek-r1:free',
+    'mistralai/mistral-small-3.1-24b-instruct:free',
+    'google/gemma-3-27b-it:free',
   ];
 
   for (let i = 0; i < models.length; i++) {
@@ -275,7 +275,7 @@ async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<strin
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
+          'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173',
           'X-Title': 'Workflow AI Analyzer - BPMN Generator',
         },
         body: JSON.stringify({

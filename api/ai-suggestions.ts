@@ -176,10 +176,10 @@ ${workflowSummary}
     // 5-model fallback chain (all free on OpenRouter)
     const models = [
       'deepseek/deepseek-r1:free',
-      'openrouter/hunter-alpha',
-      'nvidia/nemotron-3-super:free',
       'google/gemini-2.0-flash-exp:free',
       'meta-llama/llama-3.3-70b-instruct:free',
+      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'google/gemma-3-27b-it:free',
     ];
 
     let completion;
