@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { exportToPDF, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
+import { exportToPDF, calculateMonthlySavings, calculateROI, generateLocalImplementationPlan } from '../utils/businessLogic';
 import { workflowToBpmn, workflowsToBpmn, BPMNViewer, BPMNModeler } from '../integrations/bpmn';
 
 const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
@@ -16,7 +16,7 @@ const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
 );
 
 export const Step4Results: React.FC = () => {
-  const { state, setCurrentStep, resetApp, saveImplementationPlan, setNomeAzienda } = useAppContext();
+  const { state, setCurrentStep, resetApp, saveImplementationPlan, setNomeAzienda, setOpenRouterKey } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('all');
@@ -60,11 +60,16 @@ export const Step4Results: React.FC = () => {
     setAiError('');
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (state.openRouterKey) {
+        headers['X-OpenRouter-Key'] = state.openRouterKey;
+      }
+
       const response = await fetch('/api/ai-suggestions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           type: 'implementation-plan',
           workflows: state.workflows,
@@ -87,11 +92,22 @@ export const Step4Results: React.FC = () => {
 
       const data = await response.json();
       saveImplementationPlan(data.suggestion);
-      setAiError(''); // Clear any previous errors
+      setAiError('');
 
     } catch (error: any) {
-      console.error('Error generating AI plan:', error);
-      setAiError(error.message);
+      console.error('Error generating AI plan via API, using local fallback:', error);
+      // Fallback: genera piano localmente senza chiamata API
+      const localPlan = generateLocalImplementationPlan(
+        state.workflows,
+        state.evaluations,
+        state.costoOrario
+      );
+      if (localPlan) {
+        saveImplementationPlan(localPlan);
+        setAiError('');
+      } else {
+        setAiError('Nessun workflow valutato disponibile per generare il piano.');
+      }
     } finally {
       setAiLoading(false);
     }
@@ -128,11 +144,16 @@ export const Step4Results: React.FC = () => {
           owner: w.owner,
         }));
 
+      const bpmnHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (state.openRouterKey) {
+        bpmnHeaders['X-OpenRouter-Key'] = state.openRouterKey;
+      }
+
       const response = await fetch('/api/ai-generate-bpmn', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: bpmnHeaders,
         body: JSON.stringify({
           workflow: {
             titolo: workflow.titolo,
@@ -1038,9 +1059,27 @@ export const Step4Results: React.FC = () => {
         </div>
       )}
 
-      {/* Export Section */}
+      {/* Impostazioni AI + Export */}
       <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-bold text-white mb-3">Esporta Report PDF</h3>
+        <h3 className="text-lg font-bold text-white mb-3">Impostazioni</h3>
+        <div className="mb-4">
+          <label className="text-sm text-gray-400 mb-1 block">
+            Chiave OpenRouter (per funzionalita AI: piano, BPMN, chat){' '}
+            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline text-xs">
+              Ottieni chiave gratis
+            </a>
+          </label>
+          <input
+            type="password"
+            value={state.openRouterKey || ''}
+            onChange={(e) => setOpenRouterKey(e.target.value)}
+            placeholder="sk-or-..."
+            className="w-full px-4 py-2 bg-dark-hover border border-dark-border rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent font-mono text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">La chiave resta salvata nel tuo browser, non viene mai inviata a terzi se non OpenRouter.</p>
+        </div>
+        <hr className="border-dark-border mb-4" />
+        <h4 className="text-md font-bold text-white mb-3">Esporta Report PDF</h4>
         <div className="flex flex-col sm:flex-row gap-3 items-end">
           <div className="flex-1">
             <label className="text-sm text-gray-400 mb-1 block">Nome azienda (per il report)</label>

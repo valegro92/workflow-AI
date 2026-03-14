@@ -103,15 +103,20 @@ async function handler(
       addRateLimitHeaders(res, rateLimit.remaining, 5);
     }
 
-    // Check API key
-    if (!process.env.OPENROUTER_KEY) {
-      console.error('OPENROUTER_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration' });
+    // Use user-provided key from header, or fall back to server key
+    const userKey = req.headers['x-openrouter-key'];
+    const apiKey = (typeof userKey === 'string' ? userKey : undefined) || process.env.OPENROUTER_KEY;
+
+    if (!apiKey) {
+      console.error('No OpenRouter API key available (neither user nor server)');
+      return res.status(400).json({
+        error: 'Chiave OpenRouter non configurata. Inserisci la tua chiave API nelle impostazioni per usare le funzionalita AI.'
+      });
     }
 
     // Initialize client inside handler for serverless best practices
     const openrouter = new OpenAI({
-      apiKey: process.env.OPENROUTER_KEY,
+      apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 

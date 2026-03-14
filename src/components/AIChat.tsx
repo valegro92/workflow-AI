@@ -65,9 +65,20 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
       const context = { currentWorkflow, allWorkflows, currentStep };
       const conversationHistory = messages.map((m) => ({ role: m.role, content: m.content }));
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const savedKey = localStorage.getItem('ai-collaboration-canvas-data');
+      if (savedKey) {
+        try {
+          const parsed = JSON.parse(savedKey);
+          if (parsed.openRouterKey) {
+            headers['X-OpenRouter-Key'] = parsed.openRouterKey;
+          }
+        } catch {}
+      }
+
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ message: inputMessage, context, conversationHistory }),
       });
 

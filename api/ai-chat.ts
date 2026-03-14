@@ -66,6 +66,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Message is required' });
   }
 
+  // Extract user-provided OpenRouter key from header
+  const userOpenRouterKey = typeof req.headers['x-openrouter-key'] === 'string'
+    ? req.headers['x-openrouter-key']
+    : undefined;
+
   try {
     // Costruisci system prompt context-aware
     const systemPrompt = buildSystemPrompt(context);
@@ -78,7 +83,13 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     ];
 
     // Chiama API AI (Groq con Llama 3.3 70B - veloce e gratuito)
-    const response = await callGroqAPI(messages);
+    // Se l'utente ha fornito una chiave OpenRouter, usa quella direttamente
+    let response: string;
+    if (userOpenRouterKey) {
+      response = await callOpenRouterAPI(messages, userOpenRouterKey);
+    } else {
+      response = await callGroqAPI(messages);
+    }
 
     return res.status(200).json({
       response,
@@ -209,11 +220,11 @@ async function callGroqAPI(messages: ChatMessage[]): Promise<string> {
 /**
  * Chiama OpenRouter API (fallback)
  */
-async function callOpenRouterAPI(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.OPENROUTER_KEY;
+async function callOpenRouterAPI(messages: ChatMessage[], userKey?: string): Promise<string> {
+  const apiKey = userKey || process.env.OPENROUTER_KEY;
 
   if (!apiKey) {
-    throw new Error('OPENROUTER_KEY non configurata');
+    throw new Error('Chiave OpenRouter non disponibile. Inserisci la tua chiave nelle impostazioni.');
   }
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

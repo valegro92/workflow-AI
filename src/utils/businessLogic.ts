@@ -676,9 +676,128 @@ export function exportToPDF(
   doc.save(filename);
 }
 
-// 9. Get color for time (conditional formatting)
+// 10. Get color for time (conditional formatting)
 export function getTimeColor(timeInMinutes: number): string {
   if (timeInMinutes < 60) return '#28a745'; // verde
   if (timeInMinutes <= 120) return '#ffc107'; // giallo
   return '#dc3545'; // rosso
+}
+
+// 11. Genera piano di implementazione client-side (fallback quando API non disponibile)
+export function generateLocalImplementationPlan(
+  workflows: Workflow[],
+  evaluations: Record<string, Evaluation>,
+  costoOrario?: number
+): string {
+  const evaluated = workflows
+    .filter(w => evaluations[w.id])
+    .sort((a, b) => evaluations[b.id].priorita - evaluations[a.id].priorita);
+
+  if (evaluated.length === 0) return '';
+
+  const stats = calculateStats(workflows, evaluations);
+  const totalTime = stats.totalTime;
+  const totalSavings = costoOrario ? calculateMonthlySavings(totalTime, costoOrario) : null;
+
+  const strategyName = (ev: Evaluation) => ev.strategy.name.replace(/[^\w\sà-ú]/gi, '').trim();
+
+  // Quick wins: alta priorità, bassa complessità
+  const quickWins = evaluated.filter(w => evaluations[w.id].complessita <= 2 && evaluations[w.id].priorita > 50).slice(0, 3);
+  // Medium: complessità media
+  const medium = evaluated.filter(w => evaluations[w.id].complessita > 2 && evaluations[w.id].complessita <= 3).slice(0, 3);
+  // Long term: alta complessità
+  const longTerm = evaluated.filter(w => evaluations[w.id].complessita > 3).slice(0, 3);
+
+  // Se i bucket sono vuoti, distribuiamo per posizione
+  const allSorted = [...evaluated];
+  const quickWinsFinal = quickWins.length > 0 ? quickWins : allSorted.slice(0, Math.min(2, allSorted.length));
+  const mediumFinal = medium.length > 0 ? medium : allSorted.slice(quickWinsFinal.length, quickWinsFinal.length + 2);
+  const longTermFinal = longTerm.length > 0 ? longTerm : allSorted.slice(quickWinsFinal.length + mediumFinal.length, quickWinsFinal.length + mediumFinal.length + 2);
+
+  const piiWorkflows = evaluated.filter(w => workflows.find(wf => wf.id === w.id)?.pii);
+  const hitlFalse = evaluated.filter(w => !workflows.find(wf => wf.id === w.id)?.hitl);
+  const manualWorkflows = evaluated.filter(w => evaluations[w.id].strategy.name.includes('umano'));
+
+  let plan = `## Analisi Overview\n`;
+  plan += `- Workflow totali analizzati: ${evaluated.length}\n`;
+  plan += `- Tempo mensile totale: ${formatMinutes(totalTime)}\n`;
+  if (totalSavings) {
+    plan += `- Risparmio mensile potenziale: ${totalSavings.toFixed(0)} euro\n`;
+  }
+  plan += `- Distribuzione: ${stats.strategyCounts.assistant} Assistente AI, ${stats.strategyCounts.tool} Strumenti, ${stats.strategyCounts.partner} Brainstorming, ${stats.strategyCounts.out} Manuale\n\n`;
+
+  // Quick Wins
+  plan += `## Quick Wins (0-30 giorni)\n`;
+  if (quickWinsFinal.length > 0) {
+    quickWinsFinal.forEach(w => {
+      const ev = evaluations[w.id];
+      const savings = costoOrario ? calculateMonthlySavings(w.tempoTotale, costoOrario) : null;
+      plan += `\n**[${w.id}] ${w.titolo}** (Priorita: ${ev.priorita.toFixed(1)})\n`;
+      plan += `- Strategia: ${strategyName(ev)}\n`;
+      plan += `- Perche e un quick win: complessita ${ev.complessita}/5 con impatto di ${formatMinutes(w.tempoTotale)}/mese\n`;
+      if (ev.strategy.name.includes('Assistente')) {
+        plan += `- Azione: Crea un prompt strutturato con ruolo, input attesi, formato output e regole. Testalo su 5-10 casi reali.\n`;
+      } else if (ev.strategy.name.includes('Strumento')) {
+        plan += `- Azione: Cerca un tool dedicato (Zapier, Make, n8n) che integri ${w.tool.join(', ') || 'i tool attuali'}. Configura e testa.\n`;
+      } else if (ev.strategy.name.includes('Brainstorming')) {
+        plan += `- Azione: Prepara un contesto dettagliato e usa AI come partner di pensiero. Definisci domande aperte e itera.\n`;
+      }
+      if (savings) {
+        plan += `- ROI atteso: ${savings.toFixed(0)} euro/mese\n`;
+      }
+    });
+  } else {
+    plan += `Nessun quick win identificato con i criteri attuali.\n`;
+  }
+
+  // Medium Term
+  plan += `\n## Medium Term (30-60 giorni)\n`;
+  if (mediumFinal.length > 0) {
+    mediumFinal.forEach(w => {
+      const ev = evaluations[w.id];
+      plan += `\n**[${w.id}] ${w.titolo}** (Priorita: ${ev.priorita.toFixed(1)})\n`;
+      plan += `- Strategia: ${strategyName(ev)}\n`;
+      plan += `- Complessita: ${ev.complessita}/5 - richiede preparazione e test\n`;
+      if (w.painPoints) plan += `- Pain points da risolvere: ${w.painPoints}\n`;
+    });
+  } else {
+    plan += `Tutti i workflow sono gia stati classificati come quick win o long term.\n`;
+  }
+
+  // Long Term
+  plan += `\n## Long Term (60-90 giorni)\n`;
+  if (longTermFinal.length > 0) {
+    longTermFinal.forEach(w => {
+      const ev = evaluations[w.id];
+      plan += `\n**[${w.id}] ${w.titolo}** (Complessita: ${ev.complessita}/5)\n`;
+      plan += `- Strategia: ${strategyName(ev)}\n`;
+      plan += `- Valore strategico: ${formatMinutes(w.tempoTotale)}/mese di tempo liberato\n`;
+    });
+  }
+
+  // Attenzioni
+  plan += `\n## Attenzioni Critiche\n`;
+  if (piiWorkflows.length > 0) {
+    plan += `- **Workflow con dati personali (PII)**: ${piiWorkflows.map(w => w.id).join(', ')} - Richiede compliance GDPR prima dell'automazione\n`;
+  }
+  if (hitlFalse.length > 0) {
+    plan += `- **Workflow senza supervisione umana**: ${hitlFalse.map(w => w.id).join(', ')} - Valuta se aggiungere controllo umano per workflow critici\n`;
+  }
+  if (manualWorkflows.length > 0) {
+    plan += `- **Workflow "Mantieni umano"**: ${manualWorkflows.map(w => w.id).join(', ')} - Rivaluta periodicamente se nuovi tool AI li rendono automatizzabili\n`;
+  }
+
+  // Raccomandazioni
+  plan += `\n## Raccomandazioni Strategiche\n`;
+  plan += `- Inizia dai quick wins per costruire momentum e dimostrare valore\n`;
+  plan += `- Misura il tempo risparmiato dopo ogni implementazione per validare le stime\n`;
+  plan += `- Rivedi questa analisi ogni 3-6 mesi: il panorama AI evolve rapidamente\n`;
+  plan += `- Forma il team sull'uso degli strumenti AI selezionati\n`;
+  if (costoOrario) {
+    plan += `- Con un costo orario di ${costoOrario} euro, il risparmio totale stimato e di ${totalSavings?.toFixed(0)} euro/mese\n`;
+  }
+
+  plan += `\n---\n*Piano generato automaticamente dal Workflow AI Analyzer - La Cassetta degli AI-trezzi*\n`;
+
+  return plan;
 }
