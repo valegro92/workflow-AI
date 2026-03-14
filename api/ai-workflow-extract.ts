@@ -206,12 +206,18 @@ async function handler(
     console.error('Error type:', error.constructor.name);
     console.error('Error message:', error.message);
 
-    let userMessage = 'Error extracting workflow data';
+    let userMessage = 'Errore durante l\'estrazione del workflow.';
     let statusCode = 500;
 
-    if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('capacity')) {
-      userMessage = 'AI service temporarily unavailable. Please try again.';
+    if (error.status === 401 || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+      userMessage = 'Chiave OpenRouter non valida. Verifica la chiave nelle impostazioni (Step 4).';
+      statusCode = 401;
+    } else if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('capacity')) {
+      userMessage = 'AI temporaneamente non disponibile. Riprova tra qualche minuto.';
       statusCode = 503;
+    } else if (error.status === 402 || error.message?.includes('402')) {
+      userMessage = 'Credito OpenRouter insufficiente. I modelli gratuiti richiedono solo un account, nessun credito.';
+      statusCode = 402;
     }
 
     // Don't expose internal error details in production

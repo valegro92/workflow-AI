@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Workflow } from '../types';
 import { calculateTotalTime, generateWorkflowId, getTimeColor } from '../utils/businessLogic';
+import OpenRouterKeySetup from './OpenRouterKeySetup';
 
 const FASI_PREDEFINITE = ['Analisi', 'Produzione', 'Controllo', 'Pianificazione', 'Esecuzione', 'Verifica'];
 
 export const Step2Mapping: React.FC = () => {
-  const { state, addWorkflow, updateWorkflow, deleteWorkflow, setCurrentStep } = useAppContext();
+  const { state, addWorkflow, updateWorkflow, deleteWorkflow, setCurrentStep, setOpenRouterKey } = useAppContext();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [freeTextDescription, setFreeTextDescription] = useState<string>('');
@@ -100,12 +101,20 @@ export const Step2Mapping: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showKeySetup, setShowKeySetup] = useState(false);
 
   const handleAIExtract = async () => {
     if (!freeTextDescription || freeTextDescription.trim().length < 10) {
       setAiError('Inserisci almeno 10 caratteri per descrivere il workflow');
       return;
     }
+
+    // Check for OpenRouter key before calling AI
+    if (!state.openRouterKey) {
+      setShowKeySetup(true);
+      return;
+    }
+
     setAiLoading(true);
     setAiError('');
 
@@ -600,6 +609,16 @@ export const Step2Mapping: React.FC = () => {
         <div className="text-center py-8 text-gray-500">
           <p>Nessun workflow creato. Inizia compilando il form sopra!</p>
         </div>
+      )}
+
+      {showKeySetup && (
+        <OpenRouterKeySetup
+          onKeySaved={(key: string) => {
+            setOpenRouterKey(key);
+            setShowKeySetup(false);
+          }}
+          onCancel={() => setShowKeySetup(false)}
+        />
       )}
     </div>
   );
