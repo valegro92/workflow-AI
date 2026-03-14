@@ -66,12 +66,24 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Workflow with titolo and descrizione required' });
   }
 
+  // User-provided OpenRouter key (required for AI features)
+  const userOpenRouterKey = typeof req.headers['x-openrouter-key'] === 'string'
+    ? req.headers['x-openrouter-key']
+    : process.env.OPENROUTER_KEY;
+
+  if (!userOpenRouterKey) {
+    return res.status(400).json({
+      error: 'NO_API_KEY',
+      message: 'Per generare diagrammi BPMN con AI, inserisci la tua chiave OpenRouter gratuita nelle impostazioni.'
+    });
+  }
+
   try {
     // Costruisci prompt per l'AI
     const prompt = buildBPMNPrompt(workflow, req.body.relatedWorkflows);
 
-    // Chiama AI (Groq per velocità)
-    const bpmnXml = await generateBPMNWithAI(prompt);
+    // Chiama OpenRouter con modelli gratuiti
+    const bpmnXml = await generateBPMNWithAI(prompt, userOpenRouterKey);
 
     return res.status(200).json({
       bpmnXml,
@@ -245,39 +257,29 @@ ${ownersList.map((owner, i) => `      <bpmndi:BPMNShape id="Shape_Lane_${i + 1}"
 /**
  * Genera BPMN usando AI (Groq)
  */
-async function generateBPMNWithAI(prompt: string): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('GROQ_API_KEY non configurata');
-  }
-
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
+      'X-Title': 'Workflow AI Analyzer - BPMN Generator',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'meta-llama/llama-3.3-70b-instruct:free',
       messages: [
-        {
-          role: 'system',
-          content: 'Sei un esperto di BPMN 2.0. Generi sempre XML valido senza spiegazioni.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
+        { role: 'system', content: 'Sei un esperto di BPMN 2.0. Generi sempre XML valido senza spiegazioni.' },
+        { role: 'user', content: prompt },
       ],
-      temperature: 0.2, // Molto bassa per output preciso
-      max_tokens: 5000, // Aumentato per layout complessi e multi-lane
+      temperature: 0.2,
+      max_tokens: 5000,
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Groq API error: ${response.status} - ${error}`);
+    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();

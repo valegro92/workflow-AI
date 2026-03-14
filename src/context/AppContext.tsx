@@ -13,6 +13,7 @@ interface AppContextType {
   addEvaluation: (evaluation: Evaluation) => void;
   updateEvaluation: (workflowId: string, evaluation: Evaluation) => void;
   setNomeAzienda: (nome: string) => void;
+  setOpenRouterKey: (key: string) => void;
   saveImplementationPlan: (plan: string) => void;
   resetApp: () => void;
 }
@@ -180,6 +181,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setState(prev => ({ ...prev, nomeAzienda: nome }));
   };
 
+  const setOpenRouterKey = (key: string) => {
+    setState(prev => ({ ...prev, openRouterKey: key }));
+  };
+
   const saveImplementationPlan = (plan: string) => {
     setState(prev => ({ ...prev, implementationPlan: plan }));
   };
@@ -201,6 +206,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addEvaluation,
         updateEvaluation,
         setNomeAzienda,
+        setOpenRouterKey,
         saveImplementationPlan,
         resetApp
       }}

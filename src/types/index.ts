@@ -58,6 +58,7 @@ export interface AppState {
   workflows: Workflow[];
   evaluations: Record<string, Evaluation>;
   nomeAzienda?: string;          // Nome azienda per report PDF
+  openRouterKey?: string;        // Chiave OpenRouter personale (opzionale)
   costoOrario?: number;          // Costo orario in € (opzionale, per calcolo ROI)
   implementationPlan?: string;   // Piano di implementazione AI generato (markdown)
   stats: {

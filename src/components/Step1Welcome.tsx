@@ -136,7 +136,15 @@ export const Step1Welcome: React.FC = () => {
           </div>
 
           <p className="text-sm text-brand-light">
-            Un regalo per gli iscritti a La Cassetta degli AI-trezzi
+            Un regalo per gli iscritti a{' '}
+            <a
+              href="https://lacassettadegliaitrezzi.substack.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-white font-semibold"
+            >
+              La Cassetta degli AI-trezzi
+            </a>
           </p>
         </div>
 

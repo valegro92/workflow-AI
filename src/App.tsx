@@ -142,9 +142,20 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-dark-card border-t border-dark-border py-3">
+      <footer className="bg-dark-card border-t border-dark-border py-4">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-300 mb-1">
+            Un regalo per gli iscritti a{' '}
+            <a
+              href="https://lacassettadegliaitrezzi.substack.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand hover:text-brand-light hover:underline font-bold"
+            >
+              La Cassetta degli AI-trezzi
+            </a>
+          </p>
+          <p className="text-xs text-gray-500">
             Powered by{' '}
             <a
               href="https://www.linkedin.com/in/valentino-grossi/"

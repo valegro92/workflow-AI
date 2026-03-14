@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { exportToPDF, calculateMonthlySavings, calculateROI } from '../utils/businessLogic';
+import { exportToPDF, calculateMonthlySavings, calculateROI, generateLocalImplementationPlan } from '../utils/businessLogic';
 import { workflowToBpmn, workflowsToBpmn, BPMNViewer, BPMNModeler } from '../integrations/bpmn';
 
 const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
@@ -16,7 +16,7 @@ const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
 );
 
 export const Step4Results: React.FC = () => {
-  const { state, setCurrentStep, resetApp, saveImplementationPlan, setNomeAzienda } = useAppContext();
+  const { state, setCurrentStep, resetApp, saveImplementationPlan, setNomeAzienda, setOpenRouterKey } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('all');
@@ -60,11 +60,16 @@ export const Step4Results: React.FC = () => {
     setAiError('');
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (state.openRouterKey) {
+        headers['X-OpenRouter-Key'] = state.openRouterKey;
+      }
+
       const response = await fetch('/api/ai-suggestions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           type: 'implementation-plan',
           workflows: state.workflows,
@@ -87,11 +92,22 @@ export const Step4Results: React.FC = () => {
 
       const data = await response.json();
       saveImplementationPlan(data.suggestion);
-      setAiError(''); // Clear any previous errors
+      setAiError('');
 
     } catch (error: any) {
-      console.error('Error generating AI plan:', error);
-      setAiError(error.message);
+      console.error('Error generating AI plan via API, using local fallback:', error);
+      // Fallback: genera piano localmente senza chiamata API
+      const localPlan = generateLocalImplementationPlan(
+        state.workflows,
+        state.evaluations,
+        state.costoOrario
+      );
+      if (localPlan) {
+        saveImplementationPlan(localPlan);
+        setAiError('');
+      } else {
+        setAiError('Nessun workflow valutato disponibile per generare il piano.');
+      }
     } finally {
       setAiLoading(false);
     }
@@ -128,11 +144,16 @@ export const Step4Results: React.FC = () => {
           owner: w.owner,
         }));
 
+      const bpmnHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (state.openRouterKey) {
+        bpmnHeaders['X-OpenRouter-Key'] = state.openRouterKey;
+      }
+
       const response = await fetch('/api/ai-generate-bpmn', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: bpmnHeaders,
         body: JSON.stringify({
           workflow: {
             titolo: workflow.titolo,
@@ -462,7 +483,10 @@ export const Step4Results: React.FC = () => {
             )}
           </button>
           <p className="mt-2 text-xs text-gray-400">
-            Analisi intelligente AI - Roadmap 30/60/90 giorni - Quick wins evidenziati
+            {state.openRouterKey
+              ? 'Analisi intelligente AI - Roadmap 30/60/90 giorni - Quick wins evidenziati'
+              : 'Genera un piano base automatico. Per un piano AI avanzato, configura la chiave OpenRouter nelle impostazioni in basso.'
+            }
           </p>
         </div>
       </div>
@@ -1038,9 +1062,57 @@ export const Step4Results: React.FC = () => {
         </div>
       )}
 
-      {/* Export Section */}
+      {/* Configurazione AI + Export */}
       <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-bold text-white mb-3">Esporta Report PDF</h3>
+        {/* Banner chiave mancante */}
+        {!state.openRouterKey && (
+          <div className="bg-yellow-900/30 border border-yellow-600/40 rounded-lg p-4 mb-5">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0">🔑</span>
+              <div className="flex-1">
+                <h4 className="font-bold text-yellow-300 mb-1">Configura le funzionalita AI (gratis)</h4>
+                <p className="text-sm text-yellow-200/80 mb-3">
+                  Per usare il Piano AI, i diagrammi BPMN e la Chat AI, ti serve una chiave OpenRouter.
+                  E' <strong>completamente gratis</strong> — i modelli AI usati non hanno costi.
+                </p>
+                <div className="bg-dark-bg/50 rounded-lg p-3 text-sm text-gray-300 space-y-2">
+                  <p className="font-semibold text-white">Come ottenerla in 30 secondi:</p>
+                  <p>1. Vai su <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline font-semibold">openrouter.ai</a> e crea un account gratuito (anche con Google)</p>
+                  <p>2. Vai su <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline font-semibold">openrouter.ai/keys</a> e clicca "Create Key"</p>
+                  <p>3. Copia la chiave (inizia con <code className="bg-dark-hover px-1 rounded text-brand">sk-or-...</code>) e incollala qui sotto</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Input chiave */}
+        <div className="mb-4">
+          <label className="text-sm text-gray-400 mb-1 flex items-center gap-2">
+            <span>Chiave OpenRouter</span>
+            {state.openRouterKey && (
+              <span className="inline-flex items-center gap-1 text-green-400 text-xs">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                Configurata
+              </span>
+            )}
+          </label>
+          <input
+            type="password"
+            value={state.openRouterKey || ''}
+            onChange={(e) => setOpenRouterKey(e.target.value)}
+            placeholder="sk-or-v1-..."
+            className="w-full px-4 py-2 bg-dark-hover border border-dark-border rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent font-mono text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            La chiave resta nel tuo browser. Viene usata solo per chiamare i modelli AI gratuiti su OpenRouter.
+          </p>
+        </div>
+
+        <hr className="border-dark-border mb-4" />
+
+        {/* Export PDF */}
+        <h4 className="text-md font-bold text-white mb-3">Esporta Report PDF</h4>
         <div className="flex flex-col sm:flex-row gap-3 items-end">
           <div className="flex-1">
             <label className="text-sm text-gray-400 mb-1 block">Nome azienda (per il report)</label>

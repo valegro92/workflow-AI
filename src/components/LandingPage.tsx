@@ -158,6 +158,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
         </div>
       </section>
 
+      {/* Newsletter / Substack */}
+      <section className="bg-gradient-to-r from-brand/10 via-brand/5 to-brand/10 border-y border-brand/20 py-16">
+        <div className="max-w-3xl mx-auto px-4 text-center">
+          <div className="mb-4">
+            <svg className="w-10 h-10 text-brand mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">
+            Questo tool e un regalo per gli iscritti a
+          </h2>
+          <h3 className="text-3xl md:text-4xl font-extrabold text-brand mb-4">
+            La Cassetta degli AI-trezzi
+          </h3>
+          <p className="text-gray-300 mb-6 text-lg max-w-xl mx-auto">
+            La newsletter settimanale con strumenti pratici, prompt, tutorial e strategie per usare l'AI nel lavoro di tutti i giorni.
+          </p>
+          <a
+            href="https://lacassettadegliaitrezzi.substack.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
+          >
+            Iscriviti Gratis alla Newsletter
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <p className="mt-3 text-xs text-gray-500">Gratis, ogni settimana nella tua inbox</p>
+        </div>
+      </section>
+
       {/* CTA finale */}
       <section className="py-20">
         <div className="max-w-3xl mx-auto px-4 text-center">
