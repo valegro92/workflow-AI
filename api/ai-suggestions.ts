@@ -84,8 +84,20 @@ async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const reqId = Math.random().toString(36).substring(2, 8);
+  const log = (level: string, msg: string, data?: any) => {
+    const ts = new Date().toISOString();
+    const extra = data ? ` | ${JSON.stringify(data)}` : '';
+    console.log(`[${ts}] [${reqId}] [SUGGEST] [${level}] ${msg}${extra}`);
+  };
+
   try {
-    console.log('=== AI SUGGESTIONS START ===');
+    log('INFO', 'Request received', {
+      method: req.method,
+      origin: req.headers.origin || 'none',
+      hasApiKey: !!req.headers['x-openrouter-key'],
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+    });
 
     // Rate limiting - 5 requests per minute per IP (AI generation is resource intensive)
     const rateLimit = checkRateLimit(req, {
@@ -95,7 +107,7 @@ async function handler(
     });
 
     if (!rateLimit.allowed) {
-      console.warn(`Rate limit exceeded for AI suggestions`);
+      log('WARN', 'Rate limit exceeded');
       return sendRateLimitError(res, rateLimit.retryAfter || 60);
     }
 
@@ -108,6 +120,7 @@ async function handler(
     const apiKey = typeof userKey === 'string' ? userKey : undefined;
 
     if (!apiKey) {
+      log('WARN', 'No API key provided');
       return res.status(400).json({
         error: 'NO_API_KEY',
         message: 'Per usare le funzionalita AI, inserisci la tua chiave OpenRouter gratuita nelle impostazioni.'
@@ -127,12 +140,16 @@ async function handler(
     const { type, workflows, evaluations, costoOrario } = req.body;
 
     if (!type || !workflows || !evaluations) {
+      log('WARN', 'Missing required data', { hasType: !!type, hasWorkflows: !!workflows, hasEvals: !!evaluations });
       return res.status(400).json({ error: 'Missing required data' });
     }
 
-    console.log(`Request type: ${type}`);
-    console.log(`Workflows: ${workflows.length}`);
-    console.log(`Costo orario: ${costoOrario || 'N/A'}`);
+    log('INFO', 'Processing', {
+      type,
+      workflowCount: workflows.length,
+      costoOrario: costoOrario || 'N/A',
+      keyPrefix: apiKey.substring(0, 8),
+    });
 
     // Prepare data summary for AI
     const workflowSummary = workflows.map((w: WorkflowData, index: number) => {
@@ -196,7 +213,8 @@ ${workflowSummary}
 
     for (let i = 0; i < models.length; i++) {
       try {
-        console.log(`Suggestions: trying model ${i + 1}/${models.length}: ${models[i]}`);
+        log('INFO', `Trying model ${i + 1}/${models.length}: ${models[i]}`);
+        const t0 = Date.now();
         completion = await openrouter.chat.completions.create({
           model: models[i],
           messages: [
@@ -208,18 +226,24 @@ ${workflowSummary}
           temperature: 0.7,
         });
         modelUsed = models[i];
+        log('INFO', `Model succeeded`, { model: modelUsed, elapsed: `${Date.now() - t0}ms` });
         break;
       } catch (err: any) {
-        console.warn(`Suggestions model ${models[i]} failed: ${err.status || err.message}`);
+        log('WARN', `Model failed`, {
+          model: models[i],
+          status: err.status,
+          message: err.message?.substring(0, 200),
+        });
         if (i === models.length - 1) throw err;
       }
     }
 
     // Strip thinking tags from models that use them (e.g., Qwen)
-    const suggestion = (completion!.choices[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    const rawContent = completion!.choices[0]?.message?.content || '';
+    const hadThinkTags = rawContent.includes('<think>');
+    const suggestion = rawContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-    console.log(`✓ AI suggestion completed with ${modelUsed}: ${suggestion.length} chars`);
-    console.log('=== AI SUGGESTIONS SUCCESS ===');
+    log('INFO', 'SUCCESS', { model: modelUsed, suggestionLength: suggestion.length, hadThinkTags });
 
     return res.status(200).json({
       success: true,
@@ -228,9 +252,13 @@ ${workflowSummary}
     });
 
   } catch (error: any) {
-    console.error('=== AI SUGGESTIONS ERROR ===');
-    console.error('Error type:', error.constructor.name);
-    console.error('Error message:', error.message);
+    log('ERROR', 'FAILED', {
+      errorType: error.constructor?.name,
+      status: error.status,
+      code: error.code,
+      message: error.message?.substring(0, 300),
+      stack: error.stack?.split('\n').slice(0, 3).join(' | '),
+    });
 
     // Provide user-friendly error messages
     let userMessage = 'Error generating AI suggestions';
@@ -238,22 +266,18 @@ ${workflowSummary}
 
     if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('capacity')) {
       userMessage = 'OpenRouter è temporaneamente saturo. Riprova tra 5-10 minuti.';
-      statusCode = 503; // Service Unavailable
+      statusCode = 503;
+    } else if (error.status === 401 || error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+      userMessage = 'Chiave OpenRouter non valida. Verifica la chiave nelle impostazioni.';
+      statusCode = 401;
     } else if (error.message?.includes('API key') || error.message?.includes('credentials')) {
-      userMessage = 'Configurazione API non valida. Verifica le chiavi API su Vercel.';
+      userMessage = 'Configurazione API non valida. Verifica le chiavi API.';
     }
 
-    // Don't expose internal error details in production
-    const response: any = {
-      error: userMessage
-    };
-
-    // Only include details in development mode
-    if (process.env.NODE_ENV === 'development') {
-      response.details = error.message;
-    }
-
-    return res.status(statusCode).json(response);
+    return res.status(statusCode).json({
+      error: userMessage,
+      details: `${error.status || 'unknown'}: ${error.message?.substring(0, 200) || 'No details'}`,
+    });
   }
 }
 
