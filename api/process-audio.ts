@@ -113,13 +113,18 @@ async function handler(
       },
     });
 
-    // 5. Extract workflows with 5-model fallback chain (all free on OpenRouter)
+    // 5. Extract workflows with 10-model fallback chain (all free on OpenRouter)
     const models = [
-      'google/gemini-2.0-flash-exp:free',
-      'meta-llama/llama-3.3-70b-instruct:free',
-      'deepseek/deepseek-r1:free',
-      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'nousresearch/hermes-3-llama-3.1-405b:free',
       'google/gemma-3-27b-it:free',
+      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'openai/gpt-oss-20b:free',
+      'google/gemma-3-12b-it:free',
+      'qwen/qwen3-4b:free',
+      'google/gemma-3-4b-it:free',
+      'google/gemma-3n-e4b-it:free',
+      'meta-llama/llama-3.2-3b-instruct:free',
+      'google/gemma-3n-e2b-it:free',
     ];
     const messages = [{ role: 'user' as const, content: EXTRACTION_PROMPT + '\n\n' + transcript }];
 

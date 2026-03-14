@@ -109,13 +109,18 @@ async function handler(
     console.log(`Description length: ${description.length} chars`);
     console.log(`API key starts with: ${apiKey.substring(0, 8)}...`);
 
-    // 5-model fallback chain (all free on OpenRouter)
+    // 10-model fallback chain (all free on OpenRouter, ordered by capability)
     const models = [
-      'google/gemini-2.0-flash-exp:free',
-      'meta-llama/llama-3.3-70b-instruct:free',
-      'deepseek/deepseek-r1:free',
-      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'nousresearch/hermes-3-llama-3.1-405b:free',
       'google/gemma-3-27b-it:free',
+      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'openai/gpt-oss-20b:free',
+      'google/gemma-3-12b-it:free',
+      'qwen/qwen3-4b:free',
+      'google/gemma-3-4b-it:free',
+      'google/gemma-3n-e4b-it:free',
+      'meta-llama/llama-3.2-3b-instruct:free',
+      'google/gemma-3n-e2b-it:free',
     ];
     const messages = [
       { role: 'system' as const, content: WORKFLOW_EXTRACTION_PROMPT },
@@ -252,7 +257,7 @@ async function handler(
 // Export handler with CSRF protection and timeout
 export default withCSRF(
   withTimeout(handler, {
-    timeoutMs: 15000, // 15 seconds
+    timeoutMs: 25000, // 25 seconds (5-model fallback needs more time)
     message: 'Workflow extraction took too long. Please try again.'
   })
 );

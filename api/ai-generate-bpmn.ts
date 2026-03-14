@@ -258,13 +258,18 @@ ${ownersList.map((owner, i) => `      <bpmndi:BPMNShape id="Shape_Lane_${i + 1}"
  * Genera BPMN usando AI (OpenRouter)
  */
 async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<string> {
-  // 5-model fallback chain (all free on OpenRouter)
+  // 10-model fallback chain (all free on OpenRouter, ordered by capability)
   const models = [
-    'google/gemini-2.0-flash-exp:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'deepseek/deepseek-r1:free',
-    'mistralai/mistral-small-3.1-24b-instruct:free',
+    'nousresearch/hermes-3-llama-3.1-405b:free',
     'google/gemma-3-27b-it:free',
+    'mistralai/mistral-small-3.1-24b-instruct:free',
+    'openai/gpt-oss-20b:free',
+    'google/gemma-3-12b-it:free',
+    'qwen/qwen3-4b:free',
+    'google/gemma-3-4b-it:free',
+    'google/gemma-3n-e4b-it:free',
+    'meta-llama/llama-3.2-3b-instruct:free',
+    'google/gemma-3n-e2b-it:free',
   ];
 
   for (let i = 0; i < models.length; i++) {
