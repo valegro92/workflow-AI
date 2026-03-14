@@ -78,14 +78,15 @@ const VoiceImport: React.FC<VoiceImportProps> = ({ onImportComplete, onClose }) 
     setStatus('');
   }, [isRecording, transcript]);
 
-  const processTranscript = async () => {
+  const processTranscript = async (keyOverride?: string) => {
     const text = transcript.trim();
     if (!text || text.length < 20) {
       setStatus('Testo troppo breve. Descrivi almeno un processo in dettaglio.');
       return;
     }
 
-    if (!state.openRouterKey) {
+    const apiKey = keyOverride || state.openRouterKey;
+    if (!apiKey) {
       setShowKeySetup(true);
       return;
     }
@@ -98,7 +99,7 @@ const VoiceImport: React.FC<VoiceImportProps> = ({ onImportComplete, onClose }) 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-OpenRouter-Key': state.openRouterKey,
+          'X-OpenRouter-Key': apiKey,
         },
         body: JSON.stringify({ transcript: text }),
       });
@@ -137,8 +138,8 @@ const VoiceImport: React.FC<VoiceImportProps> = ({ onImportComplete, onClose }) 
   const handleKeySaved = (key: string) => {
     setOpenRouterKey(key);
     setShowKeySetup(false);
-    // Retry processing after key is saved
-    setTimeout(() => processTranscript(), 100);
+    // Retry processing with the key directly (state may not be updated yet)
+    setTimeout(() => processTranscript(key), 100);
   };
 
   return (
@@ -217,7 +218,7 @@ const VoiceImport: React.FC<VoiceImportProps> = ({ onImportComplete, onClose }) 
           {/* Action buttons */}
           <div className="flex gap-2">
             <button
-              onClick={processTranscript}
+              onClick={() => processTranscript()}
               disabled={isProcessing || isRecording || transcript.trim().length < 20}
               className="flex-1 bg-brand hover:bg-brand-light text-dark-bg font-bold py-3 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
