@@ -1,76 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
-import { Readable } from 'stream';
-import Busboy from 'busboy';
 import { withTimeout } from './middleware/timeout';
 import { withCSRF } from './middleware/csrf';
 import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
-
-// Disable Vercel's default body parser to handle multipart ourselves
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-// Convert Buffer to Readable stream with filename
-// Returns a Readable stream with path property for OpenAI SDK
-interface ReadableWithPath extends Readable {
-  path: string;
-}
-
-function bufferToFile(buffer: Buffer, filename: string): ReadableWithPath {
-  const stream = Readable.from(buffer) as ReadableWithPath;
-  stream.path = filename; // OpenAI SDK needs this
-  return stream;
-}
-
-// Parse multipart form data from request
-function parseMultipart(req: VercelRequest): Promise<{ buffer: Buffer; filename: string }> {
-  return new Promise((resolve, reject) => {
-    const busboy = Busboy({
-      headers: req.headers,
-      limits: { fileSize: 4 * 1024 * 1024 }, // 4MB limit
-    });
-    const chunks: Buffer[] = [];
-    let filename = 'audio.mp3';
-    let fileSizeLimitHit = false;
-
-    busboy.on('file', (_fieldname: string, file: Readable, info: { filename: string }) => {
-      if (info.filename) filename = info.filename;
-
-      file.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
-      file.on('limit', () => {
-        fileSizeLimitHit = true;
-      });
-    });
-
-    busboy.on('finish', () => {
-      if (fileSizeLimitHit) {
-        reject(new Error('FILE_TOO_LARGE'));
-        return;
-      }
-      if (chunks.length === 0) {
-        reject(new Error('NO_FILE'));
-        return;
-      }
-      resolve({ buffer: Buffer.concat(chunks), filename });
-    });
-
-    busboy.on('error', (err: Error) => reject(err));
-
-    // Pipe the request into busboy
-    if (req.body && Buffer.isBuffer(req.body)) {
-      // Vercel may have already read the body as buffer
-      const stream = Readable.from(req.body);
-      stream.pipe(busboy);
-    } else {
-      req.pipe(busboy);
-    }
-  });
-}
 
 // Prompt per estrarre workflows dal transcript
 const EXTRACTION_PROMPT = `Sei un esperto di mappatura processi aziendali.
@@ -129,190 +61,100 @@ async function handler(
   }
 
   try {
-    console.log('=== PROCESS AUDIO START ===');
+    console.log('=== PROCESS AUDIO (TRANSCRIPT) START ===');
 
-    // 1. Rate limiting - 5 requests per 5 minutes per IP (audio processing is expensive)
+    // 1. Rate limiting
     const rateLimit = checkRateLimit(req, {
-      maxAttempts: 5,
-      windowMs: 5 * 60 * 1000, // 5 minutes
+      maxAttempts: 10,
+      windowMs: 60 * 1000, // 1 minute
       keyPrefix: 'process-audio:',
     });
 
     if (!rateLimit.allowed) {
-      console.warn(`Rate limit exceeded for audio processing`);
-      return sendRateLimitError(res, rateLimit.retryAfter || 300);
+      console.warn(`Rate limit exceeded for transcript processing`);
+      return sendRateLimitError(res, rateLimit.retryAfter || 60);
     }
 
     if (rateLimit.remaining !== undefined) {
-      addRateLimitHeaders(res, rateLimit.remaining, 5);
+      addRateLimitHeaders(res, rateLimit.remaining, 10);
     }
 
-    // 2. Check API keys FIRST - user-provided only, no server fallback
-    const userGroqKey = typeof req.headers['x-groq-key'] === 'string'
-      ? req.headers['x-groq-key']
-      : undefined;
+    // 2. Check API key - user-provided only
     const userOpenRouterKey = typeof req.headers['x-openrouter-key'] === 'string'
       ? req.headers['x-openrouter-key']
       : undefined;
 
-    if (!userGroqKey) {
-      return res.status(400).json({
-        error: 'NO_GROQ_KEY',
-        message: 'Per usare l\'import audio serve una chiave Groq gratuita. Vai su console.groq.com per ottenerla.'
-      });
-    }
-
     if (!userOpenRouterKey) {
       return res.status(400).json({
         error: 'NO_API_KEY',
-        message: 'Per usare l\'import audio, inserisci la tua chiave OpenRouter gratuita.'
+        message: 'Per usare questa funzione, inserisci la tua chiave OpenRouter gratuita.'
       });
     }
 
-    // Initialize API clients with user-provided keys only
-    const groq = new OpenAI({
-      apiKey: userGroqKey,
-      baseURL: 'https://api.groq.com/openai/v1',
-    });
+    // 3. Parse transcript from request body
+    const { transcript } = req.body || {};
 
+    if (!transcript || typeof transcript !== 'string' || transcript.trim().length < 20) {
+      return res.status(400).json({
+        error: 'Trascrizione troppo breve. Descrivi i tuoi processi in modo più dettagliato.'
+      });
+    }
+
+    console.log(`Transcript length: ${transcript.length} chars`);
+    console.log(`Preview: ${transcript.substring(0, 100)}...`);
+
+    // 4. Initialize OpenRouter client
     const openrouter = new OpenAI({
       apiKey: userOpenRouterKey,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 
-    console.log('✓ API clients initialized');
-
-    // 2. Parse multipart form data (or fallback to JSON for backwards compat)
-    console.log('Parsing request body...');
-    let audioBuffer: Buffer;
-    let filename: string;
-
-    const contentType = req.headers['content-type'] || '';
-
-    if (contentType.includes('multipart/form-data')) {
-      // FormData upload (preferred - no base64 overhead)
-      try {
-        const parsed = await parseMultipart(req);
-        audioBuffer = parsed.buffer;
-        filename = parsed.filename;
-      } catch (parseErr: any) {
-        if (parseErr.message === 'FILE_TOO_LARGE') {
-          return res.status(400).json({
-            error: 'File troppo grande. Massimo 4MB. Comprimi il file o usa MP3 a basso bitrate.'
-          });
-        }
-        if (parseErr.message === 'NO_FILE') {
-          return res.status(400).json({ error: 'Nessun file audio ricevuto.' });
-        }
-        throw parseErr;
-      }
-    } else {
-      // Legacy JSON/base64 fallback
-      const { audio, filename: fname } = req.body || {};
-      if (!audio || typeof audio !== 'string') {
-        return res.status(400).json({ error: 'No audio data provided' });
-      }
-      audioBuffer = Buffer.from(audio, 'base64');
-      filename = fname || 'audio.mp3';
-    }
-
-    // Check file size (4MB limit)
-    if (audioBuffer.length > 4 * 1024 * 1024) {
-      console.error(`File too large: ${audioBuffer.length} bytes`);
-      return res.status(400).json({
-        error: 'File troppo grande. Massimo 4MB. Comprimi il file o usa MP3 a basso bitrate.'
-      });
-    }
-
-    console.log(`Filename: ${filename}`);
-    console.log(`✓ Audio buffer: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
-
-    // 3. Transcribe audio con Groq Whisper
-    console.log('Creating audio stream for Groq...');
-    const audioFile = bufferToFile(audioBuffer, filename || 'audio.mp3');
-    console.log('Calling Groq Whisper API...');
-
-    const transcription = await groq.audio.transcriptions.create({
-      file: audioFile,
-      model: 'whisper-large-v3-turbo',
-      language: 'it', // Forza italiano
-      response_format: 'text',
-    });
-
-    console.log(`✓ Transcription completed: ${transcription.length} chars`);
-    console.log(`Preview: ${transcription.substring(0, 100)}...`);
-
-    // 4. Extract workflows con OpenRouter + Gemini Flash (with fallback)
-    console.log('Calling OpenRouter for workflow extraction...');
-
+    // 5. Extract workflows with fallback model
     let completion;
-    let modelUsed = 'google/gemini-2.0-flash-exp:free';
+    const primaryModel = 'google/gemini-2.0-flash-exp:free';
+    const fallbackModel = 'meta-llama/llama-3.3-70b-instruct:free';
+    let modelUsed = primaryModel;
 
     try {
-      console.log('Trying primary model: google/gemini-2.0-flash-exp:free');
+      console.log(`Trying primary model: ${primaryModel}`);
       completion = await openrouter.chat.completions.create({
-        model: 'google/gemini-2.0-flash-exp:free',
-        messages: [
-          {
-            role: 'user',
-            content: EXTRACTION_PROMPT + '\n\n' + transcription,
-          },
-        ],
+        model: primaryModel,
+        messages: [{ role: 'user', content: EXTRACTION_PROMPT + '\n\n' + transcript }],
         response_format: { type: 'json_object' },
       });
     } catch (primaryError: any) {
-      // If rate limited (429) or capacity issue, try fallback model
-      if (primaryError.status === 429 || primaryError.message?.includes('rate') || primaryError.message?.includes('capacity')) {
-        console.log('Primary model saturated (429), trying fallback: meta-llama/llama-3.3-70b-instruct:free');
-        modelUsed = 'meta-llama/llama-3.3-70b-instruct:free';
-
-        completion = await openrouter.chat.completions.create({
-          model: 'meta-llama/llama-3.3-70b-instruct:free',
-          messages: [
-            {
-              role: 'user',
-              content: EXTRACTION_PROMPT + '\n\n' + transcription,
-            },
-          ],
-          response_format: { type: 'json_object' },
-        });
-      } else {
-        // Re-throw if not a rate limit error
-        throw primaryError;
-      }
+      console.warn(`Primary model failed (${primaryError.status || primaryError.message}), trying fallback: ${fallbackModel}`);
+      modelUsed = fallbackModel;
+      completion = await openrouter.chat.completions.create({
+        model: fallbackModel,
+        messages: [{ role: 'user', content: EXTRACTION_PROMPT + '\n\n' + transcript }],
+        response_format: { type: 'json_object' },
+      });
     }
 
     const extractedText = completion.choices[0]?.message?.content || '{}';
-    console.log(`✓ Extraction completed with ${modelUsed}: ${extractedText.length} chars`);
-    console.log(`Preview: ${extractedText.substring(0, 150)}...`);
+    console.log(`Extraction completed with ${modelUsed}: ${extractedText.length} chars`);
 
-    // 5. Parse AI response with error handling
+    // 6. Parse AI response
     let result;
     try {
       result = JSON.parse(extractedText);
     } catch (parseError: any) {
-      console.error('=== JSON PARSE ERROR ===');
-      console.error('Parse error:', parseError.message);
-      console.error('Raw AI response:', extractedText);
-
+      console.error('JSON parse error:', parseError.message);
+      console.error('Raw AI response:', extractedText.substring(0, 500));
       return res.status(500).json({
-        error: "L'AI non ha prodotto un JSON valido. Riprova con un audio più chiaro.",
-        details: `JSON parse error: ${parseError.message}`,
-        rawResponse: extractedText.substring(0, 500), // First 500 chars for debugging
+        error: "L'AI non ha prodotto un JSON valido. Riprova con una descrizione più chiara.",
       });
     }
 
-    // 6. Validate and transform workflows
+    // 7. Validate and transform workflows
     if (!result || !Array.isArray(result.workflows)) {
       console.error('Invalid result structure:', result);
       return res.status(500).json({
         error: "L'AI ha restituito una struttura dati non valida.",
-        details: 'Expected object with workflows array',
-        received: typeof result,
       });
     }
 
-    // Validate and sanitize workflow data from AI
     interface WorkflowInput {
       titolo?: string;
       tempoMedio?: number | string;
@@ -324,30 +166,16 @@ async function handler(
     }
 
     const workflows = result.workflows.map((w: WorkflowInput, index: number) => {
-      // Validate required fields
       if (!w.titolo || !w.tempoMedio || !w.frequenza) {
         console.warn(`Skipping invalid workflow at index ${index}: missing required fields`);
         return null;
       }
 
-      // Validate numeric bounds
       const tempoMedio = typeof w.tempoMedio === 'number' ? w.tempoMedio : parseFloat(w.tempoMedio);
       const frequenza = typeof w.frequenza === 'number' ? w.frequenza : parseFloat(w.frequenza);
 
-      if (isNaN(tempoMedio) || tempoMedio < 0 || tempoMedio > 10000) {
-        console.warn(`Skipping invalid workflow: tempoMedio out of bounds (${tempoMedio})`);
-        return null;
-      }
-
-      if (isNaN(frequenza) || frequenza < 0 || frequenza > 1000) {
-        console.warn(`Skipping invalid workflow: frequenza out of bounds (${frequenza})`);
-        return null;
-      }
-
-      // Validate arrays
-      const tool = Array.isArray(w.tool) ? w.tool : [];
-      const input = Array.isArray(w.input) ? w.input : [];
-      const output = Array.isArray(w.output) ? w.output : [];
+      if (isNaN(tempoMedio) || tempoMedio < 0 || tempoMedio > 10000) return null;
+      if (isNaN(frequenza) || frequenza < 0 || frequenza > 1000) return null;
 
       return {
         ...w,
@@ -355,59 +183,47 @@ async function handler(
         tempoMedio,
         frequenza,
         tempoTotale: tempoMedio * frequenza,
-        tool,
-        input,
-        output,
+        tool: Array.isArray(w.tool) ? w.tool : [],
+        input: Array.isArray(w.input) ? w.input : [],
+        output: Array.isArray(w.output) ? w.output : [],
       };
-    }).filter(Boolean); // Remove null entries from validation failures
+    }).filter(Boolean);
 
-    console.log(`✓ Created ${workflows.length} workflows`);
+    console.log(`Created ${workflows.length} workflows`);
     console.log('=== PROCESS AUDIO SUCCESS ===');
 
     return res.status(200).json({
       success: true,
-      transcription,
+      transcription: transcript,
       workflows,
     });
 
   } catch (error: any) {
     console.error('=== PROCESS AUDIO ERROR ===');
-    console.error('Error type:', error.constructor.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
+    console.error('Error:', error.message);
 
-    // Provide user-friendly error messages
-    let userMessage = 'Error processing audio';
+    let userMessage = 'Errore durante l\'elaborazione.';
     let statusCode = 500;
 
-    if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('capacity')) {
-      userMessage = 'OpenRouter è temporaneamente saturo. Riprova tra 5-10 minuti oppure carica un audio più breve.';
-      statusCode = 503; // Service Unavailable
-    } else if (error.message?.includes('transcription') || error.message?.includes('Groq')) {
-      userMessage = 'Errore durante la trascrizione audio. Verifica che il file sia in formato MP3/M4A/WAV valido.';
-    } else if (error.message?.includes('parse') || error.message?.includes('JSON')) {
-      userMessage = "L'AI non è riuscita a estrarre workflow validi dal transcript. Prova con una registrazione più chiara.";
+    if (error.status === 401 || error.message?.includes('401')) {
+      userMessage = 'Chiave OpenRouter non valida. Verificala nelle impostazioni.';
+      statusCode = 401;
+    } else if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('capacity')) {
+      userMessage = 'AI temporaneamente non disponibile. Riprova tra qualche minuto.';
+      statusCode = 503;
     }
 
-    // Don't expose internal error details in production
-    const response: { error: string; details?: string; type?: string } = {
-      error: userMessage
-    };
-
-    // Only include details in development mode
-    if (process.env.NODE_ENV === 'development') {
-      response.details = error.message;
-      response.type = error.constructor.name;
-    }
-
-    return res.status(statusCode).json(response);
+    return res.status(statusCode).json({
+      error: userMessage,
+      details: `${error.status || 'unknown'}: ${error.message?.substring(0, 200) || 'No details'}`,
+    });
   }
 }
 
 // Export handler with CSRF protection and timeout
 export default withCSRF(
   withTimeout(handler, {
-    timeoutMs: 50000, // 50 seconds for audio transcription + AI processing
-    message: 'Audio processing took too long. Try with a shorter audio file.'
+    timeoutMs: 30000, // 30 seconds for AI processing
+    message: 'Elaborazione troppo lenta. Riprova con una descrizione più breve.'
   })
 );

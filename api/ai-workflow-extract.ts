@@ -103,26 +103,50 @@ async function handler(
     }
 
     console.log(`Description length: ${description.length} chars`);
+    console.log(`API key starts with: ${apiKey.substring(0, 8)}...`);
 
-    // Use Gemini 2.0 Flash (fast + free)
-    const model = 'google/gemini-2.0-flash-exp:free';
+    // Try primary model, then fallback
+    const primaryModel = 'google/gemini-2.0-flash-exp:free';
+    const fallbackModel = 'meta-llama/llama-3.3-70b-instruct:free';
+    let model = primaryModel;
+    let completion;
 
-    console.log(`Calling OpenRouter with model: ${model}`);
+    try {
+      console.log(`Trying primary model: ${primaryModel}`);
+      completion = await openrouter.chat.completions.create({
+        model: primaryModel,
+        messages: [
+          {
+            role: 'system',
+            content: WORKFLOW_EXTRACTION_PROMPT,
+          },
+          {
+            role: 'user',
+            content: `DESCRIZIONE WORKFLOW:\n\n${description}`,
+          },
+        ],
+        temperature: 0.3,
+      });
+    } catch (primaryError: any) {
+      console.warn(`Primary model failed (${primaryError.status || primaryError.message}), trying fallback: ${fallbackModel}`);
+      model = fallbackModel;
+      completion = await openrouter.chat.completions.create({
+        model: fallbackModel,
+        messages: [
+          {
+            role: 'system',
+            content: WORKFLOW_EXTRACTION_PROMPT,
+          },
+          {
+            role: 'user',
+            content: `DESCRIZIONE WORKFLOW:\n\n${description}`,
+          },
+        ],
+        temperature: 0.3,
+      });
+    }
 
-    const completion = await openrouter.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: WORKFLOW_EXTRACTION_PROMPT,
-        },
-        {
-          role: 'user',
-          content: `DESCRIZIONE WORKFLOW:\n\n${description}`,
-        },
-      ],
-      temperature: 0.3, // Low temperature for consistent extraction
-    });
+    console.log(`Model used: ${model}`);
 
     const responseText = completion.choices[0]?.message?.content || '';
 
@@ -220,15 +244,11 @@ async function handler(
       statusCode = 402;
     }
 
-    // Don't expose internal error details in production
     const response: any = {
-      error: userMessage
+      error: userMessage,
+      // Include status code from upstream API for debugging
+      details: `${error.status || 'unknown'}: ${error.message?.substring(0, 200) || 'No details'}`,
     };
-
-    // Only include details in development mode
-    if (process.env.NODE_ENV === 'development') {
-      response.details = error.message;
-    }
 
     return res.status(statusCode).json(response);
   }
