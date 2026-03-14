@@ -1,9 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
 import { Readable } from 'stream';
+import Busboy from 'busboy';
 import { withTimeout } from './middleware/timeout';
 import { withCSRF } from './middleware/csrf';
 import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
+
+// Disable Vercel's default body parser to handle multipart ourselves
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 // Convert Buffer to Readable stream with filename
 // Returns a Readable stream with path property for OpenAI SDK
@@ -15,6 +23,53 @@ function bufferToFile(buffer: Buffer, filename: string): ReadableWithPath {
   const stream = Readable.from(buffer) as ReadableWithPath;
   stream.path = filename; // OpenAI SDK needs this
   return stream;
+}
+
+// Parse multipart form data from request
+function parseMultipart(req: VercelRequest): Promise<{ buffer: Buffer; filename: string }> {
+  return new Promise((resolve, reject) => {
+    const busboy = Busboy({
+      headers: req.headers,
+      limits: { fileSize: 4 * 1024 * 1024 }, // 4MB limit
+    });
+    const chunks: Buffer[] = [];
+    let filename = 'audio.mp3';
+    let fileSizeLimitHit = false;
+
+    busboy.on('file', (_fieldname: string, file: Readable, info: { filename: string }) => {
+      if (info.filename) filename = info.filename;
+
+      file.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+      file.on('limit', () => {
+        fileSizeLimitHit = true;
+      });
+    });
+
+    busboy.on('finish', () => {
+      if (fileSizeLimitHit) {
+        reject(new Error('FILE_TOO_LARGE'));
+        return;
+      }
+      if (chunks.length === 0) {
+        reject(new Error('NO_FILE'));
+        return;
+      }
+      resolve({ buffer: Buffer.concat(chunks), filename });
+    });
+
+    busboy.on('error', (err: Error) => reject(err));
+
+    // Pipe the request into busboy
+    if (req.body && Buffer.isBuffer(req.body)) {
+      // Vercel may have already read the body as buffer
+      const stream = Readable.from(req.body);
+      stream.pipe(busboy);
+    } else {
+      req.pipe(busboy);
+    }
+  });
 }
 
 // Prompt per estrarre workflows dal transcript
@@ -127,29 +182,50 @@ async function handler(
 
     console.log('✓ API clients initialized');
 
-    // 2. Parse JSON body
+    // 2. Parse multipart form data (or fallback to JSON for backwards compat)
     console.log('Parsing request body...');
-    const { audio, filename } = req.body;
+    let audioBuffer: Buffer;
+    let filename: string;
 
-    if (!audio || typeof audio !== 'string') {
-      console.error('No audio data in request body');
-      return res.status(400).json({ error: 'No audio data provided' });
+    const contentType = req.headers['content-type'] || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      // FormData upload (preferred - no base64 overhead)
+      try {
+        const parsed = await parseMultipart(req);
+        audioBuffer = parsed.buffer;
+        filename = parsed.filename;
+      } catch (parseErr: any) {
+        if (parseErr.message === 'FILE_TOO_LARGE') {
+          return res.status(400).json({
+            error: 'File troppo grande. Massimo 4MB. Comprimi il file o usa MP3 a basso bitrate.'
+          });
+        }
+        if (parseErr.message === 'NO_FILE') {
+          return res.status(400).json({ error: 'Nessun file audio ricevuto.' });
+        }
+        throw parseErr;
+      }
+    } else {
+      // Legacy JSON/base64 fallback
+      const { audio, filename: fname } = req.body || {};
+      if (!audio || typeof audio !== 'string') {
+        return res.status(400).json({ error: 'No audio data provided' });
+      }
+      audioBuffer = Buffer.from(audio, 'base64');
+      filename = fname || 'audio.mp3';
+    }
+
+    // Check file size (4MB limit)
+    if (audioBuffer.length > 4 * 1024 * 1024) {
+      console.error(`File too large: ${audioBuffer.length} bytes`);
+      return res.status(400).json({
+        error: 'File troppo grande. Massimo 4MB. Comprimi il file o usa MP3 a basso bitrate.'
+      });
     }
 
     console.log(`Filename: ${filename}`);
-    console.log(`Base64 length: ${audio.length} chars`);
-
-    // Decode base64 to buffer
-    console.log('Decoding base64...');
-    const audioBuffer = Buffer.from(audio, 'base64');
-
-    // Check file size (25MB limit)
-    if (audioBuffer.length > 25 * 1024 * 1024) {
-      console.error(`File too large: ${audioBuffer.length} bytes`);
-      return res.status(400).json({ error: 'File too large. Maximum 25MB allowed.' });
-    }
-
-    console.log(`✓ Decoded to buffer: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`✓ Audio buffer: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
 
     // 3. Transcribe audio con Groq Whisper
     console.log('Creating audio stream for Groq...');

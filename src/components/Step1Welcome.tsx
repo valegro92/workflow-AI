@@ -19,17 +19,15 @@ export const Step1Welcome: React.FC = () => {
     setUploadStatus('Trascrizione audio in corso...');
 
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64String = (reader.result as string).split(',')[1];
-          resolve(base64String);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      // Check file size client-side (max 4MB to stay within Vercel body limit)
+      if (file.size > 4 * 1024 * 1024) {
+        throw new Error('File troppo grande. Massimo 4MB per la trascrizione. Comprimi il file audio o usa un formato più leggero (es. MP3 a basso bitrate).');
+      }
 
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const formData = new FormData();
+      formData.append('audio', file);
+
+      const headers: Record<string, string> = {};
       if (state.openRouterKey) {
         headers['X-OpenRouter-Key'] = state.openRouterKey;
       }
@@ -40,7 +38,7 @@ export const Step1Welcome: React.FC = () => {
       const response = await fetch('/api/process-audio', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ audio: base64, filename: file.name }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -86,8 +84,8 @@ export const Step1Welcome: React.FC = () => {
       return;
     }
 
-    if (file.size > 25 * 1024 * 1024) {
-      setUploadStatus('File troppo grande. Massimo 25MB');
+    if (file.size > 4 * 1024 * 1024) {
+      setUploadStatus('File troppo grande. Massimo 4MB. Comprimi il file o usa MP3 a basso bitrate.');
       return;
     }
 
