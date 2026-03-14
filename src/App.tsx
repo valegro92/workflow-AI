@@ -10,6 +10,7 @@ import { Step4Results } from './components/Step4Results';
 import ImportExport from './components/ImportExport';
 import TemplateLibrary from './components/TemplateLibrary';
 import WordImport from './components/WordImport';
+import VoiceImport from './components/VoiceImport';
 import AIChat from './components/AIChat';
 import { LandingPage } from './components/LandingPage';
 
@@ -18,6 +19,7 @@ const AppContent: React.FC = () => {
   const [showImportExport, setShowImportExport] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   const [showWordImport, setShowWordImport] = useState(false);
+  const [showVoiceImport, setShowVoiceImport] = useState(false);
   const [showImportDropdown, setShowImportDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [hasEntered, setHasEntered] = useState(() => {
@@ -34,6 +36,13 @@ const AppContent: React.FC = () => {
     const handler = () => setShowTemplateLibrary(true);
     window.addEventListener('openTemplateLibrary', handler);
     return () => window.removeEventListener('openTemplateLibrary', handler);
+  }, []);
+
+  // Listen for openVoiceImport event from Step1Welcome
+  useEffect(() => {
+    const handler = () => setShowVoiceImport(true);
+    window.addEventListener('openVoiceImport', handler);
+    return () => window.removeEventListener('openVoiceImport', handler);
   }, []);
 
   // Close dropdown when clicking outside
@@ -95,6 +104,12 @@ const AppContent: React.FC = () => {
                     className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover rounded-t-lg transition-colors"
                   >
                     Import da Word
+                  </button>
+                  <button
+                    onClick={() => { setShowVoiceImport(true); setShowImportDropdown(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover transition-colors border-t border-dark-border"
+                  >
+                    Nota Vocale / Testo
                   </button>
                   <button
                     onClick={() => { setShowImportExport(true); setShowImportDropdown(false); }}
@@ -226,6 +241,17 @@ const AppContent: React.FC = () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onClose={() => setShowTemplateLibrary(false)}
+        />
+      )}
+
+      {showVoiceImport && (
+        <VoiceImport
+          onImportComplete={() => {
+            setShowVoiceImport(false);
+            setCurrentStep(1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onClose={() => setShowVoiceImport(false)}
         />
       )}
 

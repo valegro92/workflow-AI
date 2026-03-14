@@ -89,7 +89,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       { role: 'user', content: message },
     ];
 
-    // Chiama OpenRouter con modelli gratuiti
+    // Chiama OpenRouter con fallback chain di modelli gratuiti
     const response = await callOpenRouterAPI(messages, userOpenRouterKey);
 
     return res.status(200).json({
@@ -97,32 +97,23 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('AI Chat error:', error);
+    console.error('AI Chat error:', error.message);
 
-    // Fallback: retry with same user key
-    try {
-      const systemPrompt = buildSystemPrompt(context);
-      const messages: ChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        ...conversationHistory.slice(-10),
-        { role: 'user', content: message },
-      ];
+    let userMessage = 'Errore AI Chat.';
+    let statusCode = 500;
 
-      const response = await callOpenRouterAPI(messages, userOpenRouterKey);
-      return res.status(200).json({
-        response,
-        timestamp: new Date().toISOString(),
-        fallback: true,
-      });
-    } catch (fallbackError: any) {
-      console.error('Fallback AI Chat error:', fallbackError);
-
-      const response: any = { error: 'Errore AI Chat' };
-      if (process.env.NODE_ENV === 'development') {
-        response.details = fallbackError.message;
-      }
-      return res.status(500).json(response);
+    if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+      userMessage = 'Chiave OpenRouter non valida. Verificala nelle impostazioni.';
+      statusCode = 401;
+    } else if (error.message?.includes('429') || error.message?.includes('rate') || error.message?.includes('capacity')) {
+      userMessage = 'AI temporaneamente non disponibile. Riprova tra qualche minuto.';
+      statusCode = 503;
     }
+
+    return res.status(statusCode).json({
+      error: userMessage,
+      details: error.message?.substring(0, 200) || 'No details',
+    });
   }
 }
 
@@ -188,34 +179,57 @@ async function callOpenRouterAPI(messages: ChatMessage[], userKey?: string): Pro
   if (!userKey) {
     throw new Error('Chiave OpenRouter non disponibile. Inserisci la tua chiave nelle impostazioni.');
   }
-  const apiKey = userKey;
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
-      'X-Title': 'Workflow AI Analyzer - Chat Assistant',
-    },
-    body: JSON.stringify({
-      model: 'meta-llama/llama-3.3-70b-instruct:free', // Gratuito
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      temperature: 0.7,
-      max_tokens: 500,
-    }),
-  });
+  // 5-model fallback chain (all free on OpenRouter)
+  const models = [
+    'google/gemini-2.0-flash-exp:free',
+    'openrouter/hunter-alpha',
+    'nvidia/nemotron-3-super:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'deepseek/deepseek-r1:free',
+  ];
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+  for (let i = 0; i < models.length; i++) {
+    try {
+      console.log(`Chat: trying model ${i + 1}/${models.length}: ${models[i]}`);
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userKey}`,
+          'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
+          'X-Title': 'Workflow AI Analyzer - Chat Assistant',
+        },
+        body: JSON.stringify({
+          model: models[i],
+          messages: messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          temperature: 0.7,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content;
+      if (content) {
+        console.log(`Chat: success with model ${models[i]}`);
+        return content;
+      }
+      throw new Error('Empty response from model');
+    } catch (err: any) {
+      console.warn(`Chat model ${models[i]} failed: ${err.message}`);
+      if (i === models.length - 1) throw err;
+    }
   }
 
-  const data = await response.json();
-  return data.choices[0]?.message?.content || 'Nessuna risposta disponibile.';
+  return 'Nessuna risposta disponibile.';
 }
 
 // Export handler with CSRF protection and timeout
