@@ -50,11 +50,8 @@ export function withTimeout(
       if (error.message === 'TIMEOUT') {
         // Only send response if it hasn't been sent yet
         if (!res.headersSent) {
-          console.error(`Request timeout after ${timeoutMs}ms:`, {
-            method: req.method,
-            url: req.url,
-            timeout: timeoutMs
-          });
+          const ts = new Date().toISOString();
+          console.error(`[${ts}] [TIMEOUT] Request timed out after ${timeoutMs}ms | method=${req.method} | url=${req.url} | origin=${req.headers.origin || 'none'}`);
 
           return res.status(504).json({
             error: 'Gateway Timeout',

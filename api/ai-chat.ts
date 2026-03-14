@@ -41,9 +41,22 @@ interface ChatRequest {
 }
 
 async function handler(req: VercelRequest, res: VercelResponse) {
+  const reqId = Math.random().toString(36).substring(2, 8);
+  const log = (level: string, msg: string, data?: any) => {
+    const ts = new Date().toISOString();
+    const extra = data ? ` | ${JSON.stringify(data)}` : '';
+    console.log(`[${ts}] [${reqId}] [CHAT] [${level}] ${msg}${extra}`);
+  };
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  log('INFO', 'Request received', {
+    origin: req.headers.origin || 'none',
+    hasApiKey: !!req.headers['x-openrouter-key'],
+    bodyKeys: req.body ? Object.keys(req.body) : [],
+  });
 
   // Rate limiting - 20 requests per minute
   const rateLimit = checkRateLimit(req, {
@@ -53,6 +66,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   });
 
   if (!rateLimit.allowed) {
+    log('WARN', 'Rate limit exceeded');
     return sendRateLimitError(res, rateLimit.retryAfter || 60);
   }
 
@@ -63,6 +77,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   const { message, context, conversationHistory = [] } = req.body as ChatRequest;
 
   if (!message || typeof message !== 'string') {
+    log('WARN', 'Invalid message', { type: typeof message });
     return res.status(400).json({ error: 'Message is required' });
   }
 
@@ -72,6 +87,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     : undefined;
 
   if (!userOpenRouterKey) {
+    log('WARN', 'No API key provided');
     return res.status(400).json({
       error: 'NO_API_KEY',
       message: 'Per usare la chat AI, inserisci la tua chiave OpenRouter gratuita nelle impostazioni.'
@@ -79,6 +95,13 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    log('INFO', 'Processing', {
+      msgLength: message.length,
+      historyLength: conversationHistory.length,
+      currentStep: context?.currentStep,
+      keyPrefix: userOpenRouterKey.substring(0, 8),
+    });
+
     // Costruisci system prompt context-aware
     const systemPrompt = buildSystemPrompt(context);
 
@@ -90,14 +113,20 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     ];
 
     // Chiama OpenRouter con fallback chain di modelli gratuiti
-    const response = await callOpenRouterAPI(messages, userOpenRouterKey);
+    const response = await callOpenRouterAPI(messages, userOpenRouterKey, log);
+
+    log('INFO', 'SUCCESS', { responseLength: response.length });
 
     return res.status(200).json({
       response,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('AI Chat error:', error.message);
+    log('ERROR', 'FAILED', {
+      errorType: error.constructor?.name,
+      status: error.status,
+      message: error.message?.substring(0, 300),
+    });
 
     let userMessage = 'Errore AI Chat.';
     let statusCode = 500;
@@ -175,11 +204,9 @@ Rispondi in modo:
 /**
  * Chiama OpenRouter API (user key only - no server key)
  */
-async function callOpenRouterAPI(messages: ChatMessage[], userKey?: string): Promise<string> {
-  if (!userKey) {
-    throw new Error('Chiave OpenRouter non disponibile. Inserisci la tua chiave nelle impostazioni.');
-  }
+type LogFn = (level: string, msg: string, data?: any) => void;
 
+async function callOpenRouterAPI(messages: ChatMessage[], userKey: string, log: LogFn): Promise<string> {
   // 10-model fallback chain (all free on OpenRouter, ordered by capability)
   const models = [
     'nousresearch/hermes-3-llama-3.1-405b:free',
@@ -196,7 +223,8 @@ async function callOpenRouterAPI(messages: ChatMessage[], userKey?: string): Pro
 
   for (let i = 0; i < models.length; i++) {
     try {
-      console.log(`Chat: trying model ${i + 1}/${models.length}: ${models[i]}`);
+      log('INFO', `Trying model ${i + 1}/${models.length}: ${models[i]}`);
+      const t0 = Date.now();
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -217,21 +245,27 @@ async function callOpenRouterAPI(messages: ChatMessage[], userKey?: string): Pro
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+        const errorBody = await response.text();
+        log('WARN', `Model HTTP error`, { model: models[i], status: response.status, body: errorBody.substring(0, 200) });
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorBody}`);
       }
 
       const data = await response.json();
       let content = data.choices[0]?.message?.content;
       if (content) {
-        // Strip thinking tags from models that use them (e.g., Qwen)
+        const hadThinkTags = content.includes('<think>');
         content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-        console.log(`Chat: success with model ${models[i]}`);
+        log('INFO', `Model succeeded`, {
+          model: models[i],
+          elapsed: `${Date.now() - t0}ms`,
+          contentLength: content.length,
+          hadThinkTags,
+        });
         return content;
       }
       throw new Error('Empty response from model');
     } catch (err: any) {
-      console.warn(`Chat model ${models[i]} failed: ${err.message}`);
+      log('WARN', `Model failed`, { model: models[i], error: err.message?.substring(0, 200) });
       if (i === models.length - 1) throw err;
     }
   }

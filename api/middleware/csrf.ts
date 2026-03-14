@@ -117,12 +117,12 @@ export function checkCSRF(req: VercelRequest, res: VercelResponse): boolean {
   const requestOrigin = getRequestOrigin(req);
 
   if (!isOriginAllowed(requestOrigin, allowedOrigins)) {
-    console.warn(`CSRF: Blocked request from origin: ${requestOrigin}`);
-    console.warn(`CSRF: Allowed origins: ${allowedOrigins.join(', ')}`);
+    const ts = new Date().toISOString();
+    console.warn(`[${ts}] [CSRF] BLOCKED | origin=${requestOrigin} | method=${method} | url=${req.url} | allowed=[${allowedOrigins.join(', ')}] | VERCEL_URL=${process.env.VERCEL_URL || 'unset'} | NODE_ENV=${process.env.NODE_ENV || 'unset'}`);
 
     res.status(403).json({
       error: 'CSRF validation failed',
-      message: 'Request origin not allowed'
+      message: `Request origin '${requestOrigin}' not allowed. Check CSRF configuration.`
     });
 
     return false;

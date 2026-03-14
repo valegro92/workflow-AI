@@ -60,8 +60,22 @@ async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const reqId = Math.random().toString(36).substring(2, 8);
+  const log = (level: string, msg: string, data?: any) => {
+    const ts = new Date().toISOString();
+    const extra = data ? ` | ${JSON.stringify(data)}` : '';
+    console.log(`[${ts}] [${reqId}] [EXTRACT] [${level}] ${msg}${extra}`);
+  };
+
   try {
-    console.log('=== AI WORKFLOW EXTRACT START ===');
+    log('INFO', 'Request received', {
+      method: req.method,
+      origin: req.headers.origin || 'none',
+      referer: req.headers.referer || 'none',
+      hasApiKey: !!req.headers['x-openrouter-key'],
+      contentType: req.headers['content-type'],
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+    });
 
     // Rate limiting - 10 requests per minute per IP
     const rateLimit = checkRateLimit(req, {
@@ -71,7 +85,7 @@ async function handler(
     });
 
     if (!rateLimit.allowed) {
-      console.warn(`Rate limit exceeded for workflow extraction`);
+      log('WARN', 'Rate limit exceeded');
       return sendRateLimitError(res, rateLimit.retryAfter || 60);
     }
 
@@ -84,6 +98,7 @@ async function handler(
     const apiKey = typeof userKey === 'string' ? userKey : undefined;
 
     if (!apiKey) {
+      log('WARN', 'No API key provided in x-openrouter-key header');
       return res.status(400).json({
         error: 'NO_API_KEY',
         message: 'Per usare l\'estrazione AI, inserisci la tua chiave OpenRouter gratuita nelle impostazioni.'
@@ -103,11 +118,11 @@ async function handler(
     const { description } = req.body;
 
     if (!description || typeof description !== 'string' || description.trim().length < 10) {
+      log('WARN', 'Invalid description', { type: typeof description, length: description?.length });
       return res.status(400).json({ error: 'Description must be at least 10 characters' });
     }
 
-    console.log(`Description length: ${description.length} chars`);
-    console.log(`API key starts with: ${apiKey.substring(0, 8)}...`);
+    log('INFO', 'Processing', { descLength: description.length, keyPrefix: apiKey.substring(0, 8) });
 
     // 10-model fallback chain (all free on OpenRouter, ordered by capability)
     const models = [
@@ -132,26 +147,39 @@ async function handler(
 
     for (let i = 0; i < models.length; i++) {
       try {
-        console.log(`Trying model ${i + 1}/${models.length}: ${models[i]}`);
+        log('INFO', `Trying model ${i + 1}/${models.length}: ${models[i]}`);
+        const t0 = Date.now();
         completion = await openrouter.chat.completions.create({
           model: models[i],
           messages,
           temperature: 0.3,
         });
         model = models[i];
+        log('INFO', `Model succeeded`, { model, elapsed: `${Date.now() - t0}ms` });
         break;
       } catch (err: any) {
-        console.warn(`Model ${models[i]} failed: ${err.status || err.message}`);
+        log('WARN', `Model failed`, {
+          model: models[i],
+          status: err.status,
+          message: err.message?.substring(0, 200),
+          code: err.code,
+        });
         if (i === models.length - 1) throw err;
       }
     }
 
-    console.log(`Model used: ${model}`);
-
     // Strip thinking tags from models that use them (e.g., Qwen)
-    const responseText = (completion!.choices[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    const rawContent = completion!.choices[0]?.message?.content || '';
+    const hadThinkTags = rawContent.includes('<think>');
+    const responseText = rawContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-    console.log(`AI response length: ${responseText.length} chars`);
+    log('INFO', 'AI response received', {
+      rawLength: rawContent.length,
+      cleanLength: responseText.length,
+      hadThinkTags,
+      finishReason: completion!.choices[0]?.finish_reason,
+      preview: responseText.substring(0, 100),
+    });
 
     // Parse JSON response
     let extractedData;
@@ -159,15 +187,18 @@ async function handler(
       // Try to extract JSON from response (in case AI adds extra text)
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
+        log('ERROR', 'No JSON object found in AI response', {
+          responsePreview: responseText.substring(0, 300),
+        });
         throw new Error('No JSON found in response');
       }
       extractedData = JSON.parse(jsonMatch[0]);
+      log('INFO', 'JSON parsed successfully', { fields: Object.keys(extractedData) });
     } catch (parseError: any) {
-      console.error('JSON parse error:', parseError.message);
-      // Don't expose raw AI response to client for security
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Raw response:', responseText);
-      }
+      log('ERROR', 'JSON parse failed', {
+        parseError: parseError.message,
+        responsePreview: responseText.substring(0, 500),
+      });
       return res.status(500).json({
         error: 'Failed to parse AI response',
         details: 'Invalid JSON structure in AI response'
@@ -217,8 +248,7 @@ async function handler(
       });
     }
 
-    console.log(`✓ Successfully extracted workflow: ${extractedData.titolo}`);
-    console.log('=== AI WORKFLOW EXTRACT SUCCESS ===');
+    log('INFO', 'SUCCESS', { titolo: extractedData.titolo, model });
 
     return res.status(200).json({
       success: true,
@@ -227,9 +257,13 @@ async function handler(
     });
 
   } catch (error: any) {
-    console.error('=== AI WORKFLOW EXTRACT ERROR ===');
-    console.error('Error type:', error.constructor.name);
-    console.error('Error message:', error.message);
+    log('ERROR', 'FAILED', {
+      errorType: error.constructor?.name,
+      status: error.status,
+      code: error.code,
+      message: error.message?.substring(0, 300),
+      stack: error.stack?.split('\n').slice(0, 3).join(' | '),
+    });
 
     let userMessage = 'Errore durante l\'estrazione del workflow.';
     let statusCode = 500;
@@ -245,13 +279,10 @@ async function handler(
       statusCode = 402;
     }
 
-    const response: any = {
+    return res.status(statusCode).json({
       error: userMessage,
-      // Include status code from upstream API for debugging
       details: `${error.status || 'unknown'}: ${error.message?.substring(0, 200) || 'No details'}`,
-    };
-
-    return res.status(statusCode).json(response);
+    });
   }
 }
 

@@ -41,9 +41,22 @@ interface BPMNRequest {
 }
 
 async function handler(req: VercelRequest, res: VercelResponse) {
+  const reqId = Math.random().toString(36).substring(2, 8);
+  const log = (level: string, msg: string, data?: any) => {
+    const ts = new Date().toISOString();
+    const extra = data ? ` | ${JSON.stringify(data)}` : '';
+    console.log(`[${ts}] [${reqId}] [BPMN] [${level}] ${msg}${extra}`);
+  };
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  log('INFO', 'Request received', {
+    origin: req.headers.origin || 'none',
+    hasApiKey: !!req.headers['x-openrouter-key'],
+    bodyKeys: req.body ? Object.keys(req.body) : [],
+  });
 
   // Rate limiting - 5 requests per minute
   const rateLimit = checkRateLimit(req, {
@@ -53,6 +66,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   });
 
   if (!rateLimit.allowed) {
+    log('WARN', 'Rate limit exceeded');
     return sendRateLimitError(res, rateLimit.retryAfter || 60);
   }
 
@@ -63,6 +77,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   const { workflow } = req.body as BPMNRequest;
 
   if (!workflow || !workflow.titolo || !workflow.descrizione) {
+    log('WARN', 'Missing workflow data', { hasTitolo: !!workflow?.titolo, hasDescrizione: !!workflow?.descrizione });
     return res.status(400).json({ error: 'Workflow with titolo and descrizione required' });
   }
 
@@ -72,6 +87,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     : undefined;
 
   if (!userOpenRouterKey) {
+    log('WARN', 'No API key provided');
     return res.status(400).json({
       error: 'NO_API_KEY',
       message: 'Per generare diagrammi BPMN con AI, inserisci la tua chiave OpenRouter gratuita nelle impostazioni.'
@@ -79,33 +95,46 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    log('INFO', 'Processing', {
+      titolo: workflow.titolo,
+      keyPrefix: userOpenRouterKey.substring(0, 8),
+      relatedCount: req.body.relatedWorkflows?.length || 0,
+    });
+
     // Costruisci prompt per l'AI
     const prompt = buildBPMNPrompt(workflow, req.body.relatedWorkflows);
 
     // Chiama OpenRouter con modelli gratuiti
-    const bpmnXml = await generateBPMNWithAI(prompt, userOpenRouterKey);
+    const bpmnXml = await generateBPMNWithAI(prompt, userOpenRouterKey, log);
+
+    log('INFO', 'SUCCESS', { xmlLength: bpmnXml.length });
 
     return res.status(200).json({
       bpmnXml,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('AI BPMN Generation error:', error);
+    log('ERROR', 'AI generation failed, trying fallback', {
+      errorType: error.constructor?.name,
+      status: error.status,
+      message: error.message?.substring(0, 300),
+    });
 
     // Fallback: genera BPMN semplice manualmente
     try {
       const fallbackBpmn = generateSimpleBPMN(workflow);
+      log('INFO', 'Fallback BPMN generated successfully');
       return res.status(200).json({
         bpmnXml: fallbackBpmn,
         timestamp: new Date().toISOString(),
         fallback: true,
       });
     } catch (fallbackError: any) {
-      const response: any = { error: 'Errore generazione BPMN' };
-      if (process.env.NODE_ENV === 'development') {
-        response.details = fallbackError.message;
-      }
-      return res.status(500).json(response);
+      log('ERROR', 'Fallback also failed', { error: fallbackError.message });
+      return res.status(500).json({
+        error: 'Errore generazione BPMN',
+        details: fallbackError.message?.substring(0, 200),
+      });
     }
   }
 }
@@ -257,7 +286,9 @@ ${ownersList.map((owner, i) => `      <bpmndi:BPMNShape id="Shape_Lane_${i + 1}"
 /**
  * Genera BPMN usando AI (OpenRouter)
  */
-async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<string> {
+type LogFn = (level: string, msg: string, data?: any) => void;
+
+async function generateBPMNWithAI(prompt: string, apiKey: string, log: LogFn): Promise<string> {
   // 10-model fallback chain (all free on OpenRouter, ordered by capability)
   const models = [
     'nousresearch/hermes-3-llama-3.1-405b:free',
@@ -274,7 +305,8 @@ async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<strin
 
   for (let i = 0; i < models.length; i++) {
     try {
-      console.log(`BPMN: trying model ${i + 1}/${models.length}: ${models[i]}`);
+      log('INFO', `Trying model ${i + 1}/${models.length}: ${models[i]}`);
+      const t0 = Date.now();
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -295,13 +327,15 @@ async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<strin
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+        const errorBody = await response.text();
+        log('WARN', `Model HTTP error`, { model: models[i], status: response.status, body: errorBody.substring(0, 200) });
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorBody}`);
       }
 
       const data = await response.json();
       let bpmnXml = data.choices[0]?.message?.content || '';
 
+      const hadThinkTags = bpmnXml.includes('<think>');
       // Strip thinking tags from models that use them (e.g., Qwen)
       bpmnXml = bpmnXml.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       // Pulisci output (rimuovi markdown code blocks se presenti)
@@ -309,13 +343,24 @@ async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<strin
 
       // Valida che sia XML valido
       if (!bpmnXml.includes('<?xml') || !bpmnXml.includes('bpmn:definitions')) {
+        log('WARN', 'Invalid BPMN XML', {
+          model: models[i],
+          hasXmlDecl: bpmnXml.includes('<?xml'),
+          hasBpmnDef: bpmnXml.includes('bpmn:definitions'),
+          preview: bpmnXml.substring(0, 200),
+        });
         throw new Error('AI non ha generato BPMN valido');
       }
 
-      console.log(`BPMN: success with model ${models[i]}`);
+      log('INFO', `Model succeeded`, {
+        model: models[i],
+        elapsed: `${Date.now() - t0}ms`,
+        xmlLength: bpmnXml.length,
+        hadThinkTags,
+      });
       return bpmnXml;
     } catch (err: any) {
-      console.warn(`BPMN model ${models[i]} failed: ${err.message}`);
+      log('WARN', `Model failed`, { model: models[i], error: err.message?.substring(0, 200) });
       if (i === models.length - 1) throw err;
     }
   }
