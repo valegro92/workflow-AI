@@ -97,9 +97,16 @@ async function handler(
       console.error('GROQ_API_KEY not configured');
       return res.status(500).json({ error: 'Server misconfiguration: GROQ_API_KEY missing' });
     }
-    if (!process.env.OPENROUTER_KEY) {
-      console.error('OPENROUTER_KEY not configured');
-      return res.status(500).json({ error: 'Server misconfiguration: OPENROUTER_KEY missing' });
+    // User-provided key from header, fallback to server env
+    const userKey = req.headers['x-openrouter-key'];
+    const openrouterKey = typeof userKey === 'string' ? userKey : process.env.OPENROUTER_KEY;
+
+    if (!openrouterKey) {
+      console.error('No OpenRouter key available (neither user-provided nor server env)');
+      return res.status(400).json({
+        error: 'NO_API_KEY',
+        message: 'Per usare l\'import audio, inserisci la tua chiave OpenRouter gratuita.'
+      });
     }
 
     // Initialize API clients (must be done inside handler on Vercel)
@@ -109,7 +116,7 @@ async function handler(
     });
 
     const openrouter = new OpenAI({
-      apiKey: process.env.OPENROUTER_KEY,
+      apiKey: openrouterKey,
       baseURL: 'https://openrouter.ai/api/v1',
     });
 

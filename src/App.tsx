@@ -207,6 +207,7 @@ const AppContent: React.FC = () => {
               tempoTotale,
             });
             setCurrentStep(2);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onSelectMultiple={(workflows) => {
             const workflowsToAdd = workflows.map((workflow, index) => {
@@ -222,6 +223,7 @@ const AppContent: React.FC = () => {
             bulkAddWorkflows(workflowsToAdd);
             setCurrentStep(1);
             setShowTemplateLibrary(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onClose={() => setShowTemplateLibrary(false)}
         />
@@ -243,6 +245,7 @@ const AppContent: React.FC = () => {
             bulkAddWorkflows(workflowsToAdd);
             setCurrentStep(1);
             setShowWordImport(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onClose={() => setShowWordImport(false)}
         />
