@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withTimeout } from './middleware/timeout';
-import { withCSRF } from './middleware/csrf';
-import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit';
+import { withTimeout } from './middleware/timeout.js';
+import { withCSRF } from './middleware/csrf.js';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit.js';
 
 /**
  * AI BPMN Generator Endpoint
