@@ -16,7 +16,7 @@ const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
 );
 
 export const Step4Results: React.FC = () => {
-  const { state, setCurrentStep, resetApp, saveImplementationPlan } = useAppContext();
+  const { state, setCurrentStep, resetApp, saveImplementationPlan, setNomeAzienda } = useAppContext();
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>('');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('all');
@@ -42,7 +42,7 @@ export const Step4Results: React.FC = () => {
     exportToPDF(
       state.workflows,
       state.evaluations,
-      'Workflow AI Analyzer',
+      state.nomeAzienda || 'La mia azienda',
       state.costoOrario,
       state.implementationPlan
     );
@@ -1038,6 +1038,29 @@ export const Step4Results: React.FC = () => {
         </div>
       )}
 
+      {/* Export Section */}
+      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
+        <h3 className="text-lg font-bold text-white mb-3">Esporta Report PDF</h3>
+        <div className="flex flex-col sm:flex-row gap-3 items-end">
+          <div className="flex-1">
+            <label className="text-sm text-gray-400 mb-1 block">Nome azienda (per il report)</label>
+            <input
+              type="text"
+              value={state.nomeAzienda || ''}
+              onChange={(e) => setNomeAzienda(e.target.value)}
+              placeholder="Es: Acme S.r.l."
+              className="w-full px-4 py-2 bg-dark-hover border border-dark-border rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={handleExport}
+            className="bg-brand text-dark-bg font-bold py-2.5 px-6 rounded-lg transition-colors hover:bg-brand-light whitespace-nowrap"
+          >
+            Scarica PDF
+          </button>
+        </div>
+      </div>
+
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-4 justify-between items-center">
         <button
@@ -1048,12 +1071,6 @@ export const Step4Results: React.FC = () => {
         </button>
 
         <div className="flex gap-4">
-          <button
-            onClick={handleExport}
-            className="bg-brand text-dark-bg font-bold py-3 px-6 rounded-lg transition-colors hover:bg-brand-light"
-          >
-            Esporta PDF
-          </button>
 
           <button
             onClick={handleReset}

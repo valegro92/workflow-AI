@@ -57,6 +57,7 @@ export interface AppState {
   currentStep: number;           // 1-4
   workflows: Workflow[];
   evaluations: Record<string, Evaluation>;
+  nomeAzienda?: string;          // Nome azienda per report PDF
   costoOrario?: number;          // Costo orario in € (opzionale, per calcolo ROI)
   implementationPlan?: string;   // Piano di implementazione AI generato (markdown)
   stats: {
