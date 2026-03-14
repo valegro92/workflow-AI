@@ -1,31 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import OpenRouterKeySetup from './OpenRouterKeySetup';
 
 export const Step1Welcome: React.FC = () => {
-  const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows } = useAppContext();
+  const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows, setOpenRouterKey } = useAppContext();
   const [showROI, setShowROI] = useState(false);
   const [costoInput, setCostoInput] = useState<string>(
     state.costoOrario ? state.costoOrario.toString() : ''
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
+  const [showKeySetup, setShowKeySetup] = useState(false);
+  const [pendingAudioFile, setPendingAudioFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/wav'];
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|mp4|m4a|wav)$/i)) {
-      setUploadStatus('Formato file non valido. Usa MP3, MP4, M4A o WAV');
-      return;
-    }
-
-    if (file.size > 25 * 1024 * 1024) {
-      setUploadStatus('File troppo grande. Massimo 25MB');
-      return;
-    }
-
+  const processAudioFile = async (file: File) => {
     setIsProcessing(true);
     setUploadStatus('Trascrizione audio in corso...');
 
@@ -40,9 +29,14 @@ export const Step1Welcome: React.FC = () => {
         reader.readAsDataURL(file);
       });
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (state.openRouterKey) {
+        headers['X-OpenRouter-Key'] = state.openRouterKey;
+      }
+
       const response = await fetch('/api/process-audio', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ audio: base64, filename: file.name }),
       });
 
@@ -64,6 +58,7 @@ export const Step1Welcome: React.FC = () => {
       if (data.workflows && data.workflows.length > 0) {
         bulkAddWorkflows(data.workflows);
         setUploadStatus(`${data.workflows.length} workflow importati con successo!`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setUploadStatus('Nessun workflow trovato nella trascrizione');
       }
@@ -75,6 +70,41 @@ export const Step1Welcome: React.FC = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/wav'];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|mp4|m4a|wav)$/i)) {
+      setUploadStatus('Formato file non valido. Usa MP3, MP4, M4A o WAV');
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      setUploadStatus('File troppo grande. Massimo 25MB');
+      return;
+    }
+
+    // If no OpenRouter key, show setup modal and save file for later
+    if (!state.openRouterKey) {
+      setPendingAudioFile(file);
+      setShowKeySetup(true);
+      return;
+    }
+
+    await processAudioFile(file);
+  };
+
+  const handleKeySaved = (key: string) => {
+    setOpenRouterKey(key);
+    setShowKeySetup(false);
+    if (pendingAudioFile) {
+      const file = pendingAudioFile;
+      setPendingAudioFile(null);
+      setTimeout(() => processAudioFile(file), 100);
     }
   };
 
@@ -205,6 +235,13 @@ export const Step1Welcome: React.FC = () => {
           }`}>
             {uploadStatus}
           </div>
+        )}
+
+        {showKeySetup && (
+          <OpenRouterKeySetup
+            onKeySaved={handleKeySaved}
+            onCancel={() => { setShowKeySetup(false); setPendingAudioFile(null); }}
+          />
         )}
       </div>
     );
@@ -446,6 +483,13 @@ export const Step1Welcome: React.FC = () => {
           </div>
         ) : null}
       </div>
+
+      {showKeySetup && (
+        <OpenRouterKeySetup
+          onKeySaved={handleKeySaved}
+          onCancel={() => { setShowKeySetup(false); setPendingAudioFile(null); }}
+        />
+      )}
     </div>
   );
 };
