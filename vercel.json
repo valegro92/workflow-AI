@@ -1,19 +1,28 @@
 {
   "functions": {
     "api/process-audio.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "api/middleware/**"
     },
     "api/ai-suggestions.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "api/middleware/**"
     },
     "api/ai-workflow-extract.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "api/middleware/**"
     },
     "api/ai-chat.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "api/middleware/**"
     },
     "api/ai-generate-bpmn.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "api/middleware/**"
+    },
+    "api/health.ts": {
+      "maxDuration": 10,
+      "includeFiles": "api/middleware/**"
     }
   },
   "buildCommand": "npm run build",

@@ -312,7 +312,7 @@ async function generateBPMNWithAI(prompt: string, apiKey: string, log: LogFn): P
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173',
+          'HTTP-Referer': 'https://workflow-ai-eight.vercel.app',
           'X-Title': 'Workflow AI Analyzer - BPMN Generator',
         },
         body: JSON.stringify({
