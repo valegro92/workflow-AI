@@ -83,6 +83,9 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
     indigo: { bg: 'bg-indigo-900/30', text: 'text-indigo-300', hover: 'hover:bg-indigo-900/40', border: 'border-indigo-500/50' },
     orange: { bg: 'bg-orange-900/30', text: 'text-orange-300', hover: 'hover:bg-orange-900/40', border: 'border-orange-500/50' },
     pink: { bg: 'bg-pink-900/30', text: 'text-pink-300', hover: 'hover:bg-pink-900/40', border: 'border-pink-500/50' },
+    red: { bg: 'bg-red-900/30', text: 'text-red-300', hover: 'hover:bg-red-900/40', border: 'border-red-500/50' },
+    cyan: { bg: 'bg-cyan-900/30', text: 'text-cyan-300', hover: 'hover:bg-cyan-900/40', border: 'border-cyan-500/50' },
+    teal: { bg: 'bg-teal-900/30', text: 'text-teal-300', hover: 'hover:bg-teal-900/40', border: 'border-teal-500/50' },
     gray: { bg: 'bg-gray-700/30', text: 'text-gray-300', hover: 'hover:bg-gray-700/40', border: 'border-gray-500/50' },
   };
 

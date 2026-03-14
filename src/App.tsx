@@ -11,6 +11,7 @@ import ImportExport from './components/ImportExport';
 import TemplateLibrary from './components/TemplateLibrary';
 import WordImport from './components/WordImport';
 import AIChat from './components/AIChat';
+import { LandingPage } from './components/LandingPage';
 
 const AppContent: React.FC = () => {
   const { state, setCurrentStep, bulkAddWorkflows, addWorkflow } = useAppContext();
@@ -19,6 +20,14 @@ const AppContent: React.FC = () => {
   const [showWordImport, setShowWordImport] = useState(false);
   const [showImportDropdown, setShowImportDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [hasEntered, setHasEntered] = useState(() => {
+    return localStorage.getItem('workflow-ai-entered') === 'true' || state.workflows.length > 0;
+  });
+
+  const handleEnterApp = () => {
+    localStorage.setItem('workflow-ai-entered', 'true');
+    setHasEntered(true);
+  };
 
   // Listen for openTemplateLibrary event from Step1Welcome
   useEffect(() => {
@@ -39,6 +48,10 @@ const AppContent: React.FC = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showImportDropdown]);
+
+  if (!hasEntered) {
+    return <LandingPage onEnter={handleEnterApp} />;
+  }
 
   return (
     <div className="min-h-screen bg-dark-bg text-white">

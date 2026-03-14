@@ -12,6 +12,7 @@ interface AppContextType {
   deleteWorkflow: (id: string) => void;
   addEvaluation: (evaluation: Evaluation) => void;
   updateEvaluation: (workflowId: string, evaluation: Evaluation) => void;
+  setNomeAzienda: (nome: string) => void;
   saveImplementationPlan: (plan: string) => void;
   resetApp: () => void;
 }
@@ -175,6 +176,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
+  const setNomeAzienda = (nome: string) => {
+    setState(prev => ({ ...prev, nomeAzienda: nome }));
+  };
+
   const saveImplementationPlan = (plan: string) => {
     setState(prev => ({ ...prev, implementationPlan: plan }));
   };
@@ -195,6 +200,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         deleteWorkflow,
         addEvaluation,
         updateEvaluation,
+        setNomeAzienda,
         saveImplementationPlan,
         resetApp
       }}
