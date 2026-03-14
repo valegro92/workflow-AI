@@ -148,6 +148,8 @@ async function handler(
     }
 
     let extractedText = completion!.choices[0]?.message?.content || '{}';
+    // Strip thinking tags from models that use them (e.g., Qwen)
+    extractedText = extractedText.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
     // Strip markdown code blocks if present
     extractedText = extractedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     // If response contains thinking tags, extract just the JSON part

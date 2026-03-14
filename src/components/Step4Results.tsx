@@ -44,16 +44,17 @@ export const Step4Results: React.FC = () => {
   const handleKeySaved = (key: string) => {
     setOpenRouterKey(key);
     setShowKeySetup(false);
-    // Execute the pending action after key is saved
+    // Execute the pending action after key is saved, passing key directly
+    // to avoid stale React state closure
     if (pendingAction === 'plan') {
       setPendingAction(null);
-      // Small delay to let state update propagate
-      setTimeout(() => handleGenerateAIPlan(), 100);
+      setTimeout(() => handleGenerateAIPlan(key), 100);
     } else if (pendingAction === 'bpmn') {
       setPendingAction(null);
-      setTimeout(() => handleGenerateAIBpmn(), 100);
+      setTimeout(() => handleGenerateAIBpmn(key), 100);
+    } else {
+      setPendingAction(null);
     }
-    setPendingAction(null);
   };
 
   const requireKeyThen = (action: 'plan' | 'bpmn') => {
@@ -82,16 +83,17 @@ export const Step4Results: React.FC = () => {
     }
   };
 
-  const handleGenerateAIPlan = async () => {
+  const handleGenerateAIPlan = async (keyOverride?: string) => {
     setAiLoading(true);
     setAiError('');
 
     try {
+      const apiKey = keyOverride || state.openRouterKey;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      if (state.openRouterKey) {
-        headers['X-OpenRouter-Key'] = state.openRouterKey;
+      if (apiKey) {
+        headers['X-OpenRouter-Key'] = apiKey;
       }
 
       const response = await fetch('/api/ai-suggestions', {
@@ -140,7 +142,7 @@ export const Step4Results: React.FC = () => {
     }
   };
 
-  const handleGenerateAIBpmn = async () => {
+  const handleGenerateAIBpmn = async (keyOverride?: string) => {
     if (selectedWorkflowId === 'all') {
       setBpmnError('Per generare con AI, seleziona un workflow specifico (non "Tutti")');
       return;
@@ -171,11 +173,12 @@ export const Step4Results: React.FC = () => {
           owner: w.owner,
         }));
 
+      const bpmnApiKey = keyOverride || state.openRouterKey;
       const bpmnHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      if (state.openRouterKey) {
-        bpmnHeaders['X-OpenRouter-Key'] = state.openRouterKey;
+      if (bpmnApiKey) {
+        bpmnHeaders['X-OpenRouter-Key'] = bpmnApiKey;
       }
 
       const response = await fetch('/api/ai-generate-bpmn', {
@@ -1046,7 +1049,7 @@ export const Step4Results: React.FC = () => {
                       <h4 className="font-bold text-red-300 mb-2">Errore</h4>
                       <p className="text-red-300 mb-4">{aiError}</p>
                       <button
-                        onClick={handleGenerateAIPlan}
+                        onClick={() => handleGenerateAIPlan()}
                         className="bg-red-900/50 hover:bg-red-900 text-red-300 font-semibold py-2 px-4 rounded-lg transition-colors"
                       >
                         Riprova

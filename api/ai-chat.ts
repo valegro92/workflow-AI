@@ -222,8 +222,10 @@ async function callOpenRouterAPI(messages: ChatMessage[], userKey?: string): Pro
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      let content = data.choices[0]?.message?.content;
       if (content) {
+        // Strip thinking tags from models that use them (e.g., Qwen)
+        content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         console.log(`Chat: success with model ${models[i]}`);
         return content;
       }

@@ -302,6 +302,8 @@ async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<strin
       const data = await response.json();
       let bpmnXml = data.choices[0]?.message?.content || '';
 
+      // Strip thinking tags from models that use them (e.g., Qwen)
+      bpmnXml = bpmnXml.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       // Pulisci output (rimuovi markdown code blocks se presenti)
       bpmnXml = bpmnXml.replace(/```xml\n?/g, '').replace(/```\n?/g, '').trim();
 

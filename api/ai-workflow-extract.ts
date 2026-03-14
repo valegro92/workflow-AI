@@ -148,7 +148,8 @@ async function handler(
 
     console.log(`Model used: ${model}`);
 
-    const responseText = completion.choices[0]?.message?.content || '';
+    // Strip thinking tags from models that use them (e.g., Qwen)
+    const responseText = (completion!.choices[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
     console.log(`AI response length: ${responseText.length} chars`);
 

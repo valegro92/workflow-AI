@@ -24,15 +24,13 @@ function getAllowedOrigins(): string[] {
     'http://localhost:3000',
     'http://localhost:5173', // Vite default
     'http://localhost:4173', // Vite preview
+    'https://workflow-ai-eight.vercel.app', // Production domain
+    'https://*.vercel.app', // All Vercel preview/deployment URLs
   ];
 
   // Add Vercel preview and production URLs if available
   if (process.env.VERCEL_URL) {
     defaults.push(`https://${process.env.VERCEL_URL}`);
-  }
-
-  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-    defaults.push(`https://${process.env.NEXT_PUBLIC_VERCEL_URL}`);
   }
 
   // Add custom production URL if set

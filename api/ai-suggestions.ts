@@ -215,7 +215,8 @@ ${workflowSummary}
       }
     }
 
-    const suggestion = completion!.choices[0]?.message?.content || '';
+    // Strip thinking tags from models that use them (e.g., Qwen)
+    const suggestion = (completion!.choices[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
     console.log(`✓ AI suggestion completed with ${modelUsed}: ${suggestion.length} chars`);
     console.log('=== AI SUGGESTIONS SUCCESS ===');
