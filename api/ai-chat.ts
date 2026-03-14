@@ -230,7 +230,7 @@ async function callOpenRouterAPI(messages: ChatMessage[], userKey: string, log: 
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${userKey}`,
-          'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173',
+          'HTTP-Referer': 'https://workflow-ai-eight.vercel.app',
           'X-Title': 'Workflow AI Analyzer - Chat Assistant',
         },
         body: JSON.stringify({
