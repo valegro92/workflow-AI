@@ -66,10 +66,17 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  // Extract user-provided OpenRouter key from header
+  // User-provided OpenRouter key (required for AI features)
   const userOpenRouterKey = typeof req.headers['x-openrouter-key'] === 'string'
     ? req.headers['x-openrouter-key']
-    : undefined;
+    : process.env.OPENROUTER_KEY;
+
+  if (!userOpenRouterKey) {
+    return res.status(400).json({
+      error: 'NO_API_KEY',
+      message: 'Per usare la chat AI, inserisci la tua chiave OpenRouter gratuita nelle impostazioni.'
+    });
+  }
 
   try {
     // Costruisci system prompt context-aware
@@ -78,18 +85,12 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     // Costruisci la conversazione completa
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
-      ...conversationHistory.slice(-10), // Ultimi 10 messaggi per non superare limiti
+      ...conversationHistory.slice(-10),
       { role: 'user', content: message },
     ];
 
-    // Chiama API AI (Groq con Llama 3.3 70B - veloce e gratuito)
-    // Se l'utente ha fornito una chiave OpenRouter, usa quella direttamente
-    let response: string;
-    if (userOpenRouterKey) {
-      response = await callOpenRouterAPI(messages, userOpenRouterKey);
-    } else {
-      response = await callGroqAPI(messages);
-    }
+    // Chiama OpenRouter con modelli gratuiti
+    const response = await callOpenRouterAPI(messages, userOpenRouterKey);
 
     return res.status(200).json({
       response,

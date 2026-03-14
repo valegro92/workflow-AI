@@ -103,14 +103,14 @@ async function handler(
       addRateLimitHeaders(res, rateLimit.remaining, 5);
     }
 
-    // Use user-provided key from header, or fall back to server key
+    // User-provided key from header (required)
     const userKey = req.headers['x-openrouter-key'];
-    const apiKey = (typeof userKey === 'string' ? userKey : undefined) || process.env.OPENROUTER_KEY;
+    const apiKey = typeof userKey === 'string' ? userKey : process.env.OPENROUTER_KEY;
 
     if (!apiKey) {
-      console.error('No OpenRouter API key available (neither user nor server)');
       return res.status(400).json({
-        error: 'Chiave OpenRouter non configurata. Inserisci la tua chiave API nelle impostazioni per usare le funzionalita AI.'
+        error: 'NO_API_KEY',
+        message: 'Per usare le funzionalita AI, inserisci la tua chiave OpenRouter gratuita nelle impostazioni.'
       });
     }
 

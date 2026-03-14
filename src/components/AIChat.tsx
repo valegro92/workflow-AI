@@ -82,12 +82,21 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
         body: JSON.stringify({ message: inputMessage, context, conversationHistory }),
       });
 
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        if (errorData?.error === 'NO_API_KEY') {
+          throw new Error('NO_API_KEY');
+        }
+        throw new Error(`API error: ${response.status}`);
+      }
       const data = await response.json();
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response, timestamp: new Date() }]);
     } catch (error: any) {
       console.error('Chat error:', error);
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Mi dispiace, si è verificato un errore. Riprova tra poco.', timestamp: new Date() }]);
+      const errorMsg = error.message === 'NO_API_KEY'
+        ? '🔑 Per usare la chat AI, configura la tua chiave OpenRouter gratuita nelle impostazioni (Step 4 → Impostazioni). Vai su openrouter.ai, crea un account gratis e genera una chiave.'
+        : 'Mi dispiace, si è verificato un errore. Riprova tra poco.';
+      setMessages((prev) => [...prev, { role: 'assistant', content: errorMsg, timestamp: new Date() }]);
     } finally {
       setIsLoading(false);
     }

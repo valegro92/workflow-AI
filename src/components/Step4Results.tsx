@@ -483,7 +483,10 @@ export const Step4Results: React.FC = () => {
             )}
           </button>
           <p className="mt-2 text-xs text-gray-400">
-            Analisi intelligente AI - Roadmap 30/60/90 giorni - Quick wins evidenziati
+            {state.openRouterKey
+              ? 'Analisi intelligente AI - Roadmap 30/60/90 giorni - Quick wins evidenziati'
+              : 'Genera un piano base automatico. Per un piano AI avanzato, configura la chiave OpenRouter nelle impostazioni in basso.'
+            }
           </p>
         </div>
       </div>
@@ -1059,26 +1062,56 @@ export const Step4Results: React.FC = () => {
         </div>
       )}
 
-      {/* Impostazioni AI + Export */}
+      {/* Configurazione AI + Export */}
       <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-bold text-white mb-3">Impostazioni</h3>
+        {/* Banner chiave mancante */}
+        {!state.openRouterKey && (
+          <div className="bg-yellow-900/30 border border-yellow-600/40 rounded-lg p-4 mb-5">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0">🔑</span>
+              <div className="flex-1">
+                <h4 className="font-bold text-yellow-300 mb-1">Configura le funzionalita AI (gratis)</h4>
+                <p className="text-sm text-yellow-200/80 mb-3">
+                  Per usare il Piano AI, i diagrammi BPMN e la Chat AI, ti serve una chiave OpenRouter.
+                  E' <strong>completamente gratis</strong> — i modelli AI usati non hanno costi.
+                </p>
+                <div className="bg-dark-bg/50 rounded-lg p-3 text-sm text-gray-300 space-y-2">
+                  <p className="font-semibold text-white">Come ottenerla in 30 secondi:</p>
+                  <p>1. Vai su <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline font-semibold">openrouter.ai</a> e crea un account gratuito (anche con Google)</p>
+                  <p>2. Vai su <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline font-semibold">openrouter.ai/keys</a> e clicca "Create Key"</p>
+                  <p>3. Copia la chiave (inizia con <code className="bg-dark-hover px-1 rounded text-brand">sk-or-...</code>) e incollala qui sotto</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Input chiave */}
         <div className="mb-4">
-          <label className="text-sm text-gray-400 mb-1 block">
-            Chiave OpenRouter (per funzionalita AI: piano, BPMN, chat){' '}
-            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline text-xs">
-              Ottieni chiave gratis
-            </a>
+          <label className="text-sm text-gray-400 mb-1 flex items-center gap-2">
+            <span>Chiave OpenRouter</span>
+            {state.openRouterKey && (
+              <span className="inline-flex items-center gap-1 text-green-400 text-xs">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                Configurata
+              </span>
+            )}
           </label>
           <input
             type="password"
             value={state.openRouterKey || ''}
             onChange={(e) => setOpenRouterKey(e.target.value)}
-            placeholder="sk-or-..."
+            placeholder="sk-or-v1-..."
             className="w-full px-4 py-2 bg-dark-hover border border-dark-border rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent font-mono text-sm"
           />
-          <p className="text-xs text-gray-500 mt-1">La chiave resta salvata nel tuo browser, non viene mai inviata a terzi se non OpenRouter.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            La chiave resta nel tuo browser. Viene usata solo per chiamare i modelli AI gratuiti su OpenRouter.
+          </p>
         </div>
+
         <hr className="border-dark-border mb-4" />
+
+        {/* Export PDF */}
         <h4 className="text-md font-bold text-white mb-3">Esporta Report PDF</h4>
         <div className="flex flex-col sm:flex-row gap-3 items-end">
           <div className="flex-1">
