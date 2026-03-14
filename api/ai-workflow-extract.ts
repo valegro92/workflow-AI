@@ -94,6 +94,10 @@ async function handler(
     const openrouter = new OpenAI({
       apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: {
+        'HTTP-Referer': 'https://workflow-ai-eight.vercel.app',
+        'X-Title': 'Workflow AI',
+      },
     });
 
     const { description } = req.body;

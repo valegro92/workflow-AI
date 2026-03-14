@@ -107,6 +107,10 @@ async function handler(
     const openrouter = new OpenAI({
       apiKey: userOpenRouterKey,
       baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: {
+        'HTTP-Referer': 'https://workflow-ai-eight.vercel.app',
+        'X-Title': 'Workflow AI',
+      },
     });
 
     // 5. Extract workflows with 5-model fallback chain (all free on OpenRouter)
