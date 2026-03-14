@@ -112,10 +112,10 @@ async function handler(
     // 5. Extract workflows with 5-model fallback chain (all free on OpenRouter)
     const models = [
       'google/gemini-2.0-flash-exp:free',
-      'openrouter/hunter-alpha',
-      'nvidia/nemotron-3-super:free',
       'meta-llama/llama-3.3-70b-instruct:free',
       'deepseek/deepseek-r1:free',
+      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'google/gemma-3-27b-it:free',
     ];
     const messages = [{ role: 'user' as const, content: EXTRACTION_PROMPT + '\n\n' + transcript }];
 
@@ -128,9 +128,9 @@ async function handler(
         completion = await openrouter.chat.completions.create({
           model: models[i],
           messages,
-          response_format: { type: 'json_object' },
         });
         modelUsed = models[i];
+        console.log(`Success with model: ${models[i]}`);
         break;
       } catch (err: any) {
         console.warn(`Model ${models[i]} failed: ${err.status || err.message}`);
@@ -138,7 +138,14 @@ async function handler(
       }
     }
 
-    const extractedText = completion!.choices[0]?.message?.content || '{}';
+    let extractedText = completion!.choices[0]?.message?.content || '{}';
+    // Strip markdown code blocks if present
+    extractedText = extractedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    // If response contains thinking tags, extract just the JSON part
+    const jsonMatch = extractedText.match(/\{[\s\S]*"workflows"[\s\S]*\}/);
+    if (jsonMatch) {
+      extractedText = jsonMatch[0];
+    }
     console.log(`Extraction completed with ${modelUsed}: ${extractedText.length} chars`);
 
     // 6. Parse AI response
