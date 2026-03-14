@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Workflow } from '../types';
+import OpenRouterKeySetup from './OpenRouterKeySetup';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -15,6 +16,7 @@ interface AIChatProps {
 
 export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: AIChatProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showKeySetup, setShowKeySetup] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -26,6 +28,38 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const getOpenRouterKey = (): string | null => {
+    try {
+      const saved = localStorage.getItem('ai-collaboration-canvas-data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.openRouterKey || null;
+      }
+    } catch {}
+    return null;
+  };
+
+  const hasKey = () => !!getOpenRouterKey();
+
+  const handleOpenChat = () => {
+    if (!hasKey()) {
+      setShowKeySetup(true);
+    } else {
+      setIsOpen(true);
+    }
+  };
+
+  const handleKeySaved = (key: string) => {
+    try {
+      const saved = localStorage.getItem('ai-collaboration-canvas-data');
+      const data = saved ? JSON.parse(saved) : {};
+      data.openRouterKey = key;
+      localStorage.setItem('ai-collaboration-canvas-data', JSON.stringify(data));
+    } catch {}
+    setShowKeySetup(false);
+    setIsOpen(true);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,6 +90,12 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
+    // Check for key before sending
+    if (!hasKey()) {
+      setShowKeySetup(true);
+      return;
+    }
+
     const userMessage: Message = { role: 'user', content: inputMessage, timestamp: new Date() };
     setMessages((prev) => [...prev, userMessage]);
     setInputMessage('');
@@ -66,14 +106,9 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
       const conversationHistory = messages.map((m) => ({ role: m.role, content: m.content }));
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      const savedKey = localStorage.getItem('ai-collaboration-canvas-data');
-      if (savedKey) {
-        try {
-          const parsed = JSON.parse(savedKey);
-          if (parsed.openRouterKey) {
-            headers['X-OpenRouter-Key'] = parsed.openRouterKey;
-          }
-        } catch {}
+      const openRouterKey = getOpenRouterKey();
+      if (openRouterKey) {
+        headers['X-OpenRouter-Key'] = openRouterKey;
       }
 
       const response = await fetch('/api/ai-chat', {
@@ -126,10 +161,18 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
 
   return (
     <>
+      {/* OpenRouter Key Setup Modal */}
+      {showKeySetup && (
+        <OpenRouterKeySetup
+          onKeySaved={handleKeySaved}
+          onCancel={() => setShowKeySetup(false)}
+        />
+      )}
+
       {/* Floating Button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={handleOpenChat}
           className="fixed bottom-6 right-6 bg-brand hover:bg-brand-light text-dark-bg rounded-full p-4 shadow-lg hover:shadow-xl transition-all z-40 flex items-center gap-2 group"
           aria-label="Apri AI Chat"
         >
