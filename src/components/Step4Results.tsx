@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { exportToPDF, calculateMonthlySavings, calculateROI, generateLocalImplementationPlan } from '../utils/businessLogic';
 import { workflowToBpmn, workflowsToBpmn, BPMNViewer, BPMNModeler } from '../integrations/bpmn';
+import OpenRouterKeySetup from './OpenRouterKeySetup';
 
 const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
   <svg
@@ -25,6 +26,8 @@ export const Step4Results: React.FC = () => {
   const [bpmnError, setBpmnError] = useState<string>('');
   const [editMode, setEditMode] = useState(false);
   const [editedBpmnXml, setEditedBpmnXml] = useState<string | null>(null);
+  const [showKeySetup, setShowKeySetup] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'plan' | 'bpmn' | null>(null);
 
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     'opportunity-map': true,
@@ -36,6 +39,30 @@ export const Step4Results: React.FC = () => {
 
   const toggleSection = (key: string) => {
     setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleKeySaved = (key: string) => {
+    setOpenRouterKey(key);
+    setShowKeySetup(false);
+    // Execute the pending action after key is saved
+    if (pendingAction === 'plan') {
+      setPendingAction(null);
+      // Small delay to let state update propagate
+      setTimeout(() => handleGenerateAIPlan(), 100);
+    } else if (pendingAction === 'bpmn') {
+      setPendingAction(null);
+      setTimeout(() => handleGenerateAIBpmn(), 100);
+    }
+    setPendingAction(null);
+  };
+
+  const requireKeyThen = (action: 'plan' | 'bpmn') => {
+    if (!state.openRouterKey) {
+      setPendingAction(action);
+      setShowKeySetup(true);
+      return true; // blocked
+    }
+    return false; // key exists, proceed
   };
 
   const handleExport = () => {
@@ -274,6 +301,14 @@ export const Step4Results: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Modal setup chiave OpenRouter */}
+      {showKeySetup && (
+        <OpenRouterKeySetup
+          onKeySaved={handleKeySaved}
+          onCancel={() => { setShowKeySetup(false); setPendingAction(null); }}
+        />
+      )}
+
       <h2 className="text-3xl font-bold text-white mb-4">
         Risultati e Dashboard
       </h2>
@@ -457,7 +492,7 @@ export const Step4Results: React.FC = () => {
         {/* Bottone AI Piano Implementazione */}
         <div className="mt-6 text-center">
           <button
-            onClick={handleGenerateAIPlan}
+            onClick={() => { if (!requireKeyThen('plan')) handleGenerateAIPlan(); }}
             disabled={aiLoading}
             className={`
               inline-flex items-center gap-3 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg
@@ -485,7 +520,7 @@ export const Step4Results: React.FC = () => {
           <p className="mt-2 text-xs text-gray-400">
             {state.openRouterKey
               ? 'Analisi intelligente AI - Roadmap 30/60/90 giorni - Quick wins evidenziati'
-              : 'Genera un piano base automatico. Per un piano AI avanzato, configura la chiave OpenRouter nelle impostazioni in basso.'
+              : 'Clicca per generare il piano — ti chiederemo la chiave OpenRouter gratuita al primo utilizzo.'
             }
           </p>
         </div>
@@ -754,7 +789,7 @@ export const Step4Results: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-2">
                   <button
-                    onClick={handleGenerateAIBpmn}
+                    onClick={() => { if (!requireKeyThen('bpmn')) handleGenerateAIBpmn(); }}
                     disabled={bpmnLoading || selectedWorkflowId === 'all'}
                     className={`${
                       selectedWorkflowId === 'all'
@@ -1049,7 +1084,7 @@ export const Step4Results: React.FC = () => {
                       Copia Piano
                     </button>
                     <button
-                      onClick={handleGenerateAIPlan}
+                      onClick={() => { if (!requireKeyThen('plan')) handleGenerateAIPlan(); }}
                       className="bg-dark-hover text-white font-semibold py-2 px-4 rounded-lg transition-colors hover:bg-dark-border"
                     >
                       Rigenera
