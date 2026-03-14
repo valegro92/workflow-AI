@@ -1,210 +1,24 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import OpenRouterKeySetup from './OpenRouterKeySetup';
 
 export const Step1Welcome: React.FC = () => {
-  const { state, setCurrentStep, setCostoOrario, bulkAddWorkflows, setOpenRouterKey } = useAppContext();
+  const { state, setCurrentStep, setCostoOrario } = useAppContext();
   const [showROI, setShowROI] = useState(false);
   const [costoInput, setCostoInput] = useState<string>(
     state.costoOrario ? state.costoOrario.toString() : ''
   );
-  const [isProcessing, setIsProcessing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
-  const [showKeySetup, setShowKeySetup] = useState(false);
-
-  // Dictation state
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [pendingTranscript, setPendingTranscript] = useState<string | null>(null);
-  const recognitionRef = useRef<any>(null);
-
-  // Start/stop live dictation using Web Speech API (free, no server needed)
-  const toggleDictation = useCallback(() => {
-    if (isRecording) {
-      // Stop recording
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsRecording(false);
-      return;
-    }
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setUploadStatus('Il tuo browser non supporta la dettatura vocale. Usa Chrome o Edge.');
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'it-IT';
-
-    let finalTranscript = transcript;
-
-    recognition.onresult = (event: any) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript + ' ';
-        } else {
-          interim += event.results[i][0].transcript;
-        }
-      }
-      setTranscript(finalTranscript + interim);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      if (event.error !== 'no-speech') {
-        setUploadStatus(`Errore dettatura: ${event.error}`);
-      }
-      setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      setTranscript(finalTranscript);
-      setIsRecording(false);
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsRecording(true);
-    setUploadStatus('');
-  }, [isRecording, transcript]);
-
-  // Process transcript: send to AI for workflow extraction
-  const processTranscript = async (text: string) => {
-    if (!text || text.trim().length < 20) {
-      setUploadStatus('Trascrizione troppo breve. Dettata almeno qualche frase sui tuoi processi.');
-      return;
-    }
-
-    if (!state.openRouterKey) {
-      setPendingTranscript(text);
-      setShowKeySetup(true);
-      return;
-    }
-
-    setIsProcessing(true);
-    setUploadStatus('Estrazione workflow dalla trascrizione...');
-
-    try {
-      const response = await fetch('/api/process-audio', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(state.openRouterKey ? { 'X-OpenRouter-Key': state.openRouterKey } : {}),
-        },
-        body: JSON.stringify({ transcript: text }),
-      });
-
-      if (!response.ok) {
-        const responseText = await response.text();
-        let errorMessage = 'Errore durante il processing';
-        try {
-          const error = JSON.parse(responseText);
-          errorMessage = error.details || error.error || errorMessage;
-        } catch {
-          errorMessage = `Server error (${response.status})`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      if (data.workflows && data.workflows.length > 0) {
-        bulkAddWorkflows(data.workflows);
-        setUploadStatus(`${data.workflows.length} workflow importati con successo!`);
-        setTranscript('');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        setUploadStatus('Nessun workflow trovato nella trascrizione. Prova a descrivere i processi in modo piu\' dettagliato.');
-      }
-    } catch (error: any) {
-      console.error('Error processing transcript:', error);
-      setUploadStatus(`Errore: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleKeySaved = (key: string) => {
-    setOpenRouterKey(key);
-    setShowKeySetup(false);
-    if (pendingTranscript) {
-      const text = pendingTranscript;
-      setPendingTranscript(null);
-      setTimeout(() => processTranscript(text), 100);
-    }
-  };
 
   useEffect(() => {
-    if (!uploadStatus || uploadStatus.startsWith('Errore') || uploadStatus.startsWith('Nessun') || uploadStatus.startsWith('Formato') || uploadStatus.startsWith('File troppo') || uploadStatus.startsWith('Trascrizione troppo') || uploadStatus.startsWith('Il tuo browser')) {
+    if (!uploadStatus || uploadStatus.startsWith('Errore') || uploadStatus.startsWith('Nessun')) {
       return;
     }
     const timer = setTimeout(() => setUploadStatus(''), 5000);
     return () => clearTimeout(timer);
   }, [uploadStatus]);
 
-  // Cleanup speech recognition on unmount
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
-
   const evaluatedCount = Object.keys(state.evaluations).length;
   const hasWorkflows = state.workflows.length > 0;
-
-  // Dictation section component (reused in both views)
-  const DictationSection = () => (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <button
-          onClick={toggleDictation}
-          disabled={isProcessing}
-          className={`flex-1 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 ${
-            isRecording
-              ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
-              : 'bg-dark-card border border-dark-border hover:border-brand text-white'
-          }`}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-          </svg>
-          <span>{isRecording ? 'Stop Dettatura' : 'Inizia Dettatura'}</span>
-        </button>
-        {transcript && !isRecording && (
-          <button
-            onClick={() => processTranscript(transcript)}
-            disabled={isProcessing}
-            className="bg-brand hover:bg-brand-light text-dark-bg font-bold py-3 px-4 rounded-lg transition-all disabled:opacity-50"
-          >
-            {isProcessing ? 'Elaborazione...' : 'Estrai Workflow'}
-          </button>
-        )}
-      </div>
-      {(transcript || isRecording) && (
-        <div className="bg-dark-hover border border-dark-border rounded-lg p-3">
-          <p className="text-xs text-gray-500 mb-1">Trascrizione {isRecording ? '(in corso...)' : ''}</p>
-          <p className="text-sm text-gray-300 min-h-[2rem]">
-            {transcript || (isRecording ? 'Parla ora...' : '')}
-          </p>
-        </div>
-      )}
-      {transcript && !isRecording && (
-        <button
-          onClick={() => setTranscript('')}
-          className="text-xs text-gray-500 hover:text-gray-300"
-        >
-          Cancella trascrizione
-        </button>
-      )}
-    </div>
-  );
 
   // Onboarding view for first-time users
   if (!hasWorkflows) {
@@ -291,18 +105,18 @@ export const Step1Welcome: React.FC = () => {
             <span className="text-sm text-gray-400 font-normal">Scegli da processi comuni</span>
           </button>
 
-          <div className="bg-dark-card border-2 border-dark-border hover:border-brand/40 text-white font-bold py-6 px-6 rounded-xl transition-all flex flex-col items-center gap-3">
+          <button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('openVoiceImport'));
+            }}
+            className="bg-dark-card border-2 border-dark-border hover:border-brand/40 text-white font-bold py-6 px-6 rounded-xl transition-all flex flex-col items-center gap-3"
+          >
             <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
-            <span className="text-lg">Dettatura Vocale</span>
-            <span className="text-sm text-gray-400 font-normal">Descrivi i tuoi processi a voce</span>
-          </div>
-        </div>
-
-        {/* Dictation Section */}
-        <div className="mb-8">
-          <DictationSection />
+            <span className="text-lg">Nota Vocale / Testo</span>
+            <span className="text-sm text-gray-400 font-normal">Dettata o incolla i tuoi processi</span>
+          </button>
         </div>
 
         {/* Upload Status */}
@@ -317,12 +131,6 @@ export const Step1Welcome: React.FC = () => {
           </div>
         )}
 
-        {showKeySetup && (
-          <OpenRouterKeySetup
-            onKeySaved={handleKeySaved}
-            onCancel={() => { setShowKeySetup(false); setPendingTranscript(null); }}
-          />
-        )}
       </div>
     );
   }
@@ -387,51 +195,17 @@ export const Step1Welcome: React.FC = () => {
         </button>
 
         <button
-          onClick={toggleDictation}
-          disabled={isProcessing}
-          className={`font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-3 ${
-            isRecording
-              ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
-              : 'bg-dark-card border border-dark-border hover:border-brand text-white'
-          }`}
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('openVoiceImport'));
+          }}
+          className="bg-dark-card border border-dark-border hover:border-brand text-white font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-3"
         >
           <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
           </svg>
-          <span>{isRecording ? 'Stop Dettatura' : 'Dettatura Vocale'}</span>
+          <span>Nota Vocale / Testo</span>
         </button>
       </div>
-
-      {/* Dictation transcript */}
-      {(transcript || isRecording) && (
-        <div className="mb-6">
-          <div className="bg-dark-hover border border-dark-border rounded-lg p-3 mb-2">
-            <p className="text-xs text-gray-500 mb-1">Trascrizione {isRecording ? '(in corso...)' : ''}</p>
-            <p className="text-sm text-gray-300 min-h-[2rem]">
-              {transcript || 'Parla ora...'}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {!isRecording && transcript && (
-              <>
-                <button
-                  onClick={() => processTranscript(transcript)}
-                  disabled={isProcessing}
-                  className="bg-brand hover:bg-brand-light text-dark-bg font-semibold py-2 px-4 rounded-lg transition-all disabled:opacity-50 text-sm"
-                >
-                  {isProcessing ? 'Elaborazione...' : 'Estrai Workflow'}
-                </button>
-                <button
-                  onClick={() => setTranscript('')}
-                  className="text-xs text-gray-500 hover:text-gray-300 px-2"
-                >
-                  Cancella
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Upload Status */}
       {uploadStatus && (
@@ -584,12 +358,6 @@ export const Step1Welcome: React.FC = () => {
         ) : null}
       </div>
 
-      {showKeySetup && (
-        <OpenRouterKeySetup
-          onKeySaved={handleKeySaved}
-          onCancel={() => { setShowKeySetup(false); setPendingTranscript(null); }}
-        />
-      )}
     </div>
   );
 };

@@ -109,30 +109,36 @@ async function handler(
       baseURL: 'https://openrouter.ai/api/v1',
     });
 
-    // 5. Extract workflows with fallback model
-    let completion;
-    const primaryModel = 'google/gemini-2.0-flash-exp:free';
-    const fallbackModel = 'meta-llama/llama-3.3-70b-instruct:free';
-    let modelUsed = primaryModel;
+    // 5. Extract workflows with 5-model fallback chain (all free on OpenRouter)
+    const models = [
+      'google/gemini-2.0-flash-exp:free',
+      'openrouter/hunter-alpha',
+      'nvidia/nemotron-3-super:free',
+      'meta-llama/llama-3.3-70b-instruct:free',
+      'deepseek/deepseek-r1:free',
+    ];
+    const messages = [{ role: 'user' as const, content: EXTRACTION_PROMPT + '\n\n' + transcript }];
 
-    try {
-      console.log(`Trying primary model: ${primaryModel}`);
-      completion = await openrouter.chat.completions.create({
-        model: primaryModel,
-        messages: [{ role: 'user', content: EXTRACTION_PROMPT + '\n\n' + transcript }],
-        response_format: { type: 'json_object' },
-      });
-    } catch (primaryError: any) {
-      console.warn(`Primary model failed (${primaryError.status || primaryError.message}), trying fallback: ${fallbackModel}`);
-      modelUsed = fallbackModel;
-      completion = await openrouter.chat.completions.create({
-        model: fallbackModel,
-        messages: [{ role: 'user', content: EXTRACTION_PROMPT + '\n\n' + transcript }],
-        response_format: { type: 'json_object' },
-      });
+    let completion;
+    let modelUsed = '';
+
+    for (let i = 0; i < models.length; i++) {
+      try {
+        console.log(`Trying model ${i + 1}/${models.length}: ${models[i]}`);
+        completion = await openrouter.chat.completions.create({
+          model: models[i],
+          messages,
+          response_format: { type: 'json_object' },
+        });
+        modelUsed = models[i];
+        break;
+      } catch (err: any) {
+        console.warn(`Model ${models[i]} failed: ${err.status || err.message}`);
+        if (i === models.length - 1) throw err; // last model, re-throw
+      }
     }
 
-    const extractedText = completion.choices[0]?.message?.content || '{}';
+    const extractedText = completion!.choices[0]?.message?.content || '{}';
     console.log(`Extraction completed with ${modelUsed}: ${extractedText.length} chars`);
 
     // 6. Parse AI response

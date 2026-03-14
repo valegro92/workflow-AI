@@ -105,45 +105,36 @@ async function handler(
     console.log(`Description length: ${description.length} chars`);
     console.log(`API key starts with: ${apiKey.substring(0, 8)}...`);
 
-    // Try primary model, then fallback
-    const primaryModel = 'google/gemini-2.0-flash-exp:free';
-    const fallbackModel = 'meta-llama/llama-3.3-70b-instruct:free';
-    let model = primaryModel;
-    let completion;
+    // 5-model fallback chain (all free on OpenRouter)
+    const models = [
+      'google/gemini-2.0-flash-exp:free',
+      'openrouter/hunter-alpha',
+      'nvidia/nemotron-3-super:free',
+      'meta-llama/llama-3.3-70b-instruct:free',
+      'deepseek/deepseek-r1:free',
+    ];
+    const messages = [
+      { role: 'system' as const, content: WORKFLOW_EXTRACTION_PROMPT },
+      { role: 'user' as const, content: `DESCRIZIONE WORKFLOW:\n\n${description}` },
+    ];
 
-    try {
-      console.log(`Trying primary model: ${primaryModel}`);
-      completion = await openrouter.chat.completions.create({
-        model: primaryModel,
-        messages: [
-          {
-            role: 'system',
-            content: WORKFLOW_EXTRACTION_PROMPT,
-          },
-          {
-            role: 'user',
-            content: `DESCRIZIONE WORKFLOW:\n\n${description}`,
-          },
-        ],
-        temperature: 0.3,
-      });
-    } catch (primaryError: any) {
-      console.warn(`Primary model failed (${primaryError.status || primaryError.message}), trying fallback: ${fallbackModel}`);
-      model = fallbackModel;
-      completion = await openrouter.chat.completions.create({
-        model: fallbackModel,
-        messages: [
-          {
-            role: 'system',
-            content: WORKFLOW_EXTRACTION_PROMPT,
-          },
-          {
-            role: 'user',
-            content: `DESCRIZIONE WORKFLOW:\n\n${description}`,
-          },
-        ],
-        temperature: 0.3,
-      });
+    let completion;
+    let model = '';
+
+    for (let i = 0; i < models.length; i++) {
+      try {
+        console.log(`Trying model ${i + 1}/${models.length}: ${models[i]}`);
+        completion = await openrouter.chat.completions.create({
+          model: models[i],
+          messages,
+          temperature: 0.3,
+        });
+        model = models[i];
+        break;
+      } catch (err: any) {
+        console.warn(`Model ${models[i]} failed: ${err.status || err.message}`);
+        if (i === models.length - 1) throw err;
+      }
     }
 
     console.log(`Model used: ${model}`);

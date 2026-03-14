@@ -66,10 +66,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Workflow with titolo and descrizione required' });
   }
 
-  // User-provided OpenRouter key (required for AI features)
+  // User-provided OpenRouter key (required - no server fallback)
   const userOpenRouterKey = typeof req.headers['x-openrouter-key'] === 'string'
     ? req.headers['x-openrouter-key']
-    : process.env.OPENROUTER_KEY;
+    : undefined;
 
   if (!userOpenRouterKey) {
     return res.status(400).json({
@@ -258,42 +258,62 @@ ${ownersList.map((owner, i) => `      <bpmndi:BPMNShape id="Shape_Lane_${i + 1}"
  * Genera BPMN usando AI (OpenRouter)
  */
 async function generateBPMNWithAI(prompt: string, apiKey: string): Promise<string> {
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
-      'X-Title': 'Workflow AI Analyzer - BPMN Generator',
-    },
-    body: JSON.stringify({
-      model: 'meta-llama/llama-3.3-70b-instruct:free',
-      messages: [
-        { role: 'system', content: 'Sei un esperto di BPMN 2.0. Generi sempre XML valido senza spiegazioni.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.2,
-      max_tokens: 5000,
-    }),
-  });
+  // 5-model fallback chain (all free on OpenRouter)
+  const models = [
+    'google/gemini-2.0-flash-exp:free',
+    'openrouter/hunter-alpha',
+    'nvidia/nemotron-3-super:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'deepseek/deepseek-r1:free',
+  ];
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+  for (let i = 0; i < models.length; i++) {
+    try {
+      console.log(`BPMN: trying model ${i + 1}/${models.length}: ${models[i]}`);
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
+          'X-Title': 'Workflow AI Analyzer - BPMN Generator',
+        },
+        body: JSON.stringify({
+          model: models[i],
+          messages: [
+            { role: 'system', content: 'Sei un esperto di BPMN 2.0. Generi sempre XML valido senza spiegazioni.' },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.2,
+          max_tokens: 5000,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+      }
+
+      const data = await response.json();
+      let bpmnXml = data.choices[0]?.message?.content || '';
+
+      // Pulisci output (rimuovi markdown code blocks se presenti)
+      bpmnXml = bpmnXml.replace(/```xml\n?/g, '').replace(/```\n?/g, '').trim();
+
+      // Valida che sia XML valido
+      if (!bpmnXml.includes('<?xml') || !bpmnXml.includes('bpmn:definitions')) {
+        throw new Error('AI non ha generato BPMN valido');
+      }
+
+      console.log(`BPMN: success with model ${models[i]}`);
+      return bpmnXml;
+    } catch (err: any) {
+      console.warn(`BPMN model ${models[i]} failed: ${err.message}`);
+      if (i === models.length - 1) throw err;
+    }
   }
 
-  const data = await response.json();
-  let bpmnXml = data.choices[0]?.message?.content || '';
-
-  // Pulisci output (rimuovi markdown code blocks se presenti)
-  bpmnXml = bpmnXml.replace(/```xml\n?/g, '').replace(/```\n?/g, '').trim();
-
-  // Valida che sia XML valido
-  if (!bpmnXml.includes('<?xml') || !bpmnXml.includes('bpmn:definitions')) {
-    throw new Error('AI non ha generato BPMN valido');
-  }
-
-  return bpmnXml;
+  throw new Error('Tutti i modelli AI hanno fallito');
 }
 
 /**

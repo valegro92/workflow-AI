@@ -165,42 +165,31 @@ ${workflowSummary}
 `.trim();
 
     // Call AI based on type
-    let primaryModel = '';
-    let fallbackModel = '';
     let prompt = '';
 
     if (type === 'implementation-plan') {
-      primaryModel = 'deepseek/deepseek-r1:free';
-      fallbackModel = 'meta-llama/llama-3.3-70b-instruct:free';
       prompt = IMPLEMENTATION_PLAN_PROMPT + '\n\n' + contextData;
     } else {
       return res.status(400).json({ error: 'Unknown suggestion type' });
     }
 
-    console.log(`Calling OpenRouter with model: ${primaryModel}`);
+    // 5-model fallback chain (all free on OpenRouter)
+    const models = [
+      'deepseek/deepseek-r1:free',
+      'openrouter/hunter-alpha',
+      'nvidia/nemotron-3-super:free',
+      'google/gemini-2.0-flash-exp:free',
+      'meta-llama/llama-3.3-70b-instruct:free',
+    ];
 
     let completion;
-    let modelUsed = primaryModel;
+    let modelUsed = '';
 
-    try {
-      completion = await openrouter.chat.completions.create({
-        model: primaryModel,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-      });
-    } catch (primaryError: any) {
-      // If rate limited (429) or capacity issue, try fallback model
-      if (primaryError.status === 429 || primaryError.message?.includes('rate') || primaryError.message?.includes('capacity')) {
-        console.log(`Primary model saturated (429), trying fallback: ${fallbackModel}`);
-        modelUsed = fallbackModel;
-
+    for (let i = 0; i < models.length; i++) {
+      try {
+        console.log(`Suggestions: trying model ${i + 1}/${models.length}: ${models[i]}`);
         completion = await openrouter.chat.completions.create({
-          model: fallbackModel,
+          model: models[i],
           messages: [
             {
               role: 'user',
@@ -209,13 +198,15 @@ ${workflowSummary}
           ],
           temperature: 0.7,
         });
-      } else {
-        // Re-throw if not a rate limit error
-        throw primaryError;
+        modelUsed = models[i];
+        break;
+      } catch (err: any) {
+        console.warn(`Suggestions model ${models[i]} failed: ${err.status || err.message}`);
+        if (i === models.length - 1) throw err;
       }
     }
 
-    const suggestion = completion.choices[0]?.message?.content || '';
+    const suggestion = completion!.choices[0]?.message?.content || '';
 
     console.log(`✓ AI suggestion completed with ${modelUsed}: ${suggestion.length} chars`);
     console.log('=== AI SUGGESTIONS SUCCESS ===');
