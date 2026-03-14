@@ -246,8 +246,21 @@ export const Step2Mapping: React.FC = () => {
       <h2 className="text-3xl font-bold text-white mb-2">Mappatura Workflow</h2>
 
       {/* Context bar */}
-      <div className="bg-brand-50 border border-brand/30 text-brand-light rounded-lg px-4 py-3 mb-6 text-sm">
-        Fase 2 di 4 — Compila i dettagli del processo. L'AI può aiutarti a compilare il form automaticamente.
+      <div className="bg-brand-50 border border-brand/30 text-brand-light rounded-lg px-4 py-3 mb-6 text-sm flex items-center justify-between">
+        <span>
+          Fase 2 di 4 — Compila i dettagli del processo. L'AI puo aiutarti a compilare il form automaticamente.
+          {state.workflows.length > 0 && (
+            <span className="ml-2 text-white font-semibold">({state.workflows.length} workflow aggiunti)</span>
+          )}
+        </span>
+        {state.workflows.length > 0 && (
+          <button
+            onClick={() => setCurrentStep(3)}
+            className="bg-brand text-dark-bg font-semibold py-1.5 px-4 rounded-lg hover:bg-brand-light transition-colors text-sm whitespace-nowrap ml-4"
+          >
+            Vai alla Valutazione →
+          </button>
+        )}
       </div>
 
       {/* AI Assistant */}

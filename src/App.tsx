@@ -20,6 +20,13 @@ const AppContent: React.FC = () => {
   const [showImportDropdown, setShowImportDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Listen for openTemplateLibrary event from Step1Welcome
+  useEffect(() => {
+    const handler = () => setShowTemplateLibrary(true);
+    window.addEventListener('openTemplateLibrary', handler);
+    return () => window.removeEventListener('openTemplateLibrary', handler);
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

@@ -151,8 +151,19 @@ export const Step3Evaluation: React.FC = () => {
         Valutazione Step
       </h2>
 
-      <div className="bg-brand-50 border border-brand/30 text-brand-light rounded-lg px-4 py-3 mb-6 text-sm">
-        Fase 3 di 4 — Rispondi a 8 domande per determinare la strategia AI ottimale.
+      <div className="bg-brand-50 border border-brand/30 text-brand-light rounded-lg px-4 py-3 mb-6 text-sm flex items-center justify-between">
+        <span>
+          Fase 3 di 4 — Rispondi a 8 domande per determinare la strategia AI ottimale.
+          <span className="ml-2 text-white font-semibold">({evaluatedCount}/{totalCount} valutati)</span>
+        </span>
+        {allEvaluated && (
+          <button
+            onClick={() => setCurrentStep(4)}
+            className="bg-brand text-dark-bg font-semibold py-1.5 px-4 rounded-lg hover:bg-brand-light transition-colors text-sm whitespace-nowrap ml-4"
+          >
+            Vedi i Risultati →
+          </button>
+        )}
       </div>
 
       {/* Progress */}

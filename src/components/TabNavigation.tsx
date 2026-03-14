@@ -27,6 +27,18 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
     return false;
   };
 
+  const isDisabled = (step: number) => {
+    if (step === 3) return workflowCount === 0;
+    if (step === 4) return evaluationCount === 0;
+    return false;
+  };
+
+  const getBadge = (step: number) => {
+    if (step === 2 && workflowCount > 0) return `${workflowCount}`;
+    if (step === 3 && workflowCount > 0) return `${evaluationCount}/${workflowCount}`;
+    return null;
+  };
+
   return (
     <div className="bg-dark-card border-b border-dark-border">
       <div className="max-w-6xl mx-auto px-4 py-4">
@@ -34,21 +46,24 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
           {steps.map((s, index) => {
             const active = currentStep === s.step;
             const completed = isCompleted(s.step) && !active && currentStep > s.step;
-            const future = !active && !completed;
+            const disabled = isDisabled(s.step);
+            const badge = getBadge(s.step);
 
             return (
               <React.Fragment key={s.step}>
                 {/* Connector line */}
                 {index > 0 && (
                   <div className={`flex-1 h-0.5 mx-2 ${
-                    currentStep > s.step || (completed && !future) ? 'bg-brand' : 'bg-dark-border'
+                    currentStep > s.step || (completed) ? 'bg-brand' : 'bg-dark-border'
                   }`} />
                 )}
 
                 {/* Step circle + label */}
                 <button
-                  onClick={() => onStepChange(s.step)}
-                  className="flex flex-col items-center gap-1 group"
+                  onClick={() => !disabled && onStepChange(s.step)}
+                  className={`flex flex-col items-center gap-1 group ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
+                  disabled={disabled}
+                  title={disabled ? 'Completa gli step precedenti prima' : ''}
                 >
                   <div className={`
                     w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all
@@ -71,6 +86,9 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                     active ? 'text-brand' : completed ? 'text-white' : 'text-gray-500'
                   }`}>
                     {s.label}
+                    {badge && (
+                      <span className="ml-1 text-brand">({badge})</span>
+                    )}
                   </span>
                   <span className="text-[10px] text-gray-500 whitespace-nowrap hidden md:block">
                     {s.description}

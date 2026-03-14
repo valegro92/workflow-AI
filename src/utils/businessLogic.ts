@@ -187,6 +187,138 @@ export function exportToPDF(
   doc.text(`Strategie: ${stats.strategyCounts.assistant} Assistente AI, ${stats.strategyCounts.tool} Strumenti, ${stats.strategyCounts.partner} Brainstorming, ${stats.strategyCounts.out} Manuale`, marginLeft, yPosition);
   yPosition += 15;
 
+  // === TABELLA PRIORITÀ DI IMPLEMENTAZIONE ===
+  const evaluatedWorkflows = workflows
+    .filter(w => evaluations[w.id])
+    .sort((a, b) => evaluations[b.id].priorita - evaluations[a.id].priorita);
+
+  if (evaluatedWorkflows.length > 0) {
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Tabella Priorita di Implementazione', marginLeft, yPosition);
+    yPosition += 8;
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('(Ordinata per priorita decrescente - inizia dai valori piu alti)', marginLeft, yPosition);
+    yPosition += 8;
+
+    // Table header
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    const colX = [marginLeft, marginLeft + 8, marginLeft + 20, marginLeft + 80, marginLeft + 115, marginLeft + 135, marginLeft + 155];
+    doc.text('#', colX[0], yPosition);
+    doc.text('ID', colX[1], yPosition);
+    doc.text('Titolo', colX[2], yPosition);
+    doc.text('Strategia', colX[3], yPosition);
+    doc.text('min/mese', colX[4], yPosition);
+    doc.text('Compl.', colX[5], yPosition);
+    doc.text('Priorita', colX[6], yPosition);
+    yPosition += 2;
+    doc.setDrawColor(100);
+    doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
+    yPosition += 5;
+
+    doc.setFont('helvetica', 'normal');
+    evaluatedWorkflows.forEach((workflow, index) => {
+      checkPageBreak(10);
+      const evaluation = evaluations[workflow.id];
+      const strategyClean = evaluation.strategy.name.replace(/[^\w\s]/gi, '').trim();
+
+      doc.text(`${index + 1}`, colX[0], yPosition);
+      doc.text(workflow.id, colX[1], yPosition);
+      const titleTrunc = workflow.titolo.length > 35 ? workflow.titolo.substring(0, 33) + '...' : workflow.titolo;
+      doc.text(titleTrunc, colX[2], yPosition);
+      const stratTrunc = strategyClean.length > 20 ? strategyClean.substring(0, 18) + '...' : strategyClean;
+      doc.text(stratTrunc, colX[3], yPosition);
+      doc.text(`${workflow.tempoTotale}`, colX[4], yPosition);
+      doc.text(`${evaluation.complessita}/5`, colX[5], yPosition);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${evaluation.priorita.toFixed(1)}`, colX[6], yPosition);
+      doc.setFont('helvetica', 'normal');
+
+      if (costoOrario) {
+        const savings = calculateMonthlySavings(workflow.tempoTotale, costoOrario);
+        const roi = calculateROI(savings, evaluation.complessita);
+        doc.text(`${savings.toFixed(0)}€/m  ROI:${roi.toFixed(0)}`, colX[6] + 18, yPosition);
+      }
+
+      yPosition += 6;
+    });
+    yPosition += 10;
+  }
+
+  // === MAPPA DELLE OPPORTUNITÀ AI ===
+  checkPageBreak(40);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Mappa delle Opportunita AI', marginLeft, yPosition);
+  yPosition += 10;
+
+  const strategyGroups: { label: string; desc: string; filter: string }[] = [
+    { label: 'Brainstorming (Auto BASSA / Cogn. ALTO)', desc: 'Partner di pensiero per esplorare idee', filter: 'Brainstorming' },
+    { label: 'Assistente AI (Auto ALTA / Cogn. ALTO)', desc: 'Prompt riutilizzabile per delegare', filter: 'Assistente AI' },
+    { label: 'Strumento Automatizzato (Auto ALTA / Cogn. BASSO)', desc: 'Tool specifico per automatizzare', filter: 'Strumento' },
+    { label: 'Mantieni Umano (Auto BASSA / Cogn. BASSO)', desc: 'Gestione manuale, non delegare', filter: 'umano' },
+  ];
+
+  strategyGroups.forEach(group => {
+    const groupWorkflows = workflows.filter(w => {
+      const ev = evaluations[w.id];
+      return ev && ev.strategy.name.includes(group.filter);
+    });
+
+    if (groupWorkflows.length === 0) return;
+
+    checkPageBreak(20);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${group.label} (${groupWorkflows.length})`, marginLeft, yPosition);
+    yPosition += 5;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.text(group.desc, marginLeft + 3, yPosition);
+    yPosition += 5;
+    doc.setFont('helvetica', 'normal');
+    groupWorkflows.forEach(w => {
+      checkPageBreak(8);
+      doc.text(`- [${w.id}] ${w.titolo}`, marginLeft + 5, yPosition);
+      yPosition += 5;
+    });
+    yPosition += 3;
+  });
+  yPosition += 5;
+
+  // === RACCOMANDAZIONI PERSONALIZZATE ===
+  const recs: { label: string; filter: string; text: string }[] = [
+    { label: 'Brainstorming con AI', filter: 'Brainstorming', text: 'Non standardizzabili ma richiedono ragionamento e creativita. Usa l\'IA come partner di pensiero: contesto ben definito, domande aperte, valuta le proposte e itera.' },
+    { label: 'Assistente AI', filter: 'Assistente AI', text: 'Cognitivamente impegnativi ma ripetitivi. Crea un prompt strutturato come risorsa riutilizzabile: definisci ruolo, input, output e regole con precisione.' },
+    { label: 'Strumento Automatizzato', filter: 'Strumento', text: 'Cosi operativi e ripetitivi che non richiedono intervento umano. Identifica uno strumento specializzato, configuralo, testalo e lascialo eseguire.' },
+  ];
+
+  const hasRecs = recs.some(r => workflows.some(w => evaluations[w.id]?.strategy.name.includes(r.filter)));
+  if (hasRecs) {
+    checkPageBreak(30);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Raccomandazioni Personalizzate', marginLeft, yPosition);
+    yPosition += 10;
+
+    recs.forEach(rec => {
+      const recWorkflows = workflows.filter(w => evaluations[w.id]?.strategy.name.includes(rec.filter));
+      if (recWorkflows.length === 0) return;
+
+      checkPageBreak(20);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${rec.label} (${recWorkflows.length} step)`, marginLeft, yPosition);
+      yPosition += 6;
+      addWrappedText(rec.text, marginLeft + 3, contentWidth - 6, 9);
+      yPosition += 3;
+    });
+    yPosition += 5;
+  }
+
   // === WORKFLOW DETTAGLIATI ===
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
@@ -196,7 +328,7 @@ export function exportToPDF(
   workflows.forEach((workflow) => {
     const evaluation = evaluations[workflow.id];
 
-    checkPageBreak(40);
+    checkPageBreak(50);
 
     // ID e Titolo
     doc.setFontSize(11);
@@ -213,6 +345,23 @@ export function exportToPDF(
     doc.text(`Tempo: ${workflow.tempoMedio} min x ${workflow.frequenza}/mese = ${workflow.tempoTotale} min/mese`, marginLeft + 5, yPosition);
     yPosition += 6;
 
+    if (workflow.owner) {
+      doc.text(`Owner: ${workflow.owner}`, marginLeft + 5, yPosition);
+      yPosition += 6;
+    }
+
+    if (workflow.tool.length > 0 && workflow.tool[0] !== '') {
+      addWrappedText(`Tool: ${workflow.tool.join(', ')}`, marginLeft + 5, contentWidth - 10, 9);
+    }
+
+    if (workflow.input.length > 0 && workflow.input[0] !== '') {
+      addWrappedText(`Input: ${workflow.input.join(', ')}`, marginLeft + 5, contentWidth - 10, 9);
+    }
+
+    if (workflow.output.length > 0 && workflow.output[0] !== '') {
+      addWrappedText(`Output: ${workflow.output.join(', ')}`, marginLeft + 5, contentWidth - 10, 9);
+    }
+
     if (evaluation) {
       doc.text(`Strategia: ${evaluation.strategy.name.replace(/[^\w\s]/gi, '')}`, marginLeft + 5, yPosition);
       yPosition += 6;
@@ -220,10 +369,27 @@ export function exportToPDF(
       yPosition += 6;
       doc.text(`Complessita: ${evaluation.complessita}/5, Priorita: ${evaluation.priorita.toFixed(1)}`, marginLeft + 5, yPosition);
       yPosition += 6;
+
+      if (costoOrario) {
+        const savings = calculateMonthlySavings(workflow.tempoTotale, costoOrario);
+        const roi = calculateROI(savings, evaluation.complessita);
+        doc.text(`Risparmio: ${savings.toFixed(0)} euro/mese, ROI: ${roi.toFixed(0)}`, marginLeft + 5, yPosition);
+        yPosition += 6;
+      }
     }
 
     if (workflow.painPoints) {
       addWrappedText(`Pain points: ${workflow.painPoints}`, marginLeft + 5, contentWidth - 10, 9);
+    }
+
+    // Tags
+    const tags: string[] = [];
+    if (workflow.pii) tags.push('PII');
+    if (workflow.hitl) tags.push('HITL');
+    if (workflow.citazioni) tags.push('Citazioni');
+    if (tags.length > 0) {
+      doc.text(`Flag: ${tags.join(', ')}`, marginLeft + 5, yPosition);
+      yPosition += 6;
     }
 
     yPosition += 5;
