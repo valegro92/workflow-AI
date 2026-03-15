@@ -172,6 +172,32 @@ export function formatMinutes(minutes: number): string {
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
+// 9a. Calcolo AI Readiness Score (0-100)
+export function calculateAIReadinessScore(
+  workflows: Workflow[],
+  evaluations: Record<string, Evaluation>
+): { score: number; label: string; color: string } {
+  const evaluated = workflows.filter(w => evaluations[w.id]);
+  if (evaluated.length === 0) return { score: 0, label: 'Non calcolabile', color: '#6b7280' };
+
+  let totalScore = 0;
+  evaluated.forEach(w => {
+    const ev = evaluations[w.id];
+    // Combina automation + cognitive scores normalizzati a 0-100
+    const workflowScore = ((ev.autoScore + ev.cogScore) / 16) * 100;
+    // Peso per priorità
+    const priorityWeight = Math.min(ev.priorita / 100, 1);
+    totalScore += workflowScore * (0.7 + 0.3 * priorityWeight);
+  });
+
+  const avgScore = Math.round(totalScore / evaluated.length);
+  const clamped = Math.min(100, Math.max(0, avgScore));
+
+  if (clamped >= 70) return { score: clamped, label: 'Alto potenziale AI', color: '#28a745' };
+  if (clamped >= 40) return { score: clamped, label: 'Potenziale moderato', color: '#ffc107' };
+  return { score: clamped, label: 'Serve analisi approfondita', color: '#dc3545' };
+}
+
 // 9. Export PDF
 export function exportToPDF(
   workflows: Workflow[],
@@ -189,9 +215,30 @@ export function exportToPDF(
   const marginRight = 15;
   const contentWidth = pageWidth - marginLeft - marginRight;
 
+  // Helper: branded footer on every page
+  const addBrandedFooter = () => {
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      // Teal line
+      doc.setDrawColor(45, 212, 168);
+      doc.setLineWidth(0.5);
+      doc.line(marginLeft, pageHeight - 18, pageWidth - marginRight, pageHeight - 18);
+      // Branding text
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(140, 140, 140);
+      doc.text('Creato con Workflow AI Analyzer | valentinogrossi.it', marginLeft, pageHeight - 13);
+      doc.text('La Cassetta degli AI-trezzi - Tool gratuiti per l\'automazione AI', marginLeft, pageHeight - 9);
+      // Page number
+      doc.text(`${i} / ${totalPages}`, pageWidth - marginRight - 10, pageHeight - 13);
+      doc.setTextColor(0, 0, 0);
+    }
+  };
+
   // Helper: add new page if needed
   const checkPageBreak = (requiredSpace: number = 20) => {
-    if (yPosition + requiredSpace > pageHeight - 20) {
+    if (yPosition + requiredSpace > pageHeight - 25) {
       doc.addPage();
       yPosition = 20;
       return true;
@@ -219,27 +266,109 @@ export function exportToPDF(
     yPosition += 10;
   };
 
-  // === HEADER ===
-  doc.setFontSize(22);
+  // === COVER PAGE ===
+  const readiness = calculateAIReadinessScore(workflows, evaluations);
+  const stats = calculateStats(workflows, evaluations);
+
+  // Background accent bar
+  doc.setFillColor(45, 212, 168);
+  doc.rect(0, 0, pageWidth, 6, 'F');
+
+  // Title block
+  yPosition = 50;
+  doc.setFontSize(32);
   doc.setFont('helvetica', 'bold');
-  doc.text('Workflow AI Analyzer', marginLeft, yPosition);
-  yPosition += 8;
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(45, 212, 168); // brand teal
-  doc.text('La Cassetta degli AI-trezzi', marginLeft, yPosition);
+  doc.setTextColor(45, 212, 168);
+  doc.text('Workflow AI', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 14;
+  doc.text('Analyzer', pageWidth / 2, yPosition, { align: 'center' });
   doc.setTextColor(0, 0, 0);
+  yPosition += 20;
+
+  // Subtitle
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(120, 120, 120);
+  doc.text('Report di Analisi AI dei Processi Aziendali', pageWidth / 2, yPosition, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+  yPosition += 25;
+
+  // Company info box
+  doc.setDrawColor(45, 212, 168);
+  doc.setLineWidth(1);
+  doc.roundedRect(pageWidth / 2 - 60, yPosition, 120, 35, 3, 3, 'S');
+  yPosition += 12;
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(nomeAzienda, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Data: ${new Date().toLocaleDateString('it-IT')}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 30;
+
+  // AI Readiness Score circle
+  const scoreX = pageWidth / 2;
+  const scoreY = yPosition + 15;
+  const r = parseInt(readiness.color.slice(1, 3), 16);
+  const g = parseInt(readiness.color.slice(3, 5), 16);
+  const b = parseInt(readiness.color.slice(5, 7), 16);
+  doc.setFillColor(r, g, b);
+  doc.circle(scoreX, scoreY, 22, 'F');
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(`${readiness.score}`, scoreX, scoreY + 3, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+  yPosition = scoreY + 30;
 
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Azienda: ${nomeAzienda}`, marginLeft, yPosition);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AI Readiness Score', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 7;
-  doc.text(`Data: ${new Date().toLocaleDateString('it-IT')}`, marginLeft, yPosition);
-  yPosition += 12;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(r, g, b);
+  doc.text(readiness.label, pageWidth / 2, yPosition, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+  yPosition += 20;
+
+  // Quick stats on cover
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  const coverStats = [
+    `${workflows.length} workflow analizzati`,
+    `${Object.keys(evaluations).length} valutati`,
+    `${formatMinutes(stats.totalTime)} di tempo mensile`,
+  ];
+  coverStats.forEach(s => {
+    doc.text(s, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 6;
+  });
+
+  // Cover footer
+  yPosition = pageHeight - 40;
+  doc.setDrawColor(45, 212, 168);
+  doc.setLineWidth(0.5);
+  doc.line(50, yPosition, pageWidth - 50, yPosition);
+  yPosition += 8;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(120, 120, 120);
+  doc.text('La Cassetta degli AI-trezzi', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 5;
+  doc.text('by Valentino Grossi | valentinogrossi.it', pageWidth / 2, yPosition, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+
+  // Bottom accent bar
+  doc.setFillColor(45, 212, 168);
+  doc.rect(0, pageHeight - 6, pageWidth, 6, 'F');
+
+  // === PAGE 2: Content starts ===
+  doc.addPage();
+  yPosition = 20;
 
   // === EXECUTIVE SUMMARY ===
-  const stats = calculateStats(workflows, evaluations);
   const totalTime = stats.totalTime;
   const totalSavings = costoOrario ? calculateMonthlySavings(totalTime, costoOrario) : null;
   const evaluatedCount = Object.keys(evaluations).length;
@@ -702,20 +831,65 @@ export function exportToPDF(
     yPosition += 1;
   });
 
-  // === FOOTER / CREDITS ===
-  yPosition += 10;
-  checkPageBreak(20);
-  doc.setDrawColor(45, 212, 168);
-  doc.setLineWidth(0.5);
-  doc.line(marginLeft, yPosition, pageWidth - marginRight, yPosition);
-  yPosition += 8;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(120, 120, 120);
-  doc.text('Report generato con Workflow AI Analyzer - La Cassetta degli AI-trezzi', marginLeft, yPosition);
-  yPosition += 5;
-  doc.text('Powered by Valentino Grossi | valentinogrossi.it', marginLeft, yPosition);
-  doc.setTextColor(0, 0, 0);
+  // === CTA PAGE (for low readiness scores) ===
+  if (readiness.score < 50) {
+    doc.addPage();
+    yPosition = 50;
+
+    doc.setFillColor(45, 212, 168);
+    doc.rect(0, 0, pageWidth, 6, 'F');
+
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Hai bisogno di supporto?', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const ctaLines = [
+      'Il tuo AI Readiness Score indica che i tuoi processi potrebbero',
+      'beneficiare di un\'analisi approfondita con un esperto.',
+      '',
+      'Prenota una consulenza gratuita di 30 minuti per:',
+    ];
+    ctaLines.forEach(line => {
+      doc.text(line, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 7;
+    });
+    yPosition += 3;
+
+    doc.setFont('helvetica', 'bold');
+    const bullets = [
+      'Identificare le quick wins nascoste nei tuoi workflow',
+      'Costruire una roadmap di automazione personalizzata',
+      'Scegliere gli strumenti AI giusti per il tuo caso',
+    ];
+    bullets.forEach(b => {
+      doc.text(`• ${b}`, 40, yPosition);
+      yPosition += 8;
+    });
+
+    yPosition += 15;
+    doc.setFontSize(12);
+    doc.setTextColor(45, 212, 168);
+    doc.text('Prenota qui: calendar.app.google/5ows3q4UNPKwEkCdA', pageWidth / 2, yPosition, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    yPosition += 15;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(120, 120, 120);
+    doc.text('Valentino Grossi | valentinogrossi.it', pageWidth / 2, yPosition, { align: 'center' });
+    doc.text('La Cassetta degli AI-trezzi', pageWidth / 2, yPosition + 5, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+
+    doc.setFillColor(45, 212, 168);
+    doc.rect(0, pageHeight - 6, pageWidth, 6, 'F');
+  }
+
+  // === BRANDED FOOTER ON ALL PAGES ===
+  addBrandedFooter();
 
   // === DOWNLOAD ===
   const sanitizedName = nomeAzienda

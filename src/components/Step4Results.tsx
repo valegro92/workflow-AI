@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { exportToPDF, calculateMonthlySavings, calculateROI, generateLocalImplementationPlan } from '../utils/businessLogic';
+import { exportToPDF, calculateMonthlySavings, calculateROI, generateLocalImplementationPlan, calculateAIReadinessScore } from '../utils/businessLogic';
 import { workflowToBpmn, workflowsToBpmn, BPMNViewer, BPMNModeler } from '../integrations/bpmn';
 import OpenRouterKeySetup from './OpenRouterKeySetup';
+import EmailGateModal, { getStoredEmail } from './EmailGateModal';
 
 const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
   <svg
@@ -28,6 +29,8 @@ export const Step4Results: React.FC = () => {
   const [editedBpmnXml, setEditedBpmnXml] = useState<string | null>(null);
   const [showKeySetup, setShowKeySetup] = useState(false);
   const [pendingAction, setPendingAction] = useState<'plan' | 'bpmn' | null>(null);
+  const [showEmailGate, setShowEmailGate] = useState(false);
+  const [emailGateAction, setEmailGateAction] = useState<'plan' | 'export' | null>(null);
 
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     'opportunity-map': true,
@@ -66,7 +69,27 @@ export const Step4Results: React.FC = () => {
     return false; // key exists, proceed
   };
 
-  const handleExport = () => {
+  // Email gate: richiedi email se non già fornita
+  const requireEmailThen = (action: 'plan' | 'export'): boolean => {
+    if (!getStoredEmail()) {
+      setEmailGateAction(action);
+      setShowEmailGate(true);
+      return true; // blocked
+    }
+    return false;
+  };
+
+  const handleEmailSubmitted = (_email: string) => {
+    setShowEmailGate(false);
+    if (emailGateAction === 'plan') {
+      if (!requireKeyThen('plan')) handleGenerateAIPlan();
+    } else if (emailGateAction === 'export') {
+      doExport();
+    }
+    setEmailGateAction(null);
+  };
+
+  const doExport = () => {
     exportToPDF(
       state.workflows,
       state.evaluations,
@@ -75,6 +98,17 @@ export const Step4Results: React.FC = () => {
       state.implementationPlan
     );
   };
+
+  const handleExport = () => {
+    if (requireEmailThen('export')) return;
+    doExport();
+  };
+
+  // AI Readiness Score
+  const readiness = useMemo(
+    () => calculateAIReadinessScore(state.workflows, state.evaluations),
+    [state.workflows, state.evaluations]
+  );
 
   const handleReset = () => {
     if (window.confirm('Sei sicuro di voler cancellare tutti i dati e ricominciare?')) {
@@ -312,6 +346,14 @@ export const Step4Results: React.FC = () => {
         />
       )}
 
+      {/* Email Gate Modal */}
+      {showEmailGate && (
+        <EmailGateModal
+          onEmailSubmitted={handleEmailSubmitted}
+          onCancel={() => { setShowEmailGate(false); setEmailGateAction(null); }}
+        />
+      )}
+
       <h2 className="text-3xl font-bold text-white mb-4">
         Risultati e Dashboard
       </h2>
@@ -376,6 +418,61 @@ export const Step4Results: React.FC = () => {
             <p className="text-xs text-gray-400">al mese</p>
           </div>
         )}
+      </div>
+
+      {/* AI Readiness Score + CTA */}
+      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-8">
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          {/* Score Circle */}
+          <div className="flex-shrink-0 flex flex-col items-center">
+            <div
+              className="w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-3xl shadow-lg"
+              style={{ backgroundColor: readiness.color }}
+            >
+              {readiness.score}
+            </div>
+            <p className="text-sm font-bold text-white mt-2">AI Readiness Score</p>
+            <p className="text-xs" style={{ color: readiness.color }}>{readiness.label}</p>
+          </div>
+
+          {/* Description */}
+          <div className="flex-1 text-center md:text-left">
+            {readiness.score >= 70 ? (
+              <p className="text-gray-300">
+                I tuoi processi hanno un <strong className="text-green-400">alto potenziale di automazione AI</strong>.
+                Genera il piano di implementazione per scoprire da dove iniziare!
+              </p>
+            ) : readiness.score >= 40 ? (
+              <p className="text-gray-300">
+                I tuoi processi hanno un <strong className="text-yellow-400">potenziale moderato</strong>.
+                Con le giuste strategie puoi ottenere risultati significativi.
+              </p>
+            ) : (
+              <p className="text-gray-300">
+                I tuoi processi richiedono un'<strong className="text-red-400">analisi approfondita</strong> per
+                identificare le migliori opportunita di automazione.
+              </p>
+            )}
+          </div>
+
+          {/* Calendly CTA for low scores */}
+          {readiness.score < 50 && (
+            <div className="flex-shrink-0">
+              <a
+                href="https://calendar.app.google/5ows3q4UNPKwEkCdA"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-brand text-dark-bg font-bold py-3 px-6 rounded-lg hover:bg-brand-light transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Consulenza Gratuita
+              </a>
+              <p className="text-xs text-gray-500 mt-1 text-center">30 min con Valentino</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Prioritizzazione e ROI */}
@@ -495,7 +592,7 @@ export const Step4Results: React.FC = () => {
         {/* Bottone AI Piano Implementazione */}
         <div className="mt-6 text-center">
           <button
-            onClick={() => { if (!requireKeyThen('plan')) handleGenerateAIPlan(); }}
+            onClick={() => { if (!requireEmailThen('plan') && !requireKeyThen('plan')) handleGenerateAIPlan(); }}
             disabled={aiLoading}
             className={`
               inline-flex items-center gap-3 px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg
@@ -1087,7 +1184,7 @@ export const Step4Results: React.FC = () => {
                       Copia Piano
                     </button>
                     <button
-                      onClick={() => { if (!requireKeyThen('plan')) handleGenerateAIPlan(); }}
+                      onClick={() => { if (!requireEmailThen('plan') && !requireKeyThen('plan')) handleGenerateAIPlan(); }}
                       className="bg-dark-hover text-white font-semibold py-2 px-4 rounded-lg transition-colors hover:bg-dark-border"
                     >
                       Rigenera
