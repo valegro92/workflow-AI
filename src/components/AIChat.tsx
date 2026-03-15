@@ -22,7 +22,7 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Ciao! Sono il tuo assistente AI per il framework AI Collaboration Canvas. Posso aiutarti a compilare i workflow, spiegarti il framework, o suggerire strategie AI. Come posso aiutarti?',
+      content: 'Ciao! Sono il tuo assistente per Workflow AI Analyzer. Posso aiutarti a:\n\n• Compilare i workflow e capire i campi\n• Spiegarti le 4 strategie AI del framework\n• Guidarti passo passo nell\'app\n• Suggerire ottimizzazioni per i tuoi processi\n\nChiedimi qualsiasi cosa!',
       timestamp: new Date(),
     },
   ]);
@@ -92,7 +92,14 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
     setIsLoading(true);
 
     try {
-      const context = { currentWorkflow, allWorkflows, currentStep };
+      const context = {
+        currentWorkflow,
+        allWorkflows,
+        currentStep,
+        evaluations: state.evaluations,
+        nomeAzienda: state.nomeAzienda,
+        costoOrario: state.costoOrario,
+      };
       const conversationHistory = messages.map((m) => ({ role: m.role, content: m.content }));
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -112,6 +119,9 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
         if (errorData?.error === 'NO_API_KEY') {
           throw new Error('NO_API_KEY');
         }
+        if (response.status === 401) {
+          throw new Error('API error: 401');
+        }
         if (response.status === 504 || errorData?.error === 'Gateway Timeout') {
           throw new Error('TIMEOUT');
         }
@@ -124,15 +134,34 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response, timestamp: new Date() }]);
     } catch (error: any) {
       console.error('Chat error:', error);
-      let errorMsg = 'Mi dispiace, si è verificato un errore. Riprova tra poco.';
-      if (error.message === 'NO_API_KEY') {
-        errorMsg = 'Per usare la chat AI, configura la tua chiave OpenRouter gratuita nelle impostazioni (Step 4 → Impostazioni). Vai su openrouter.ai, crea un account gratis e genera una chiave.';
+
+      // Se manca la chiave o è invalida, apri direttamente il modal di setup
+      if (error.message === 'NO_API_KEY' || error.message === 'API error: 401') {
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'Per usare la chat serve una chiave OpenRouter gratuita. Ti apro la configurazione...',
+          timestamp: new Date(),
+        }]);
+        setTimeout(() => setShowKeySetup(true), 1000);
       } else if (error.message === 'TIMEOUT') {
-        errorMsg = 'La richiesta ha impiegato troppo tempo. I modelli AI gratuiti potrebbero essere sovraccarichi, riprova tra qualche secondo.';
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'La richiesta ha impiegato troppo tempo. I modelli AI gratuiti potrebbero essere sovraccarichi, riprova tra qualche secondo.',
+          timestamp: new Date(),
+        }]);
       } else if (error.message === 'CSRF') {
-        errorMsg = 'Errore di sicurezza (CSRF). Ricarica la pagina e riprova.';
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'Errore di sicurezza (CSRF). Ricarica la pagina e riprova.',
+          timestamp: new Date(),
+        }]);
+      } else {
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'Si è verificato un errore di connessione. Verifica la tua connessione internet e riprova.',
+          timestamp: new Date(),
+        }]);
       }
-      setMessages((prev) => [...prev, { role: 'assistant', content: errorMsg, timestamp: new Date() }]);
     } finally {
       setIsLoading(false);
     }
@@ -149,11 +178,13 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
     }
   };
 
-  const quickQuestions = [
-    'Come funziona il framework AI Canvas?',
-    'Come compilo un workflow?',
-    'Quali sono le 4 strategie AI?',
-  ];
+  const quickQuestions = currentStep === 2
+    ? ['Come compilo un workflow?', 'Cosa devo mettere nei campi?', 'Come funziona "Compila con AI"?']
+    : currentStep === 3
+    ? ['Cosa significano le domande?', 'Come funziona la matrice 2×2?', 'Quali sono le 4 strategie AI?']
+    : currentStep === 4
+    ? ['Come leggo il canvas?', 'Come genero il piano AI?', 'Come calcolo il ROI?']
+    : ['Come funziona questa app?', 'Da dove comincio?', 'Quali sono le 4 strategie AI?'];
 
   const handleQuickQuestion = (question: string) => {
     setInputMessage(question);

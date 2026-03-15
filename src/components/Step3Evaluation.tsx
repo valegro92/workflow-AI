@@ -15,6 +15,7 @@ export const Step3Evaluation: React.FC = () => {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [complessita, setComplessita] = useState<number>(3); // Default: media complessità
+  const [saveMessage, setSaveMessage] = useState<{ text: string; type: 'success' | 'done' } | null>(null);
 
   // Auto-select first unevaluated workflow when workflows change
   // Don't include selectedWorkflowId in deps to avoid circular dependency
@@ -112,6 +113,8 @@ export const Step3Evaluation: React.FC = () => {
       addEvaluation(evaluation);
     }
 
+    const savedId = selectedWorkflowId;
+
     // Passa al prossimo workflow non valutato
     const nextUneval = state.workflows.find(
       w => w.id !== selectedWorkflowId && !state.evaluations[w.id]
@@ -120,7 +123,22 @@ export const Step3Evaluation: React.FC = () => {
       setSelectedWorkflowId(nextUneval.id);
       setAnswers({});
       setComplessita(3);
+      setSaveMessage({
+        text: `${savedId} salvato! Prosegui ora con ${nextUneval.id} — ${nextUneval.titolo}`,
+        type: 'success',
+      });
+    } else {
+      setSaveMessage({
+        text: `${savedId} salvato! Tutti gli step sono stati valutati. Vai ai Risultati!`,
+        type: 'done',
+      });
     }
+
+    // Auto-hide dopo 6 secondi
+    setTimeout(() => setSaveMessage(null), 6000);
+
+    // Scroll in cima per vedere il prossimo workflow
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const evaluatedCount = Object.keys(state.evaluations).length;
@@ -179,6 +197,28 @@ export const Step3Evaluation: React.FC = () => {
           {allEvaluated && '✓'}
         </p>
       </div>
+
+      {/* Messaggio progressione */}
+      {saveMessage && (
+        <div
+          className={`mb-6 p-4 rounded-lg border flex items-center justify-between transition-all ${
+            saveMessage.type === 'success'
+              ? 'bg-green-900/30 border-green-500/50 text-green-300'
+              : 'bg-brand-50 border-brand/50 text-brand-light'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">{saveMessage.type === 'success' ? '→' : '★'}</span>
+            <span className="font-semibold">{saveMessage.text}</span>
+          </div>
+          <button
+            onClick={() => setSaveMessage(null)}
+            className="text-gray-400 hover:text-white ml-4"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Selector Step */}
       <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">

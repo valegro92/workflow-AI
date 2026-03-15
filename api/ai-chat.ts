@@ -36,6 +36,9 @@ interface ChatRequest {
     currentWorkflow?: any;
     allWorkflows?: any[];
     currentStep?: number;
+    evaluations?: Record<string, any>;
+    nomeAzienda?: string;
+    costoOrario?: number;
   };
   conversationHistory?: ChatMessage[];
 }
@@ -147,56 +150,92 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Costruisce system prompt context-aware
+ * Costruisce system prompt context-aware con conoscenza completa dell'app
  */
 function buildSystemPrompt(context?: ChatRequest['context']): string {
-  let prompt = `Sei un assistente AI esperto in:
-- Framework "AI Collaboration Canvas" di Nicola Mattina
-- Analisi e mappatura processi aziendali
-- Strategie di adozione AI in azienda
-- Valutazione automazione e cognitive load
+  let prompt = `Sei l'assistente AI integrato nell'applicazione "Workflow AI Analyzer", basata sul framework "AI Collaboration Canvas" di Nicola Mattina.
 
-Il tuo compito è aiutare l'utente a:
-1. Compilare correttamente i workflow
-2. Capire come funziona il framework
-3. Identificare opportunità di automazione AI
-4. Rispondere a domande su strategie AI
+## COME FUNZIONA L'APPLICAZIONE (spiegalo all'utente se chiede)
 
-Rispondi in modo:
-- Conciso e pratico (max 3-4 frasi)
-- Specifico al contesto dell'utente
-- Con esempi concreti quando utile
-- In italiano
+L'app guida l'utente in 4 step:
 
+**Step 1 - Panoramica/Dashboard**: Mostra i workflow creati, le statistiche, il costo orario, il nome azienda. Da qui si parte.
+
+**Step 2 - Mappatura Workflow**: L'utente descrive i processi aziendali compilando un form con:
+- Fase (es. Analisi, Produzione, Controllo)
+- Titolo e Descrizione dettagliata del processo
+- Tool usati, Input necessari, Output prodotti
+- Tempo medio (minuti per volta) e Frequenza mensile → il sistema calcola il Tempo Totale
+- Pain points, Owner, flag PII/HITL/Citazioni
+- C'è anche un'opzione "Compila con AI" che estrae automaticamente i campi da una descrizione libera (testo o voce)
+
+**Step 3 - Valutazione**: Per ogni workflow, l'utente risponde a 8 domande (scala 0-1-2):
+- 4 domande AUTOMAZIONE (quanto è ripetibile, regole chiare, dati strutturati, feedback semplice) → Score 0-8
+- 4 domande CARICO COGNITIVO (creatività, giudizio soggettivo, contesto complesso, eccezioni) → Score 0-8
+- Poi imposta la Complessità di implementazione (1-5)
+
+**Le 4 strategie AI** (matrice 2×2):
+- **AI Partner** (Auto BASSO + Cognitivo ALTO): Attività creative/strategiche → AI collabora come copilota
+- **AI Assistant** (Auto ALTO + Cognitivo ALTO): Attività complesse ma strutturate → AI fa il grosso, umano supervisiona
+- **Tool Automation** (Auto ALTO + Cognitivo BASSO): Processi ripetitivi → automazione completa con AI
+- **Mantieni Umano** (Auto BASSO + Cognitivo BASSO): Non conviene automatizzare → resta manuale
+
+**Step 4 - Risultati**: Canvas 2×2 con tutti i workflow posizionati, diagrammi BPMN, piano di implementazione AI (30/60/90 giorni), calcolo ROI, export PDF.
+
+## IL TUO RUOLO
+
+Sei un assistente in tempo reale che:
+1. **Aiuta a compilare**: suggerisce come descrivere i workflow, quali campi riempire, come stimare tempi
+2. **Spiega il framework**: cosa significano le domande di valutazione, come funziona la matrice 2×2
+3. **Guida la navigazione**: dice all'utente cosa fare dopo, dove cliccare
+4. **Dà consigli strategici**: suggerisce strategie AI, identifica quick wins, segnala processi ad alto potenziale
+5. **Risponde a qualsiasi domanda** sull'app e sul framework
+
+## REGOLE
+- Rispondi SEMPRE in italiano
+- Sii conciso (max 4-5 frasi) ma completo
+- Se l'utente è in uno step specifico, dai consigli contestuali per quello step
+- Usa riferimenti concreti ai workflow dell'utente quando possibile
 `;
 
-  // Aggiungi contesto specifico se disponibile
+  // Contesto step corrente
   if (context?.currentStep) {
-    const stepNames = {
-      1: 'Dashboard',
-      2: 'Mappatura Workflow',
-      3: 'Valutazione Workflow',
-      4: 'Risultati e Strategie AI',
+    const stepHelp: Record<number, string> = {
+      1: 'L\'utente è nella Dashboard (Step 1). Può vedere i workflow creati, impostare il costo orario, o iniziare a mappare processi.',
+      2: 'L\'utente sta mappando i workflow (Step 2). Aiutalo a compilare il form: fase, titolo, descrizione, tool, tempi, frequenza. Ricordagli che può usare "Compila con AI" per velocizzare.',
+      3: 'L\'utente sta valutando i workflow (Step 3). Aiutalo a rispondere alle 8 domande. Spiega cosa significano i punteggi e le strategie.',
+      4: 'L\'utente è nei Risultati (Step 4). Può vedere il canvas 2×2, generare diagrammi BPMN, creare il piano di implementazione, calcolare il ROI.',
     };
-    prompt += `\nL'utente è nello step: ${context.currentStep} - ${stepNames[context.currentStep as keyof typeof stepNames]}\n`;
+    prompt += `\n## CONTESTO ATTUALE\n${stepHelp[context.currentStep] || ''}\n`;
   }
 
+  // Dettagli workflow corrente
   if (context?.currentWorkflow) {
     const wf = context.currentWorkflow;
-    prompt += `\nWorkflow corrente in editing:
-- Titolo: ${wf.titolo || 'Non compilato'}
-- Descrizione: ${wf.descrizione || 'Non compilata'}
-- Tool: ${wf.tool?.join(', ') || 'Nessuno'}
-- Tempo medio: ${wf.tempoMedio || 'Non specificato'} min
-- Frequenza: ${wf.frequenza || 'Non specificata'} volte/mese
-`;
+    prompt += `\nWorkflow in focus:\n- ID: ${wf.id} | Titolo: ${wf.titolo || '(vuoto)'}\n- Descrizione: ${wf.descrizione || '(vuota)'}\n- Tool: ${wf.tool?.join(', ') || 'nessuno'}\n- Tempo: ${wf.tempoMedio || '?'}min × ${wf.frequenza || '?'}/mese = ${wf.tempoTotale || '?'}min/mese\n- Pain points: ${wf.painPoints || 'nessuno'}\n`;
   }
 
+  // Tutti i workflow dell'utente
   if (context?.allWorkflows && context.allWorkflows.length > 0) {
-    prompt += `\nL'utente ha ${context.allWorkflows.length} workflow già mappati.\n`;
+    prompt += `\nWorkflow dell'utente (${context.allWorkflows.length} totali):\n`;
+    for (const wf of context.allWorkflows) {
+      prompt += `- ${wf.id}: "${wf.titolo}" (${wf.fase}) — ${wf.tempoTotale || 0}min/mese`;
+      if (wf.evaluation) prompt += ` → Strategia: ${wf.evaluation.strategy?.name || '?'}`;
+      prompt += `\n`;
+    }
   }
 
-  prompt += `\nRicorda: risposte brevi, pratiche e contestualizzate.`;
+  // Evaluations se disponibili
+  if (context?.evaluations) {
+    const evalEntries = Object.entries(context.evaluations);
+    if (evalEntries.length > 0) {
+      prompt += `\nValutazioni completate:\n`;
+      for (const [wId, ev] of evalEntries) {
+        const e = ev as any;
+        prompt += `- ${wId}: Auto=${e.autoScore}/8, Cognitivo=${e.cogScore}/8 → ${e.strategy?.name || e.strategy || '?'} (Complessità: ${e.complessita}/5, Priorità: ${e.priorita?.toFixed(1) || '?'})\n`;
+      }
+    }
+  }
 
   return prompt;
 }
@@ -207,18 +246,18 @@ Rispondi in modo:
 type LogFn = (level: string, msg: string, data?: any) => void;
 
 async function callOpenRouterAPI(messages: ChatMessage[], userKey: string, log: LogFn): Promise<string> {
-  // 10-model fallback chain (all free on OpenRouter, ordered by capability)
+  // 10-model fallback chain (all free on OpenRouter, Mar 2026, ordered by capability)
   const models = [
-    'nousresearch/hermes-3-llama-3.1-405b:free',
-    'google/gemma-3-27b-it:free',
+    'qwen/qwen3-235b-a22b:free',
+    'deepseek/deepseek-r1:free',
+    'meta-llama/llama-4-maverick:free',
+    'nvidia/nemotron-3-super:free',
+    'deepseek/deepseek-chat-v3.1:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'qwen/qwen3-32b:free',
     'mistralai/mistral-small-3.1-24b-instruct:free',
-    'openai/gpt-oss-20b:free',
-    'google/gemma-3-12b-it:free',
-    'qwen/qwen3-4b:free',
-    'google/gemma-3-4b-it:free',
-    'google/gemma-3n-e4b-it:free',
-    'meta-llama/llama-3.2-3b-instruct:free',
-    'google/gemma-3n-e2b-it:free',
+    'google/gemma-3-27b-it:free',
+    'arcee-ai/trinity-large-preview:free',
   ];
 
   for (let i = 0; i < models.length; i++) {
