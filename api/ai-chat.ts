@@ -153,7 +153,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
  * Costruisce system prompt context-aware con conoscenza completa dell'app
  */
 function buildSystemPrompt(context?: ChatRequest['context']): string {
-  let prompt = `Sei l'assistente AI integrato nell'applicazione "Workflow AI Analyzer", basata sul framework "AI Collaboration Canvas" di Nicola Mattina.
+  let prompt = `Sei l'assistente AI integrato nell'applicazione "Workflow AI Analyzer".
 
 ## COME FUNZIONA L'APPLICAZIONE (spiegalo all'utente se chiede)
 

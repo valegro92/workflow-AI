@@ -1,4 +1,4 @@
-// Data Model per AI Collaboration Canvas
+// Data Model per Workflow AI Analyzer
 
 export interface Workflow {
   id: string;                    // Auto-generato: "W001", "W002", etc.

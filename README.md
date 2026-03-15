@@ -1,170 +1,214 @@
-# AI Collaboration Canvas 🎯
+<div align="center">
 
-Web application interattiva per mappare i tuoi workflow e scoprire come l'AI può aiutarti, basata sul framework di **Nicola Mattina**.
+# Workflow AI Analyzer
 
-## 🚀 Demo e Funzionalità
+**Mappa i tuoi workflow. Scopri dove l'AI fa la differenza.**
 
-Questa applicazione ti aiuta a:
-1. **Mappare i workflow** - Descrivi ogni step del tuo processo con dettagli su tempi, input e output
-2. **Valutare gli step** - Rispondi a 8 domande scientifiche su automazione e carico cognitivo
-3. **Ottenere strategia AI** - Ricevi automaticamente la strategia ottimale (AI Partner, AI Assistant, AI Tool, o Fuori Perimetro)
-4. **Visualizzare risultati** - Dashboard completa con KPI, matrice 2×2 e priorità di implementazione
+Applicazione web per analizzare i processi aziendali e identificare le migliori strategie di collaborazione con l'Intelligenza Artificiale.
 
-## 🏗️ Tech Stack
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
-- **React 18** con TypeScript
-- **Vite** - Build tool velocissimo
-- **Tailwind CSS** - Styling responsive
-- **LocalStorage** - Persistenza dati client-side
-- Nessun backend necessario - 100% client-side
-
-## 📦 Installazione e Avvio
-
-```bash
-# Installa dipendenze
-npm install
-
-# Avvia in modalità sviluppo
-npm run dev
-
-# Build per produzione
-npm run build
-
-# Preview build di produzione
-npm run preview
-```
-
-L'applicazione sarà disponibile su `http://localhost:5173`
-
-## 🎨 Struttura Progetto
-
-```
-workflow-AI/
-├── src/
-│   ├── components/          # Componenti React
-│   │   ├── ProgressIndicator.tsx
-│   │   ├── Step1Welcome.tsx
-│   │   ├── Step2Mapping.tsx
-│   │   ├── Step3Evaluation.tsx
-│   │   └── Step4Results.tsx
-│   ├── context/            # State management
-│   │   └── AppContext.tsx
-│   ├── data/               # Configurazioni
-│   │   └── questions.ts    # Le 8 domande
-│   ├── types/              # TypeScript interfaces
-│   │   └── index.ts
-│   ├── utils/              # Business logic
-│   │   └── businessLogic.ts
-│   ├── App.tsx             # Componente principale
-│   ├── main.tsx           # Entry point
-│   └── index.css          # Stili globali
-├── package.json
-├── tsconfig.json
-├── tailwind.config.js
-└── vite.config.ts
-```
-
-## 📊 La Matrice 2×2
-
-L'algoritmo classifica ogni step in base a due dimensioni:
-
-### Automazione (0-8)
-- Quanto è ripetibile e standardizzato?
-- 4 domande con punteggio 0-2 ciascuna
-
-### Carico Cognitivo (0-8)
-- Quanto pensiero e linguaggio richiede?
-- 4 domande con punteggio 0-2 ciascuna
-
-### Strategie AI
-
-| Carico Cognitivo | Automazione BASSA (0-4) | Automazione ALTA (5-8) |
-|------------------|-------------------------|------------------------|
-| **ALTO (5-8)**   | 🤝 **AI Assistant**<br/>Prompt ripetibili | 💡 **AI Partner**<br/>Conversazioni approfondite |
-| **BASSO (0-4)**  | 🔴 **Fuori Perimetro**<br/>Non delegabile | 🔧 **AI Tool**<br/>Tool specifici |
-
-## 🎯 Esempio di Utilizzo
-
-### 1. Mappatura
-```
-Fase: Produzione
-Titolo: Report settimanale vendite
-Descrizione: Raccolgo dati da Jira, Analytics e CRM,
-             creo pivot table e scrivo executive summary
-Tempo medio: 120 minuti
-Frequenza: 4 volte/mese
-→ Tempo totale: 480 min/mese
-```
-
-### 2. Valutazione (esempio)
-```
-AUTOMAZIONE:
-- Passaggi sempre uguali? → Sempre (2)
-- Struttura output uguale? → Sì (2)
-- Istruzioni scrivibili? → Sì (2)
-- Senza decisioni contestuali? → In parte (1)
-Score: 7/8
-
-CARICO COGNITIVO:
-- Meccanico o cognitivo? → Misto (1)
-- Lavoro con testi? → Sì (2)
-- Volume informazioni? → Molte (2)
-- Esplorare prospettive? → No (0)
-Score: 5/8
-```
-
-### 3. Risultato
-```
-Strategia: 💡 AI PARTNER
-Perché: Automazione ≥ 5 AND Carico Cognitivo ≥ 5
-
-Raccomandazione:
-Usa Claude/ChatGPT per aggregare dati,
-generare summary e suggerire insights
-```
-
-## 💾 Persistenza Dati
-
-L'applicazione salva automaticamente i dati in **localStorage**:
-- Tutti i workflow creati
-- Tutte le valutazioni
-- Stato della sessione
-
-I dati persistono tra le sessioni del browser. Usa "Nuova Analisi" per reset completo.
-
-## 📥 Export
-
-Esporta tutti i dati in formato JSON con:
-- Timestamp
-- Workflows completi
-- Valutazioni e strategie
-- Statistiche aggregate
-
-## 👤 Autore e Framework
-
-**Framework**: AI Collaboration Canvas
-**Autore**: Nicola Mattina
-**Website**: [radicalcuriosity.xyz](https://radicalcuriosity.xyz)
-**LinkedIn**: [linkedin.com/in/nicolamattina](https://linkedin.com/in/nicolamattina)
-**Email**: ciao@nicolamattina.it
-
-## 📝 Licenza
-
-Questo progetto implementa il framework "AI Collaboration Canvas" di Nicola Mattina.
-
-## 🤝 Contributing
-
-1. Fork del progetto
-2. Crea un branch per la feature (`git checkout -b feature/AmazingFeature`)
-3. Commit delle modifiche (`git commit -m 'Add some AmazingFeature'`)
-4. Push al branch (`git push origin feature/AmazingFeature`)
-5. Apri una Pull Request
-
-## 🐛 Bug Report
-
-Per segnalare bug o richiedere feature, apri un issue su GitHub.
+</div>
 
 ---
 
-Sviluppato con ❤️ seguendo il framework AI Collaboration Canvas
-# Updated Sat Nov  8 22:34:08 UTC 2025
+## Panoramica
+
+Workflow AI Analyzer guida l'utente in un percorso strutturato in **4 step** per trasformare workflow complessi in strategie AI concrete e misurabili.
+
+| Step | Cosa fa |
+|------|---------|
+| **1. Dashboard** | Panoramica dei workflow, configurazione azienda e costo orario |
+| **2. Mappatura** | Descrizione dettagliata di ogni processo: fasi, tempi, input/output, criticita |
+| **3. Valutazione** | Scoring su 2 assi (Automazione e Carico Cognitivo) con 8 domande scientifiche |
+| **4. Risultati** | Matrice 2x2, diagrammi BPMN, roadmap 30/60/90 giorni, calcolo ROI |
+
+## Funzionalita principali
+
+- **Mappatura workflow** con supporto a fasi, tool, input/output, tempi e frequenze
+- **Assistente AI integrato** con chat contestuale per guidare l'analisi
+- **Estrazione intelligente** da testo libero, documenti Word (.docx) e input vocale
+- **Import/Export** in formato JSON, CSV, Excel
+- **Diagrammi BPMN** generati automaticamente con AI
+- **Roadmap di implementazione** con piano a 30, 60 e 90 giorni
+- **Calcolo ROI** automatico basato su costo orario e tempo risparmiato
+- **100% client-side** — i dati restano nel browser (localStorage)
+
+## La Matrice 2x2
+
+L'algoritmo classifica ogni step su due dimensioni (0-8 ciascuna):
+
+```
+                        AUTOMAZIONE
+                   Bassa (0-4)    Alta (5-8)
+                 +--------------+--------------+
+   Alto (5-8)    |  AI Assistant |  AI Partner   |
+  CARICO         |  Prompt       |  Conversazioni|
+  COGNITIVO      |  ripetibili   |  approfondite |
+                 +--------------+--------------+
+   Basso (0-4)   |  Fuori        |  AI Tool      |
+                 |  Perimetro    |  Automazione  |
+                 |  (keep human) |  completa     |
+                 +--------------+--------------+
+```
+
+## Tech Stack
+
+| Layer | Tecnologia |
+|-------|-----------|
+| **Frontend** | React 18, TypeScript 5.2, React Router 7 |
+| **Build** | Vite 5 |
+| **Styling** | Tailwind CSS 3.4 (dark theme custom) |
+| **BPMN** | bpmn-js 18 |
+| **PDF** | jsPDF 3 |
+| **File parsing** | mammoth (docx), papaparse (csv), xlsx |
+| **AI** | OpenRouter API (modelli free, chiave utente) |
+| **Backend** | Vercel Serverless Functions |
+| **State** | React Context + localStorage |
+
+## Quick Start
+
+### Prerequisiti
+
+- **Node.js** >= 18
+- **npm** >= 9
+
+### Installazione
+
+```bash
+# Clona il repository
+git clone https://github.com/valegro92/workflow-AI.git
+cd workflow-AI
+
+# Installa le dipendenze
+npm install
+
+# Avvia il server di sviluppo
+npm run dev
+```
+
+L'app sara disponibile su `http://localhost:5173`
+
+### Build di produzione
+
+```bash
+npm run build
+npm run preview
+```
+
+### Deploy su Vercel
+
+Il progetto include `vercel.json` preconfigurato. Basta collegare il repository a Vercel e il deploy avviene automaticamente.
+
+## Configurazione AI
+
+L'app utilizza **OpenRouter** per le funzionalita AI. Non serve nessuna configurazione server-side.
+
+1. Registrati gratuitamente su [openrouter.ai](https://openrouter.ai)
+2. Genera una API key
+3. Inseriscila nell'app al primo utilizzo del chatbot (il modal si apre automaticamente)
+
+Tutti i modelli utilizzati sono **gratuiti**. La fallback chain include 10 modelli ordinati per capability:
+
+| # | Modello | Provider |
+|---|---------|----------|
+| 1 | Qwen3 235B (MoE) | Alibaba |
+| 2 | DeepSeek R1 | DeepSeek |
+| 3 | Llama 4 Maverick | Meta |
+| 4 | Nemotron 3 Super 120B | NVIDIA |
+| 5 | DeepSeek V3.1 | DeepSeek |
+| 6 | Llama 3.3 70B | Meta |
+| 7 | Qwen3 32B | Alibaba |
+| 8 | Mistral Small 3.1 24B | Mistral |
+| 9 | Gemma 3 27B | Google |
+| 10 | Arcee Trinity Large 400B | Arcee AI |
+
+### Variabili d'ambiente (opzionali)
+
+| Variabile | Descrizione | Default |
+|-----------|-------------|---------|
+| `ALLOWED_ORIGINS` | Origini consentite per CSRF protection (comma-separated) | `*` |
+
+## Struttura del progetto
+
+```
+workflow-AI/
+├── api/                          # Vercel Serverless Functions
+│   ├── middleware/                # CSRF, rate limiting, timeout, headers
+│   ├── ai-chat.ts                # Chat assistant endpoint
+│   ├── ai-generate-bpmn.ts       # Generazione diagrammi BPMN
+│   ├── ai-suggestions.ts         # Suggerimenti implementazione
+│   ├── ai-workflow-extract.ts    # Estrazione workflow da testo
+│   ├── process-audio.ts          # Elaborazione audio/voce
+│   └── health.ts                 # Health check
+├── src/
+│   ├── components/               # Componenti React
+│   │   ├── Step1Welcome.tsx      # Dashboard iniziale
+│   │   ├── Step2Mapping.tsx      # Mappatura workflow
+│   │   ├── Step3Evaluation.tsx   # Valutazione scoring
+│   │   ├── Step4Results.tsx      # Risultati e roadmap
+│   │   ├── AIChat.tsx            # Chat assistant
+│   │   ├── SmartImport.tsx       # Import intelligente multi-workflow
+│   │   └── ProgressIndicator.tsx # Barra di progressione
+│   ├── context/
+│   │   └── AppContext.tsx        # State management globale
+│   ├── data/
+│   │   └── questions.ts          # Le 8 domande di valutazione
+│   ├── integrations/
+│   │   └── bpmn/                 # Viewer e generatore BPMN
+│   ├── types/
+│   │   └── index.ts              # Interfacce TypeScript
+│   ├── utils/
+│   │   └── businessLogic.ts      # Logica di scoring e strategie
+│   ├── App.tsx                   # Root component
+│   ├── main.tsx                  # Entry point
+│   └── index.css                 # Stili globali Tailwind
+├── vercel.json                   # Configurazione deploy
+├── tailwind.config.js            # Theme customization
+├── tsconfig.json                 # Configurazione TypeScript
+└── package.json
+```
+
+## API Endpoints
+
+Tutti gli endpoint sono serverless functions su Vercel con middleware di sicurezza (CSRF, rate limiting, timeout).
+
+| Endpoint | Metodo | Timeout | Descrizione |
+|----------|--------|---------|-------------|
+| `/api/health` | GET | 10s | Health check |
+| `/api/ai-chat` | POST | 25s | Chat assistant contestuale |
+| `/api/ai-workflow-extract` | POST | 30s | Estrazione workflow da testo/voce |
+| `/api/ai-suggestions` | POST | 30s | Piano di implementazione AI |
+| `/api/ai-generate-bpmn` | POST | 30s | Generazione diagramma BPMN |
+| `/api/process-audio` | POST | 30s | Trascrizione e analisi audio |
+
+## Persistenza dati
+
+Tutti i dati sono salvati in **localStorage** sotto la chiave `ai-collaboration-canvas-data`:
+
+- Workflow e relative valutazioni
+- Configurazione azienda (nome, costo orario)
+- Chiave API OpenRouter
+- Stato della sessione
+
+I dati restano nel browser tra le sessioni. Utilizza la funzione "Nuova Analisi" per un reset completo.
+
+## Contributing
+
+1. Fai il fork del repository
+2. Crea un branch per la tua feature (`git checkout -b feature/nome-feature`)
+3. Committa le modifiche (`git commit -m 'Aggiungi nome-feature'`)
+4. Pusha il branch (`git push origin feature/nome-feature`)
+5. Apri una Pull Request
+
+## Autore
+
+**Valentino Grossi** — [valentinogrossi.it](https://valentinogrossi.it)
+
+## Licenza
+
+MIT
