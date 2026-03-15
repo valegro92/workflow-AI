@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppState, Workflow, Evaluation } from '../types';
-import { calculateStats } from '../utils/businessLogic';
+import { calculateStats, fixDuplicateWorkflowIds } from '../utils/businessLogic';
 
 interface AppContextType {
   state: AppState;
@@ -84,9 +84,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (savedData) {
         const parsed = JSON.parse(savedData);
         if (parsed && parsed.workflows) {
+          // Fix ID duplicati da bug precedente
+          const { workflows, evaluations, changed } = fixDuplicateWorkflowIds(
+            parsed.workflows || [],
+            parsed.evaluations || {}
+          );
+          if (changed) {
+            console.log('Fixed duplicate workflow IDs');
+          }
           return {
             ...parsed,
-            stats: calculateStats(parsed.workflows || [], parsed.evaluations || {})
+            workflows,
+            evaluations,
+            stats: calculateStats(workflows, evaluations)
           };
         }
       }

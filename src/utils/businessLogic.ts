@@ -81,6 +81,57 @@ export function generateWorkflowId(workflows: Workflow[]): string {
   return `W${String(nextNum).padStart(3, '0')}`;
 }
 
+/**
+ * Riassegna ID univoci e progressivi ai workflow con ID duplicati.
+ * Aggiorna anche le chiavi delle evaluations di conseguenza.
+ */
+export function fixDuplicateWorkflowIds(
+  workflows: Workflow[],
+  evaluations: Record<string, any>
+): { workflows: Workflow[]; evaluations: Record<string, any>; changed: boolean } {
+  const seen = new Set<string>();
+  let changed = false;
+  const idMap: Record<number, string> = {}; // index -> new id (only for changed ones)
+  const fixedWorkflows: Workflow[] = [];
+  const assigned: Workflow[] = []; // track already-assigned for generateWorkflowId
+
+  for (let i = 0; i < workflows.length; i++) {
+    const w = workflows[i];
+    if (seen.has(w.id)) {
+      // Duplicato: genera un nuovo ID progressivo
+      const newId = generateWorkflowId(assigned);
+      idMap[i] = newId;
+      const fixed = { ...w, id: newId };
+      fixedWorkflows.push(fixed);
+      assigned.push(fixed);
+      changed = true;
+    } else {
+      seen.add(w.id);
+      fixedWorkflows.push(w);
+      assigned.push(w);
+    }
+  }
+
+  if (!changed) return { workflows, evaluations, changed: false };
+
+  // Aggiorna evaluations: mappa vecchio ID -> nuovo ID
+  const newEvaluations = { ...evaluations };
+  for (let i = 0; i < workflows.length; i++) {
+    if (idMap[i]) {
+      const oldId = workflows[i].id;
+      if (newEvaluations[oldId]) {
+        const eval_ = { ...newEvaluations[oldId], workflowId: idMap[i] };
+        newEvaluations[idMap[i]] = eval_;
+        // Non cancellare il vecchio se altri workflow lo usano ancora
+        const stillUsed = fixedWorkflows.some(w => w.id === oldId);
+        if (!stillUsed) delete newEvaluations[oldId];
+      }
+    }
+  }
+
+  return { workflows: fixedWorkflows, evaluations: newEvaluations, changed: true };
+}
+
 // 7. Calcola statistiche aggregate
 export function calculateStats(workflows: Workflow[], evaluations: Record<string, Evaluation>): AppState['stats'] {
   const totalSteps = workflows.length;
