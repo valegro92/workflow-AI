@@ -1,10 +1,10 @@
 <div align="center">
 
-# AI Collaboration Canvas
+# Workflow AI Analyzer
 
 **Mappa i tuoi workflow. Scopri dove l'AI fa la differenza.**
 
-Applicazione web interattiva basata sul framework di [Nicola Mattina](https://radicalcuriosity.xyz) per analizzare i processi aziendali e identificare le migliori strategie di collaborazione con l'Intelligenza Artificiale.
+Applicazione web per analizzare i processi aziendali e identificare le migliori strategie di collaborazione con l'Intelligenza Artificiale.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -18,7 +18,7 @@ Applicazione web interattiva basata sul framework di [Nicola Mattina](https://ra
 
 ## Panoramica
 
-AI Collaboration Canvas guida l'utente in un percorso strutturato in **4 step** per trasformare workflow complessi in strategie AI concrete e misurabili.
+Workflow AI Analyzer guida l'utente in un percorso strutturato in **4 step** per trasformare workflow complessi in strategie AI concrete e misurabili.
 
 | Step | Cosa fa |
 |------|---------|
@@ -45,15 +45,15 @@ L'algoritmo classifica ogni step su due dimensioni (0-8 ciascuna):
 ```
                         AUTOMAZIONE
                    Bassa (0-4)    Alta (5-8)
-                 ┌──────────────┬──────────────┐
-   Alto (5-8)    │  AI Assistant │  AI Partner   │
-  CARICO         │  Prompt       │  Conversazioni│
-  COGNITIVO      │  ripetibili   │  approfondite │
-                 ├──────────────┼──────────────┤
-   Basso (0-4)   │  Fuori        │  AI Tool      │
-                 │  Perimetro    │  Automazione  │
-                 │  (keep human) │  completa     │
-                 └──────────────┴──────────────┘
+                 +--------------+--------------+
+   Alto (5-8)    |  AI Assistant |  AI Partner   |
+  CARICO         |  Prompt       |  Conversazioni|
+  COGNITIVO      |  ripetibili   |  approfondite |
+                 +--------------+--------------+
+   Basso (0-4)   |  Fuori        |  AI Tool      |
+                 |  Perimetro    |  Automazione  |
+                 |  (keep human) |  completa     |
+                 +--------------+--------------+
 ```
 
 ## Tech Stack
@@ -205,14 +205,10 @@ I dati restano nel browser tra le sessioni. Utilizza la funzione "Nuova Analisi"
 4. Pusha il branch (`git push origin feature/nome-feature`)
 5. Apri una Pull Request
 
-## Crediti
+## Autore
 
-| | |
-|-|-|
-| **Framework** | AI Collaboration Canvas |
-| **Autore del framework** | [Nicola Mattina](https://linkedin.com/in/nicolamattina) — [radicalcuriosity.xyz](https://radicalcuriosity.xyz) |
-| **Sviluppo** | [Valentino Grossi](https://valentinogrossi.it) |
+**Valentino Grossi** — [valentinogrossi.it](https://valentinogrossi.it)
 
 ## Licenza
 
-Questo progetto implementa il framework "AI Collaboration Canvas" di Nicola Mattina.
+MIT
