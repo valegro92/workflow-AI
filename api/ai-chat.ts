@@ -225,24 +225,35 @@ async function callOpenRouterAPI(messages: ChatMessage[], userKey: string, log: 
     try {
       log('INFO', `Trying model ${i + 1}/${models.length}: ${models[i]}`);
       const t0 = Date.now();
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userKey}`,
-          'HTTP-Referer': 'https://workflow-ai-eight.vercel.app',
-          'X-Title': 'Workflow AI Analyzer - Chat Assistant',
-        },
-        body: JSON.stringify({
-          model: models[i],
-          messages: messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          temperature: 0.7,
-          max_tokens: 500,
-        }),
-      });
+
+      // Per-model timeout: 8s per model to avoid consuming the entire budget
+      const controller = new AbortController();
+      const modelTimeout = setTimeout(() => controller.abort(), 8000);
+
+      let response: Response;
+      try {
+        response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${userKey}`,
+            'HTTP-Referer': 'https://workflow-ai-eight.vercel.app',
+            'X-Title': 'Workflow AI Analyzer - Chat Assistant',
+          },
+          body: JSON.stringify({
+            model: models[i],
+            messages: messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+            temperature: 0.7,
+            max_tokens: 500,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(modelTimeout);
+      }
 
       if (!response.ok) {
         const errorBody = await response.text();
