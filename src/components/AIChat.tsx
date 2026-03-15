@@ -122,15 +122,26 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
         if (errorData?.error === 'NO_API_KEY') {
           throw new Error('NO_API_KEY');
         }
+        if (response.status === 504 || errorData?.error === 'Gateway Timeout') {
+          throw new Error('TIMEOUT');
+        }
+        if (response.status === 403) {
+          throw new Error('CSRF');
+        }
         throw new Error(`API error: ${response.status}`);
       }
       const data = await response.json();
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response, timestamp: new Date() }]);
     } catch (error: any) {
       console.error('Chat error:', error);
-      const errorMsg = error.message === 'NO_API_KEY'
-        ? '🔑 Per usare la chat AI, configura la tua chiave OpenRouter gratuita nelle impostazioni (Step 4 → Impostazioni). Vai su openrouter.ai, crea un account gratis e genera una chiave.'
-        : 'Mi dispiace, si è verificato un errore. Riprova tra poco.';
+      let errorMsg = 'Mi dispiace, si è verificato un errore. Riprova tra poco.';
+      if (error.message === 'NO_API_KEY') {
+        errorMsg = 'Per usare la chat AI, configura la tua chiave OpenRouter gratuita nelle impostazioni (Step 4 → Impostazioni). Vai su openrouter.ai, crea un account gratis e genera una chiave.';
+      } else if (error.message === 'TIMEOUT') {
+        errorMsg = 'La richiesta ha impiegato troppo tempo. I modelli AI gratuiti potrebbero essere sovraccarichi, riprova tra qualche secondo.';
+      } else if (error.message === 'CSRF') {
+        errorMsg = 'Errore di sicurezza (CSRF). Ricarica la pagina e riprova.';
+      }
       setMessages((prev) => [...prev, { role: 'assistant', content: errorMsg, timestamp: new Date() }]);
     } finally {
       setIsLoading(false);

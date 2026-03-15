@@ -32,9 +32,11 @@ export function withTimeout(
   } = options;
 
   return async (req: VercelRequest, res: VercelResponse) => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     // Create a promise that rejects after timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         reject(new Error('TIMEOUT'));
       }, timeoutMs);
     });
@@ -60,9 +62,13 @@ export function withTimeout(
           });
         }
       } else {
-        // Re-throw non-timeout errors to be handled by the caller
+        // Non-timeout error: still clear the timer
+        if (timeoutId) clearTimeout(timeoutId);
         throw error;
       }
+    } finally {
+      // Always clear the timeout to prevent dangling timers
+      if (timeoutId) clearTimeout(timeoutId);
     }
   };
 }

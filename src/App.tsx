@@ -14,6 +14,7 @@ import VoiceImport from './components/VoiceImport';
 import SmartImport from './components/SmartImport';
 import AIChat from './components/AIChat';
 import { LandingPage } from './components/LandingPage';
+import { generateWorkflowId } from './utils/businessLogic';
 
 const AppContent: React.FC = () => {
   const { state, setCurrentStep, bulkAddWorkflows, addWorkflow } = useAppContext();
@@ -235,7 +236,7 @@ const AppContent: React.FC = () => {
       {showTemplateLibrary && (
         <TemplateLibrary
           onSelectTemplate={(workflow) => {
-            const newId = `W${String(state.workflows.length + 1).padStart(3, '0')}`;
+            const newId = generateWorkflowId(state.workflows);
             const tempoTotale = workflow.tempoMedio * workflow.frequenza;
             addWorkflow({
               ...workflow,
@@ -246,14 +247,13 @@ const AppContent: React.FC = () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onSelectMultiple={(workflows) => {
-            const workflowsToAdd = workflows.map((workflow, index) => {
-              const newId = `W${String(state.workflows.length + index + 1).padStart(3, '0')}`;
+            const existingWorkflows = [...state.workflows];
+            const workflowsToAdd = workflows.map((workflow) => {
+              const newId = generateWorkflowId(existingWorkflows);
               const tempoTotale = workflow.tempoMedio * workflow.frequenza;
-              return {
-                ...workflow,
-                id: newId,
-                tempoTotale,
-              };
+              const newWorkflow = { ...workflow, id: newId, tempoTotale };
+              existingWorkflows.push(newWorkflow);
+              return newWorkflow;
             });
 
             bulkAddWorkflows(workflowsToAdd);
@@ -283,14 +283,13 @@ const AppContent: React.FC = () => {
       {showWordImport && (
         <WordImport
           onImportMultiple={(workflows) => {
-            const workflowsToAdd = workflows.map((workflow, index) => {
-              const newId = `W${String(state.workflows.length + index + 1).padStart(3, '0')}`;
+            const existingWorkflows = [...state.workflows];
+            const workflowsToAdd = workflows.map((workflow) => {
+              const newId = generateWorkflowId(existingWorkflows);
               const tempoTotale = workflow.tempoMedio * workflow.frequenza;
-              return {
-                ...workflow,
-                id: newId,
-                tempoTotale,
-              };
+              const newWorkflow = { ...workflow, id: newId, tempoTotale };
+              existingWorkflows.push(newWorkflow);
+              return newWorkflow;
             });
 
             bulkAddWorkflows(workflowsToAdd);
