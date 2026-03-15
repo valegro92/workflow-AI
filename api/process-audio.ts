@@ -115,16 +115,16 @@ async function handler(
 
     // 5. Extract workflows with 10-model fallback chain (all free on OpenRouter)
     const models = [
-      'nousresearch/hermes-3-llama-3.1-405b:free',
-      'google/gemma-3-27b-it:free',
+      'qwen/qwen3-235b-a22b:free',
+      'deepseek/deepseek-r1:free',
+      'meta-llama/llama-4-maverick:free',
+      'nvidia/nemotron-3-super:free',
+      'deepseek/deepseek-chat-v3.1:free',
+      'meta-llama/llama-3.3-70b-instruct:free',
+      'qwen/qwen3-32b:free',
       'mistralai/mistral-small-3.1-24b-instruct:free',
-      'openai/gpt-oss-20b:free',
-      'google/gemma-3-12b-it:free',
-      'qwen/qwen3-4b:free',
-      'google/gemma-3-4b-it:free',
-      'google/gemma-3n-e4b-it:free',
-      'meta-llama/llama-3.2-3b-instruct:free',
-      'google/gemma-3n-e2b-it:free',
+      'google/gemma-3-27b-it:free',
+      'arcee-ai/trinity-large-preview:free',
     ];
     const messages = [{ role: 'user' as const, content: EXTRACTION_PROMPT + '\n\n' + transcript }];
 

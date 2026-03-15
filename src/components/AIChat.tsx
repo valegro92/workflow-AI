@@ -119,6 +119,9 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
         if (errorData?.error === 'NO_API_KEY') {
           throw new Error('NO_API_KEY');
         }
+        if (response.status === 401) {
+          throw new Error('API error: 401');
+        }
         if (response.status === 504 || errorData?.error === 'Gateway Timeout') {
           throw new Error('TIMEOUT');
         }
@@ -131,15 +134,34 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response, timestamp: new Date() }]);
     } catch (error: any) {
       console.error('Chat error:', error);
-      let errorMsg = 'Mi dispiace, si è verificato un errore. Riprova tra poco.';
-      if (error.message === 'NO_API_KEY') {
-        errorMsg = 'Per usare la chat AI, configura la tua chiave OpenRouter gratuita nelle impostazioni (Step 4 → Impostazioni). Vai su openrouter.ai, crea un account gratis e genera una chiave.';
+
+      // Se manca la chiave o è invalida, apri direttamente il modal di setup
+      if (error.message === 'NO_API_KEY' || error.message === 'API error: 401') {
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'Per usare la chat serve una chiave OpenRouter gratuita. Ti apro la configurazione...',
+          timestamp: new Date(),
+        }]);
+        setTimeout(() => setShowKeySetup(true), 1000);
       } else if (error.message === 'TIMEOUT') {
-        errorMsg = 'La richiesta ha impiegato troppo tempo. I modelli AI gratuiti potrebbero essere sovraccarichi, riprova tra qualche secondo.';
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'La richiesta ha impiegato troppo tempo. I modelli AI gratuiti potrebbero essere sovraccarichi, riprova tra qualche secondo.',
+          timestamp: new Date(),
+        }]);
       } else if (error.message === 'CSRF') {
-        errorMsg = 'Errore di sicurezza (CSRF). Ricarica la pagina e riprova.';
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'Errore di sicurezza (CSRF). Ricarica la pagina e riprova.',
+          timestamp: new Date(),
+        }]);
+      } else {
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'Si è verificato un errore di connessione. Verifica la tua connessione internet e riprova.',
+          timestamp: new Date(),
+        }]);
       }
-      setMessages((prev) => [...prev, { role: 'assistant', content: errorMsg, timestamp: new Date() }]);
     } finally {
       setIsLoading(false);
     }
