@@ -52,6 +52,70 @@ FORMATO OUTPUT (JSON valido):
 
 Analizza il testo fornito ed estrai le informazioni in formato JSON.`;
 
+const MULTI_WORKFLOW_EXTRACTION_PROMPT = `Sei un assistente esperto nell'analisi di processi aziendali.
+
+Il tuo compito è analizzare un documento (testo libero, JSON, o qualsiasi formato) e identificare TUTTI i singoli step/fasi del processo descritto, restituendo un array di workflow strutturati.
+
+IMPORTANTE: Devi rispondere SOLO con un array JSON valido, senza testo aggiuntivo prima o dopo.
+
+PER OGNI STEP/FASE ESTRAI:
+- fase: string - la macro-fase del processo (es: "Analisi", "Produzione", "Controllo", "Pianificazione", "Esecuzione", "Verifica", "Vendite", "Marketing", "HR", "IT", "Finanza", "Customer Service", "Operazioni")
+- titolo: string (max 60 caratteri, descrittivo dello step specifico)
+- descrizione: string (dettagliata, cosa si fa concretamente in questo step)
+- tool: array di stringhe (strumenti/software usati)
+- input: array di stringhe (cosa serve per iniziare questo step)
+- output: array di stringhe (cosa viene prodotto da questo step)
+- tempoMedio: number (minuti per singola esecuzione, stima ragionevole)
+- frequenza: number (quante volte al mese viene eseguito: giornaliero=20, settimanale=4, mensile=1)
+- painPoints: string (problemi/difficoltà, stringa vuota se non menzionati)
+- pii: boolean (true se contiene dati personali sensibili)
+- hitl: boolean (true se richiede supervisione/decisione umana)
+- citazioni: boolean (true se serve citare fonti)
+
+REGOLE CRITICHE:
+1. Identifica OGNI step distinto del processo. Se il testo descrive 5 attività diverse, restituisci 5 oggetti.
+2. Ogni step deve essere un'attività concreta e separata, non una categoria generica.
+3. Se il testo è un elenco puntato o numerato, ogni punto è probabilmente uno step.
+4. Se è un testo discorsivo, identifica i verbi d'azione principali come step separati.
+5. Se è un JSON con dati strutturati, estrai ogni elemento come workflow.
+6. Per ogni step, assegna la fase macro più appropriata tra quelle standard.
+7. Stima tempi e frequenze in modo realistico se non specificati.
+8. L'output e l'input di step consecutivi dovrebbero essere coerenti (l'output di uno è spesso l'input del successivo).
+
+FORMATO OUTPUT (array JSON valido):
+[
+  {
+    "fase": "Analisi",
+    "titolo": "Raccolta dati vendite",
+    "descrizione": "Scarico i dati di vendita dal CRM e li organizzo in un foglio Excel",
+    "tool": ["CRM", "Excel"],
+    "input": ["Accesso CRM", "Credenziali"],
+    "output": ["Foglio Excel con dati vendite"],
+    "tempoMedio": 30,
+    "frequenza": 4,
+    "painPoints": "Dati in formati diversi, export lento",
+    "pii": true,
+    "hitl": false,
+    "citazioni": false
+  },
+  {
+    "fase": "Produzione",
+    "titolo": "Creazione report settimanale",
+    "descrizione": "Elaboro i dati raccolti e creo il report con grafici e KPI",
+    "tool": ["Excel", "PowerPoint"],
+    "input": ["Foglio Excel con dati vendite"],
+    "output": ["Report PowerPoint", "PDF riepilogativo"],
+    "tempoMedio": 60,
+    "frequenza": 4,
+    "painPoints": "Formule complesse, formattazione manuale",
+    "pii": false,
+    "hitl": true,
+    "citazioni": false
+  }
+]
+
+Analizza il documento fornito e restituisci TUTTI gli step come array JSON.`;
+
 async function handler(
   req: VercelRequest,
   res: VercelResponse
@@ -115,14 +179,15 @@ async function handler(
       },
     });
 
-    const { description } = req.body;
+    const { description, multi } = req.body;
 
     if (!description || typeof description !== 'string' || description.trim().length < 10) {
       log('WARN', 'Invalid description', { type: typeof description, length: description?.length });
       return res.status(400).json({ error: 'Description must be at least 10 characters' });
     }
 
-    log('INFO', 'Processing', { descLength: description.length, keyPrefix: apiKey.substring(0, 8) });
+    const isMulti = multi === true;
+    log('INFO', 'Processing', { descLength: description.length, keyPrefix: apiKey.substring(0, 8), multi: isMulti });
 
     // 10-model fallback chain (all free on OpenRouter, ordered by capability)
     const models = [
@@ -137,9 +202,13 @@ async function handler(
       'meta-llama/llama-3.2-3b-instruct:free',
       'google/gemma-3n-e2b-it:free',
     ];
+    const systemPrompt = isMulti ? MULTI_WORKFLOW_EXTRACTION_PROMPT : WORKFLOW_EXTRACTION_PROMPT;
+    const userContent = isMulti
+      ? `DOCUMENTO DA ANALIZZARE:\n\n${description}`
+      : `DESCRIZIONE WORKFLOW:\n\n${description}`;
     const messages = [
-      { role: 'system' as const, content: WORKFLOW_EXTRACTION_PROMPT },
-      { role: 'user' as const, content: `DESCRIZIONE WORKFLOW:\n\n${description}` },
+      { role: 'system' as const, content: systemPrompt },
+      { role: 'user' as const, content: userContent },
     ];
 
     let completion;
@@ -184,16 +253,38 @@ async function handler(
     // Parse JSON response
     let extractedData;
     try {
-      // Try to extract JSON from response (in case AI adds extra text)
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        log('ERROR', 'No JSON object found in AI response', {
-          responsePreview: responseText.substring(0, 300),
-        });
-        throw new Error('No JSON found in response');
+      if (isMulti) {
+        // Multi mode: expect an array
+        const arrayMatch = responseText.match(/\[[\s\S]*\]/);
+        if (!arrayMatch) {
+          // Fallback: try single object and wrap in array
+          const objMatch = responseText.match(/\{[\s\S]*\}/);
+          if (!objMatch) {
+            log('ERROR', 'No JSON found in AI response (multi)', {
+              responsePreview: responseText.substring(0, 300),
+            });
+            throw new Error('No JSON found in response');
+          }
+          extractedData = [JSON.parse(objMatch[0])];
+        } else {
+          extractedData = JSON.parse(arrayMatch[0]);
+        }
+        if (!Array.isArray(extractedData)) {
+          extractedData = [extractedData];
+        }
+        log('INFO', 'Multi JSON parsed', { count: extractedData.length });
+      } else {
+        // Single mode: expect an object
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          log('ERROR', 'No JSON object found in AI response', {
+            responsePreview: responseText.substring(0, 300),
+          });
+          throw new Error('No JSON found in response');
+        }
+        extractedData = JSON.parse(jsonMatch[0]);
+        log('INFO', 'JSON parsed successfully', { fields: Object.keys(extractedData) });
       }
-      extractedData = JSON.parse(jsonMatch[0]);
-      log('INFO', 'JSON parsed successfully', { fields: Object.keys(extractedData) });
     } catch (parseError: any) {
       log('ERROR', 'JSON parse failed', {
         parseError: parseError.message,
@@ -205,7 +296,40 @@ async function handler(
       });
     }
 
-    // Validate required fields and data types
+    if (isMulti) {
+      // Validate each workflow in array
+      const required = ['fase', 'titolo', 'descrizione', 'tool', 'input', 'output', 'tempoMedio', 'frequenza'];
+      const validWorkflows = extractedData.filter((wf: any) => {
+        const missing = required.filter(field => !(field in wf));
+        if (missing.length > 0) {
+          log('WARN', 'Skipping workflow with missing fields', { missing, titolo: wf.titolo });
+          return false;
+        }
+        if (typeof wf.tempoMedio !== 'number') wf.tempoMedio = parseInt(wf.tempoMedio) || 30;
+        if (typeof wf.frequenza !== 'number') wf.frequenza = parseInt(wf.frequenza) || 4;
+        if (!Array.isArray(wf.tool)) wf.tool = typeof wf.tool === 'string' ? [wf.tool] : [];
+        if (!Array.isArray(wf.input)) wf.input = typeof wf.input === 'string' ? [wf.input] : [];
+        if (!Array.isArray(wf.output)) wf.output = typeof wf.output === 'string' ? [wf.output] : [];
+        return true;
+      });
+
+      if (validWorkflows.length === 0) {
+        return res.status(500).json({
+          error: 'Nessun workflow valido estratto dal documento.',
+          details: 'AI non ha prodotto workflow con tutti i campi richiesti'
+        });
+      }
+
+      log('INFO', 'MULTI SUCCESS', { count: validWorkflows.length, model });
+
+      return res.status(200).json({
+        success: true,
+        workflows: validWorkflows,
+        model
+      });
+    }
+
+    // Single mode validation
     const required = ['fase', 'titolo', 'descrizione', 'tool', 'input', 'output', 'tempoMedio', 'frequenza'];
     const missing = required.filter(field => !(field in extractedData));
 

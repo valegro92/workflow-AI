@@ -11,6 +11,7 @@ import ImportExport from './components/ImportExport';
 import TemplateLibrary from './components/TemplateLibrary';
 import WordImport from './components/WordImport';
 import VoiceImport from './components/VoiceImport';
+import SmartImport from './components/SmartImport';
 import AIChat from './components/AIChat';
 import { LandingPage } from './components/LandingPage';
 
@@ -20,6 +21,7 @@ const AppContent: React.FC = () => {
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
   const [showWordImport, setShowWordImport] = useState(false);
   const [showVoiceImport, setShowVoiceImport] = useState(false);
+  const [showSmartImport, setShowSmartImport] = useState(false);
   const [showImportDropdown, setShowImportDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [hasEntered, setHasEntered] = useState(() => {
@@ -98,24 +100,43 @@ const AppContent: React.FC = () => {
                 </svg>
               </button>
               {showImportDropdown && (
-                <div className="absolute right-0 mt-1 w-48 bg-dark-card border border-dark-border rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 mt-1 w-56 bg-dark-card border border-dark-border rounded-lg shadow-xl z-50">
+                  <button
+                    onClick={() => { setShowSmartImport(true); setShowImportDropdown(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover rounded-t-lg transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Import TXT / JSON (AI)
+                  </button>
                   <button
                     onClick={() => { setShowWordImport(true); setShowImportDropdown(false); }}
-                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover rounded-t-lg transition-colors"
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover transition-colors border-t border-dark-border flex items-center gap-2"
                   >
+                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                     Import da Word
                   </button>
                   <button
                     onClick={() => { setShowVoiceImport(true); setShowImportDropdown(false); }}
-                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover transition-colors border-t border-dark-border"
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover transition-colors border-t border-dark-border flex items-center gap-2"
                   >
+                    <svg className="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+                    </svg>
                     Nota Vocale / Testo
                   </button>
                   <button
                     onClick={() => { setShowImportExport(true); setShowImportDropdown(false); }}
-                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover rounded-b-lg transition-colors border-t border-dark-border"
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover rounded-b-lg transition-colors border-t border-dark-border flex items-center gap-2"
                   >
-                    Import/Export JSON
+                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    Import/Export CSV/Excel
                   </button>
                 </div>
               )}
@@ -253,6 +274,10 @@ const AppContent: React.FC = () => {
           }}
           onClose={() => setShowVoiceImport(false)}
         />
+      )}
+
+      {showSmartImport && (
+        <SmartImport onClose={() => setShowSmartImport(false)} />
       )}
 
       {showWordImport && (
