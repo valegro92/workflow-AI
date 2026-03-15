@@ -22,7 +22,7 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Ciao! Sono il tuo assistente AI per il framework AI Collaboration Canvas. Posso aiutarti a compilare i workflow, spiegarti il framework, o suggerire strategie AI. Come posso aiutarti?',
+      content: 'Ciao! Sono il tuo assistente per Workflow AI Analyzer. Posso aiutarti a:\n\n• Compilare i workflow e capire i campi\n• Spiegarti le 4 strategie AI del framework\n• Guidarti passo passo nell\'app\n• Suggerire ottimizzazioni per i tuoi processi\n\nChiedimi qualsiasi cosa!',
       timestamp: new Date(),
     },
   ]);
@@ -92,7 +92,14 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
     setIsLoading(true);
 
     try {
-      const context = { currentWorkflow, allWorkflows, currentStep };
+      const context = {
+        currentWorkflow,
+        allWorkflows,
+        currentStep,
+        evaluations: state.evaluations,
+        nomeAzienda: state.nomeAzienda,
+        costoOrario: state.costoOrario,
+      };
       const conversationHistory = messages.map((m) => ({ role: m.role, content: m.content }));
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -149,11 +156,13 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
     }
   };
 
-  const quickQuestions = [
-    'Come funziona il framework AI Canvas?',
-    'Come compilo un workflow?',
-    'Quali sono le 4 strategie AI?',
-  ];
+  const quickQuestions = currentStep === 2
+    ? ['Come compilo un workflow?', 'Cosa devo mettere nei campi?', 'Come funziona "Compila con AI"?']
+    : currentStep === 3
+    ? ['Cosa significano le domande?', 'Come funziona la matrice 2×2?', 'Quali sono le 4 strategie AI?']
+    : currentStep === 4
+    ? ['Come leggo il canvas?', 'Come genero il piano AI?', 'Come calcolo il ROI?']
+    : ['Come funziona questa app?', 'Da dove comincio?', 'Quali sono le 4 strategie AI?'];
 
   const handleQuickQuestion = (question: string) => {
     setInputMessage(question);
