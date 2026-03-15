@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Workflow } from '../types';
+import { useAppContext } from '../context/AppContext';
 import OpenRouterKeySetup from './OpenRouterKeySetup';
 
 interface Message {
@@ -15,6 +16,7 @@ interface AIChatProps {
 }
 
 export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: AIChatProps) {
+  const { state, setOpenRouterKey } = useAppContext();
   const [isOpen, setIsOpen] = useState(false);
   const [showKeySetup, setShowKeySetup] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -30,17 +32,10 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
   const inputRef = useRef<HTMLInputElement>(null);
 
   const getOpenRouterKey = (): string | null => {
-    try {
-      const saved = localStorage.getItem('ai-collaboration-canvas-data');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.openRouterKey || null;
-      }
-    } catch {}
-    return null;
+    return state.openRouterKey || null;
   };
 
-  const hasKey = () => !!getOpenRouterKey();
+  const hasKey = () => !!state.openRouterKey;
 
   const handleOpenChat = () => {
     if (!hasKey()) {
@@ -51,12 +46,7 @@ export default function AIChat({ currentWorkflow, allWorkflows, currentStep }: A
   };
 
   const handleKeySaved = (key: string) => {
-    try {
-      const saved = localStorage.getItem('ai-collaboration-canvas-data');
-      const data = saved ? JSON.parse(saved) : {};
-      data.openRouterKey = key;
-      localStorage.setItem('ai-collaboration-canvas-data', JSON.stringify(data));
-    } catch {}
+    setOpenRouterKey(key);
     setShowKeySetup(false);
     setIsOpen(true);
   };
