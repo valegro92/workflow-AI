@@ -91,7 +91,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-card rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-dark-border">
+      <div className="bg-dark-surface rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-dark-border">
         {/* Header */}
         <div className="bg-dark-hover border-b border-brand/30 text-white px-6 py-4">
           <div className="flex justify-between items-start mb-3">
@@ -123,7 +123,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                 className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                   multiSelectMode
                     ? 'bg-brand text-dark-bg'
-                    : 'bg-dark-border hover:bg-dark-card text-gray-300'
+                    : 'bg-dark-border hover:bg-dark-surface text-gray-300'
                 }`}
               >
                 {multiSelectMode ? 'Selezione Multipla' : 'Abilita Selezione Multipla'}
@@ -136,13 +136,13 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                   </div>
                   <button
                     onClick={handleSelectAll}
-                    className="text-sm bg-dark-border hover:bg-dark-card text-gray-300 px-3 py-1.5 rounded transition-colors"
+                    className="text-sm bg-dark-border hover:bg-dark-surface text-gray-300 px-3 py-1.5 rounded transition-colors"
                   >
                     Seleziona tutti ({filteredTemplates.length})
                   </button>
                   <button
                     onClick={handleClearSelection}
-                    className="text-sm bg-dark-border hover:bg-dark-card text-gray-300 px-3 py-1.5 rounded transition-colors"
+                    className="text-sm bg-dark-border hover:bg-dark-surface text-gray-300 px-3 py-1.5 rounded transition-colors"
                   >
                     Deseleziona tutti
                   </button>
@@ -162,7 +162,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
         </div>
 
         {/* Search Bar */}
-        <div className="px-6 py-4 border-b border-dark-border bg-dark-card">
+        <div className="px-6 py-4 border-b border-dark-border bg-dark-surface">
           <input
             type="text"
             placeholder="Cerca template... (es: 'onboarding', 'email', 'fatture')"
@@ -177,7 +177,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
 
         {/* Categories */}
         {!searchQuery && (
-          <div className="px-6 py-4 border-b border-dark-border bg-dark-card overflow-x-auto">
+          <div className="px-6 py-4 border-b border-dark-border bg-dark-surface overflow-x-auto">
             <div className="flex gap-2 min-w-max">
               <button
                 onClick={() => setSelectedCategory(null)}
@@ -231,7 +231,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
                 return (
                   <div
                     key={template.id}
-                    className={`bg-dark-card border-2 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer relative ${
+                    className={`bg-dark-surface border-2 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer relative ${
                       isSelected && multiSelectMode
                         ? 'border-brand bg-brand-50/20'
                         : 'border-dark-border hover:border-brand/50'
@@ -315,7 +315,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
         </div>
 
         {/* Footer */}
-        <div className="bg-dark-card px-6 py-4 border-t border-dark-border flex justify-between items-center">
+        <div className="bg-dark-surface px-6 py-4 border-t border-dark-border flex justify-between items-center">
           <p className="text-sm text-gray-400">
             <strong className="text-gray-300">Tip:</strong> Puoi personalizzare il template dopo averlo selezionato
           </p>
@@ -335,7 +335,7 @@ export default function TemplateLibrary({ onSelectTemplate, onSelectMultiple, on
           onClick={() => setSelectedTemplate(null)}
         >
           <div
-            className="bg-dark-card rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-dark-border"
+            className="bg-dark-surface rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-dark-border"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Detail Header */}

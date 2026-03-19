@@ -71,7 +71,7 @@ const AppContent: React.FC = () => {
       <div className="h-1 bg-brand" />
 
       {/* Header */}
-      <header className="bg-dark-card border-b border-brand/30 py-3 shadow-lg">
+      <header className="bg-dark-surface border-b border-brand/30 py-3 shadow-lg">
         <div className="max-w-6xl mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             {/* Toolbox icon */}
@@ -101,7 +101,7 @@ const AppContent: React.FC = () => {
                 </svg>
               </button>
               {showImportDropdown && (
-                <div className="absolute right-0 mt-1 w-56 bg-dark-card border border-dark-border rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 mt-1 w-56 bg-dark-surface border border-dark-border rounded-lg shadow-xl z-50">
                   <button
                     onClick={() => { setShowSmartImport(true); setShowImportDropdown(false); }}
                     className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover rounded-t-lg transition-colors flex items-center gap-2"
@@ -179,7 +179,7 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-dark-card border-t border-dark-border py-4">
+      <footer className="bg-dark-surface border-t border-dark-border py-4">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <p className="text-xs text-gray-300 mb-1">
             Un regalo per gli iscritti a{' '}

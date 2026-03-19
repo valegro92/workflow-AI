@@ -40,7 +40,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
   };
 
   return (
-    <div className="bg-dark-card border-b border-dark-border">
+    <div className="bg-dark-surface border-b border-dark-border">
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex items-center">
           {steps.map((s, index) => {
@@ -68,7 +68,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                   <div className={`
                     w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all
                     ${active
-                      ? 'bg-brand text-dark-bg ring-2 ring-brand ring-offset-2 ring-offset-dark-card'
+                      ? 'bg-brand text-dark-bg ring-2 ring-brand ring-offset-2 ring-offset-dark-surface'
                       : completed
                         ? 'bg-brand text-dark-bg'
                         : 'bg-dark-hover text-gray-400 group-hover:bg-dark-border group-hover:text-gray-300'

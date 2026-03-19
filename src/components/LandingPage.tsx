@@ -11,7 +11,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
       <div className="h-1 bg-brand" />
 
       {/* Nav */}
-      <header className="bg-dark-card/80 backdrop-blur border-b border-brand/20 sticky top-0 z-50">
+      <header className="bg-dark-surface/80 backdrop-blur border-b border-brand/20 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <svg className="w-7 h-7 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -61,7 +61,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
       </section>
 
       {/* Come funziona */}
-      <section className="bg-dark-card/50 border-y border-dark-border py-16">
+      <section className="bg-dark-surface/50 border-y border-dark-border py-16">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">
             Come funziona in <span className="text-brand">4 passi</span>
@@ -93,7 +93,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
                 icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
               },
             ].map((item, i) => (
-              <div key={i} className="bg-dark-card border border-dark-border rounded-xl p-6 text-center relative">
+              <div key={i} className="bg-dark-surface border border-dark-border rounded-xl p-6 text-center relative">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand text-dark-bg w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">
                   {item.step}
                 </div>
@@ -125,7 +125,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
               { icon: '📄', title: 'Export PDF completo', desc: 'Report professionale con executive summary, tabella priorita, matrice visuale e raccomandazioni.' },
               { icon: '🤖', title: 'AI Chat integrata', desc: 'Assistente AI per aiutarti nella mappatura, nella valutazione e nella generazione del piano.' },
             ].map((feature, i) => (
-              <div key={i} className="bg-dark-card border border-dark-border rounded-xl p-6 hover:border-brand/40 transition-colors">
+              <div key={i} className="bg-dark-surface border border-dark-border rounded-xl p-6 hover:border-brand/40 transition-colors">
                 <span className="text-3xl mb-3 block">{feature.icon}</span>
                 <h3 className="text-lg font-bold mb-2">{feature.title}</h3>
                 <p className="text-sm text-gray-400">{feature.desc}</p>
@@ -136,7 +136,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
       </section>
 
       {/* Per chi e */}
-      <section className="bg-dark-card/50 border-y border-dark-border py-16">
+      <section className="bg-dark-surface/50 border-y border-dark-border py-16">
         <div className="max-w-5xl mx-auto px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Per chi e?</h2>
           <p className="text-gray-400 mb-10 max-w-2xl mx-auto">
@@ -149,7 +149,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
               { role: 'Consulente', desc: 'Analisi AI-readiness per i clienti' },
               { role: 'IT Lead', desc: 'Prioritizza le integrazioni AI' },
             ].map((persona, i) => (
-              <div key={i} className="bg-dark-card border border-dark-border rounded-lg p-5">
+              <div key={i} className="bg-dark-surface border border-dark-border rounded-lg p-5">
                 <p className="font-bold text-brand text-sm mb-1">{persona.role}</p>
                 <p className="text-xs text-gray-400">{persona.desc}</p>
               </div>
@@ -209,7 +209,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-dark-card border-t border-dark-border py-6">
+      <footer className="bg-dark-surface border-t border-dark-border py-6">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <p className="text-sm text-gray-400 mb-2">
             <span className="font-bold text-white">La Cassetta degli AI-trezzi</span> &mdash; Workflow AI Analyzer

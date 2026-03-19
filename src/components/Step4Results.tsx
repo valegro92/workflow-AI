@@ -289,7 +289,7 @@ export const Step4Results: React.FC = () => {
   if (Object.keys(state.evaluations).length === 0) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
-        <div className="bg-dark-card border border-dark-border rounded-lg p-12 text-center max-w-md">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-12 text-center max-w-md">
           <p className="text-gray-300 text-lg mb-6">Non hai ancora valutato nessun workflow</p>
           <button
             onClick={() => setCurrentStep(3)}
@@ -322,12 +322,12 @@ export const Step4Results: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-4">
           <p className="text-sm text-gray-400 mb-1">Step Totali</p>
           <p className="text-3xl font-bold text-white">{stats.totalSteps}</p>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4 border-l-4 border-l-purple-500">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-4 border-l-4 border-l-purple-500">
           <p className="text-sm text-gray-400 mb-1">Brainstorming</p>
           <p className="text-3xl font-bold text-purple-400">
             {stats.strategyCounts.partner}
@@ -335,7 +335,7 @@ export const Step4Results: React.FC = () => {
           <p className="text-xs text-gray-400">{getPercentage(stats.strategyCounts.partner)}%</p>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4 border-l-4 border-l-green-500">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-4 border-l-4 border-l-green-500">
           <p className="text-sm text-gray-400 mb-1">Assistente AI</p>
           <p className="text-3xl font-bold text-green-400">
             {stats.strategyCounts.assistant}
@@ -343,7 +343,7 @@ export const Step4Results: React.FC = () => {
           <p className="text-xs text-gray-400">{getPercentage(stats.strategyCounts.assistant)}%</p>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4 border-l-4 border-l-blue-500">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-4 border-l-4 border-l-blue-500">
           <p className="text-sm text-gray-400 mb-1">Strumento</p>
           <p className="text-3xl font-bold text-blue-400">
             {stats.strategyCounts.tool}
@@ -351,7 +351,7 @@ export const Step4Results: React.FC = () => {
           <p className="text-xs text-gray-400">{getPercentage(stats.strategyCounts.tool)}%</p>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4 border-l-4 border-l-red-500">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-4 border-l-4 border-l-red-500">
           <p className="text-sm text-gray-400 mb-1">Mantieni umano</p>
           <p className="text-3xl font-bold text-red-400">
             {stats.strategyCounts.out}
@@ -359,7 +359,7 @@ export const Step4Results: React.FC = () => {
           <p className="text-xs text-gray-400">{getPercentage(stats.strategyCounts.out)}%</p>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4 border-l-4 border-l-purple-500">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-4 border-l-4 border-l-purple-500">
           <p className="text-sm text-gray-400 mb-1">Tempo Totale</p>
           <p className="text-2xl font-bold text-purple-400">
             {stats.totalTime}
@@ -368,7 +368,7 @@ export const Step4Results: React.FC = () => {
         </div>
 
         {state.costoOrario && (
-          <div className="bg-dark-card border border-dark-border rounded-lg p-4 border-l-4 border-l-green-400">
+          <div className="bg-dark-surface border border-dark-border rounded-lg p-4 border-l-4 border-l-green-400">
             <p className="text-sm text-gray-400 mb-1">Risparmio Potenziale</p>
             <p className="text-2xl font-bold text-green-400">
               {calculateMonthlySavings(stats.totalTime, state.costoOrario).toFixed(0)}€
@@ -379,7 +379,7 @@ export const Step4Results: React.FC = () => {
       </div>
 
       {/* Prioritizzazione e ROI */}
-      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-8">
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-8">
         <h3 className="text-2xl font-bold text-white mb-4 text-center">
           Priorità di Implementazione
         </h3>
@@ -397,7 +397,7 @@ export const Step4Results: React.FC = () => {
         )}
 
         <div className="overflow-x-auto">
-          <table className="w-full bg-dark-card rounded-lg overflow-hidden">
+          <table className="w-full bg-dark-surface rounded-lg overflow-hidden">
             <thead className="bg-dark-hover">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">#</th>
@@ -434,7 +434,7 @@ export const Step4Results: React.FC = () => {
                   return (
                     <tr
                       key={workflow.id}
-                      className={`border-b border-dark-border ${index % 2 === 0 ? 'bg-dark-card' : 'bg-dark-hover/50'} ${index < 3 ? 'bg-brand-50/30' : ''}`}
+                      className={`border-b border-dark-border ${index % 2 === 0 ? 'bg-dark-surface' : 'bg-dark-hover/50'} ${index < 3 ? 'bg-brand-50/30' : ''}`}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center">
@@ -530,7 +530,7 @@ export const Step4Results: React.FC = () => {
       </div>
 
       {/* Mappa delle Opportunità AI - Collapsible */}
-      <div className="bg-dark-card border border-dark-border rounded-lg mb-8">
+      <div className="bg-dark-surface border border-dark-border rounded-lg mb-8">
         <button
           onClick={() => toggleSection('opportunity-map')}
           className="w-full flex items-center justify-between p-6 text-left"
@@ -659,7 +659,7 @@ export const Step4Results: React.FC = () => {
 
       {/* BPMN Diagram Viewer - Collapsible */}
       {state.workflows.length > 0 && (
-        <div className="bg-dark-card border border-dark-border rounded-lg mb-8">
+        <div className="bg-dark-surface border border-dark-border rounded-lg mb-8">
           <button
             onClick={() => toggleSection('bpmn-diagram')}
             className="w-full flex items-center justify-between p-6 text-left"
@@ -727,7 +727,7 @@ export const Step4Results: React.FC = () => {
                       onClick={() => setEditMode(false)}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                         !editMode
-                          ? 'bg-dark-card text-white shadow-sm'
+                          ? 'bg-dark-surface text-white shadow-sm'
                           : 'text-gray-400 hover:text-white'
                       }`}
                     >
@@ -737,7 +737,7 @@ export const Step4Results: React.FC = () => {
                       onClick={() => setEditMode(true)}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                         editMode
-                          ? 'bg-dark-card text-white shadow-sm'
+                          ? 'bg-dark-surface text-white shadow-sm'
                           : 'text-gray-400 hover:text-white'
                       }`}
                     >
@@ -827,7 +827,7 @@ export const Step4Results: React.FC = () => {
       )}
 
       {/* Lista Dettagliata Step - Collapsible */}
-      <div className="bg-dark-card border border-dark-border rounded-lg mb-8">
+      <div className="bg-dark-surface border border-dark-border rounded-lg mb-8">
         <button
           onClick={() => toggleSection('step-details')}
           className="w-full flex items-center justify-between p-6 text-left"
@@ -875,13 +875,13 @@ export const Step4Results: React.FC = () => {
                   <p className="text-gray-300 mb-3">{workflow.descrizione}</p>
 
                   <div className="grid md:grid-cols-2 gap-4 mb-3">
-                    <div className="bg-dark-card rounded-lg p-3">
+                    <div className="bg-dark-surface rounded-lg p-3">
                       <p className="text-sm text-gray-400">Score Automazione</p>
                       <p className="text-2xl font-bold text-green-400">
                         {evaluation.autoScore}/8
                       </p>
                     </div>
-                    <div className="bg-dark-card rounded-lg p-3">
+                    <div className="bg-dark-surface rounded-lg p-3">
                       <p className="text-sm text-gray-400">Score Carico Cognitivo</p>
                       <p className="text-2xl font-bold text-orange-400">
                         {evaluation.cogScore}/8
@@ -889,7 +889,7 @@ export const Step4Results: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-dark-card rounded-lg p-3 mb-3">
+                  <div className="bg-dark-surface rounded-lg p-3 mb-3">
                     <p className="text-sm text-gray-400 mb-1">Strategia Consigliata</p>
                     <p className="text-lg font-semibold text-white">
                       {evaluation.strategy.desc}
@@ -897,26 +897,26 @@ export const Step4Results: React.FC = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-3 text-sm">
-                    <div className="bg-dark-card rounded px-3 py-1 text-gray-300">
+                    <div className="bg-dark-surface rounded px-3 py-1 text-gray-300">
                       <span className="font-semibold text-white">Tempo:</span> {workflow.tempoTotale} min/mese
                     </div>
                     {workflow.tool.length > 0 && workflow.tool[0] !== '' && (
-                      <div className="bg-dark-card rounded px-3 py-1 text-gray-300">
+                      <div className="bg-dark-surface rounded px-3 py-1 text-gray-300">
                         <span className="font-semibold text-white">Tool:</span> {workflow.tool.join(', ')}
                       </div>
                     )}
                     {workflow.input.length > 0 && workflow.input[0] !== '' && (
-                      <div className="bg-dark-card rounded px-3 py-1 text-gray-300">
+                      <div className="bg-dark-surface rounded px-3 py-1 text-gray-300">
                         <span className="font-semibold text-white">Input:</span> {workflow.input.join(', ')}
                       </div>
                     )}
                     {workflow.output.length > 0 && workflow.output[0] !== '' && (
-                      <div className="bg-dark-card rounded px-3 py-1 text-gray-300">
+                      <div className="bg-dark-surface rounded px-3 py-1 text-gray-300">
                         <span className="font-semibold text-white">Output:</span> {workflow.output.join(', ')}
                       </div>
                     )}
                     {workflow.owner && (
-                      <div className="bg-dark-card rounded px-3 py-1 text-gray-300">
+                      <div className="bg-dark-surface rounded px-3 py-1 text-gray-300">
                         <span className="font-semibold text-white">Owner:</span> {workflow.owner}
                       </div>
                     )}
@@ -958,7 +958,7 @@ export const Step4Results: React.FC = () => {
 
       {/* Raccomandazioni Personalizzate - Collapsible */}
       {(partnerWorkflows.length > 0 || assistantWorkflows.length > 0 || toolWorkflows.length > 0) && (
-        <div className="bg-dark-card border border-dark-border rounded-lg mb-8">
+        <div className="bg-dark-surface border border-dark-border rounded-lg mb-8">
           <button
             onClick={() => toggleSection('recommendations')}
             className="w-full flex items-center justify-between p-6 text-left"
@@ -1015,7 +1015,7 @@ export const Step4Results: React.FC = () => {
 
       {/* Piano di Implementazione AI - Collapsible */}
       {(state.implementationPlan || aiLoading || aiError) && (
-        <div className="bg-dark-card border border-dark-border rounded-lg mb-8">
+        <div className="bg-dark-surface border border-dark-border rounded-lg mb-8">
           <button
             onClick={() => toggleSection('implementation-plan')}
             className="w-full flex items-center justify-between p-6 text-left"
@@ -1101,7 +1101,7 @@ export const Step4Results: React.FC = () => {
       )}
 
       {/* Configurazione AI + Export */}
-      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
         {/* Banner chiave mancante */}
         {!state.openRouterKey && (
           <div className="bg-yellow-900/30 border border-yellow-600/40 rounded-lg p-4 mb-5">

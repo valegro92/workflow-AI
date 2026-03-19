@@ -158,7 +158,7 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-dark-surface rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-dark-hover border-b border-brand/30 text-white px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold">Import / Export Workflow</h2>
@@ -196,7 +196,7 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] bg-dark-card text-gray-300">
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] bg-dark-surface text-gray-300">
           {/* Status Message */}
           {importStatus.type && (
             <div
@@ -228,7 +228,7 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
 
               <button
                 onClick={handleExportCSV}
-                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-card hover:border-brand hover:bg-dark-hover transition-colors"
+                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-surface hover:border-brand hover:bg-dark-hover transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">📄</span>
@@ -244,7 +244,7 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
 
               <button
                 onClick={handleExportExcel}
-                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-card hover:border-brand hover:bg-dark-hover transition-colors"
+                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-surface hover:border-brand hover:bg-dark-hover transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">📊</span>
@@ -260,7 +260,7 @@ export default function ImportExport({ workflows, evaluations, onImport, onClose
 
               <button
                 onClick={handleExportJSON}
-                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-card hover:border-brand hover:bg-dark-hover transition-colors"
+                className="w-full flex items-center justify-between p-4 border-2 border-dark-border rounded-lg bg-dark-surface hover:border-brand hover:bg-dark-hover transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">🔧</span>

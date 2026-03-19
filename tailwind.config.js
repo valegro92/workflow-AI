@@ -16,16 +16,17 @@ export default {
         'cognitive-bg': '#3a2a1a',
         // Dark theme
         dark: {
-          bg: '#2D2D2D',
-          card: '#3A3A3A',
-          hover: '#454545',
-          border: '#4A4A4A',
+          bg: '#292524',
+          surface: '#2D2D2D',
+          hover: '#3A3A3A',
+          border: '#454545',
+          elevated: '#4A4A4A',
         },
         // Brand "La Cassetta degli AI-trezzi"
         brand: {
           DEFAULT: '#2DD4A8',
-          light: '#5EEAD4',
-          dark: '#1A5C4F',
+          light: '#5EEAD2',
+          dark: '#0D9488',
           50: '#0d3d32',
         },
       },

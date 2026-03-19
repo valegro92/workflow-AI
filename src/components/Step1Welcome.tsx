@@ -25,7 +25,7 @@ export const Step1Welcome: React.FC = () => {
     return (
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Hero */}
-        <div className="bg-dark-card border border-brand/30 rounded-2xl p-8 md:p-12 text-center mb-8">
+        <div className="bg-dark-surface border border-brand/30 rounded-2xl p-8 md:p-12 text-center mb-8">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -96,7 +96,7 @@ export const Step1Welcome: React.FC = () => {
             onClick={() => {
               window.dispatchEvent(new CustomEvent('openTemplateLibrary'));
             }}
-            className="bg-dark-card border-2 border-brand/40 hover:border-brand text-white font-bold py-6 px-6 rounded-xl transition-all flex flex-col items-center gap-3"
+            className="bg-dark-surface border-2 border-brand/40 hover:border-brand text-white font-bold py-6 px-6 rounded-xl transition-all flex flex-col items-center gap-3"
           >
             <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -109,7 +109,7 @@ export const Step1Welcome: React.FC = () => {
             onClick={() => {
               window.dispatchEvent(new CustomEvent('openVoiceImport'));
             }}
-            className="bg-dark-card border-2 border-dark-border hover:border-brand/40 text-white font-bold py-6 px-6 rounded-xl transition-all flex flex-col items-center gap-3"
+            className="bg-dark-surface border-2 border-dark-border hover:border-brand/40 text-white font-bold py-6 px-6 rounded-xl transition-all flex flex-col items-center gap-3"
           >
             <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -140,7 +140,7 @@ export const Step1Welcome: React.FC = () => {
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-dark-card border border-dark-border rounded-lg p-6">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">Workflow Mappati</p>
@@ -154,7 +154,7 @@ export const Step1Welcome: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-lg p-6">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">Workflow Valutati</p>
@@ -168,7 +168,7 @@ export const Step1Welcome: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-dark-card border border-dark-border rounded-lg p-6">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 mb-1">Tempo Totale</p>
@@ -198,7 +198,7 @@ export const Step1Welcome: React.FC = () => {
           onClick={() => {
             window.dispatchEvent(new CustomEvent('openVoiceImport'));
           }}
-          className="bg-dark-card border border-dark-border hover:border-brand text-white font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-3"
+          className="bg-dark-surface border border-dark-border hover:border-brand text-white font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-3"
         >
           <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -220,7 +220,7 @@ export const Step1Welcome: React.FC = () => {
       )}
 
       {/* ROI Calculator */}
-      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-8">
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-8">
         <div
           className="flex items-center justify-between cursor-pointer"
           onClick={() => setShowROI(!showROI)}
@@ -272,7 +272,7 @@ export const Step1Welcome: React.FC = () => {
       </div>
 
       {/* Workflow List */}
-      <div className="bg-dark-card border border-dark-border rounded-lg p-6">
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6">
         <h2 className="text-xl font-bold text-white mb-4">I tuoi workflow</h2>
         <div className="space-y-2">
           {state.workflows.map((workflow) => {

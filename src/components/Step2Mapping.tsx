@@ -277,7 +277,7 @@ export const Step2Mapping: React.FC = () => {
       </div>
 
       {/* AI Assistant */}
-      <div className="bg-dark-card border border-brand/30 rounded-lg p-6 mb-8">
+      <div className="bg-dark-surface border border-brand/30 rounded-lg p-6 mb-8">
         <div className="flex items-center gap-2 mb-4">
           <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -355,7 +355,7 @@ export const Step2Mapping: React.FC = () => {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-dark-card border border-dark-border rounded-lg p-6 mb-8">
+      <form onSubmit={handleSubmit} className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-8">
         <div className="grid md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-semibold text-gray-300 mb-2">Fase *</label>
@@ -527,7 +527,7 @@ export const Step2Mapping: React.FC = () => {
           <div className="space-y-4 mb-8">
             {state.workflows.map((workflow) => (
               <div key={workflow.id}
-                className="bg-dark-card border border-dark-border rounded-lg p-6 border-l-4"
+                className="bg-dark-surface border border-dark-border rounded-lg p-6 border-l-4"
                 style={{ borderLeftColor: getTimeColor(workflow.tempoTotale) }}>
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex gap-2">

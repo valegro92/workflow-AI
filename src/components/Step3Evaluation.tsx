@@ -148,7 +148,7 @@ export const Step3Evaluation: React.FC = () => {
   if (state.workflows.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 flex items-center justify-center min-h-[400px]">
-        <div className="bg-dark-card border border-dark-border rounded-lg p-8 text-center max-w-md">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-8 text-center max-w-md">
           <p className="text-gray-300 mb-6">
             Devi prima creare almeno un workflow nella fase di mappatura.
           </p>
@@ -221,7 +221,7 @@ export const Step3Evaluation: React.FC = () => {
       )}
 
       {/* Selector Step */}
-      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
         <label className="block text-sm font-semibold text-gray-300 mb-2">
           Seleziona Step da Valutare
         </label>
@@ -241,7 +241,7 @@ export const Step3Evaluation: React.FC = () => {
 
       {/* Card Info Step Corrente */}
       {selectedWorkflow && (
-        <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
           <div className="flex items-start justify-between mb-3">
             <div>
               <span className="inline-block bg-dark-hover text-gray-300 px-3 py-1 rounded-full text-sm font-semibold mr-2">
@@ -266,7 +266,7 @@ export const Step3Evaluation: React.FC = () => {
       )}
 
       {/* Sezione AUTOMAZIONE */}
-      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
         <h3 className="text-2xl font-bold text-white mb-4">
           AUTOMAZIONE - Quanto è ripetibile?
         </h3>
@@ -314,7 +314,7 @@ export const Step3Evaluation: React.FC = () => {
       </div>
 
       {/* Sezione CARICO COGNITIVO */}
-      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
         <h3 className="text-2xl font-bold text-white mb-4">
           CARICO COGNITIVO - Quanto pensiero richiede?
         </h3>
@@ -378,7 +378,7 @@ export const Step3Evaluation: React.FC = () => {
       )}
 
       {/* Complessità di Implementazione */}
-      <div className="bg-dark-card border border-dark-border rounded-lg p-6 mb-6">
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
         <h3 className="text-xl font-bold text-white mb-3">
           Complessità di Implementazione
         </h3>

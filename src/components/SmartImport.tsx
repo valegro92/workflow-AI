@@ -184,7 +184,7 @@ export default function SmartImport({ onClose }: SmartImportProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-card rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-dark-surface rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-dark-hover border-b border-brand/30 text-white px-6 py-4 flex justify-between items-center flex-shrink-0">
           <div>

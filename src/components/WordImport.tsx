@@ -134,7 +134,7 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-card rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-dark-surface rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-dark-hover border-b border-brand/30 text-white p-6">
           <div className="flex justify-between items-start">
@@ -229,7 +229,7 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
                         ? 'border-red-700 bg-red-900/30'
                         : preview.workflows.length > 0
                         ? 'border-green-700 bg-green-900/30'
-                        : 'border-dark-border bg-dark-card'
+                        : 'border-dark-border bg-dark-surface'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -345,7 +345,7 @@ const WordImport: React.FC<WordImportProps> = ({ onImportMultiple, onClose }) =>
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-2 border border-dark-border bg-dark-hover rounded-lg font-semibold text-gray-300 hover:bg-dark-card transition-all"
+              className="px-6 py-2 border border-dark-border bg-dark-hover rounded-lg font-semibold text-gray-300 hover:bg-dark-surface transition-all"
             >
               Chiudi
             </button>

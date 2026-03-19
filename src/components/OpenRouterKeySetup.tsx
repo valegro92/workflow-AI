@@ -18,7 +18,7 @@ export default function OpenRouterKeySetup({ onKeySaved, onCancel, inline = fals
   };
 
   const content = (
-    <div className={`${inline ? '' : 'bg-dark-card border border-dark-border rounded-xl shadow-2xl max-w-md w-full mx-4'}`}>
+    <div className={`${inline ? '' : 'bg-dark-surface border border-dark-border rounded-xl shadow-2xl max-w-md w-full mx-4'}`}>
       {/* Header */}
       <div className={`${inline ? 'mb-3' : 'px-5 pt-5 pb-3'}`}>
         <div className="flex items-center gap-2 mb-2">
