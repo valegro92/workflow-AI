@@ -16,6 +16,7 @@ import AIChat from './components/AIChat';
 import { LandingPage } from './components/LandingPage';
 import { LoginPageAuth } from './components/LoginPage.auth';
 import { PaywallBanner } from './components/PaywallBanner';
+import { WelcomeBanner } from './components/WelcomeBanner';
 import { generateWorkflowId } from './utils/businessLogic';
 import { isPaywallActive, isGracePeriod, isAuthenticated as checkAuth, logout, getUserEmail } from './utils/auth';
 
@@ -119,6 +120,9 @@ const AppContent: React.FC = () => {
 
       {/* Banner periodo di grazia (8-14 maggio 2026) */}
       {gracePeriod && <PaywallBanner />}
+
+      {/* Welcome banner dopo primo login */}
+      {isLoggedIn && <WelcomeBanner userEmail={userEmail} />}
 
       {/* Header */}
       <header className="bg-dark-surface border-b border-brand/30 py-3 shadow-lg">
