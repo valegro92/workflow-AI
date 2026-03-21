@@ -17,7 +17,7 @@ import { LandingPage } from './components/LandingPage';
 import { LoginPageAuth } from './components/LoginPage.auth';
 import { PaywallBanner } from './components/PaywallBanner';
 import { generateWorkflowId } from './utils/businessLogic';
-import { isPaywallActive, isGracePeriod, isAuthenticated as checkAuth, logout } from './utils/auth';
+import { isPaywallActive, isGracePeriod, isAuthenticated as checkAuth, logout, getUserEmail } from './utils/auth';
 
 const AppContent: React.FC = () => {
   const { state, setCurrentStep, bulkAddWorkflows, addWorkflow } = useAppContext();
@@ -43,13 +43,25 @@ const AppContent: React.FC = () => {
     setHasEntered(true);
   };
 
+  const [showLoginPage, setShowLoginPage] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(() => getUserEmail());
+
   const handleLoginSuccess = useCallback(() => {
     setIsLoggedIn(true);
+    setUserEmail(getUserEmail());
+    setShowLoginPage(false);
   }, []);
 
   const handleLogout = useCallback(() => {
     logout();
     setIsLoggedIn(false);
+    setUserEmail(null);
+    setHasEntered(false);
+    localStorage.removeItem('workflow-ai-entered');
+  }, []);
+
+  const handleShowLogin = useCallback(() => {
+    setShowLoginPage(true);
   }, []);
 
   // Listen for openTemplateLibrary event from Step1Welcome
@@ -79,13 +91,25 @@ const AppContent: React.FC = () => {
     }
   }, [showImportDropdown]);
 
-  // Se il paywall è attivo e l'utente non è loggato → LoginPage
+  // Se il paywall è attivo e l'utente non è loggato → LoginPage obbligatoria
   if (paywallActive && !isLoggedIn) {
     return <LoginPageAuth onLoginSuccess={handleLoginSuccess} />;
   }
 
+  // Se l'utente ha cliccato "Accedi" (login volontario, pre-paywall)
+  if (showLoginPage && !isLoggedIn) {
+    return <LoginPageAuth onLoginSuccess={handleLoginSuccess} />;
+  }
+
   if (!hasEntered) {
-    return <LandingPage onEnter={handleEnterApp} />;
+    return (
+      <LandingPage
+        onEnter={handleEnterApp}
+        onLogin={isLoggedIn ? undefined : handleShowLogin}
+        isLoggedIn={isLoggedIn}
+        userEmail={userEmail}
+      />
+    );
   }
 
   return (
@@ -109,15 +133,26 @@ const AppContent: React.FC = () => {
               <p className="text-xs text-brand">La Cassetta degli AI-trezzi</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            {/* Logout button — visibile solo se paywall attivo e utente loggato */}
-            {paywallActive && isLoggedIn && (
+          <div className="flex gap-2 items-center">
+            {/* Stato login — sempre visibile */}
+            {isLoggedIn ? (
+              <>
+                <span className="hidden sm:inline text-xs text-text-secondary bg-dark-hover px-2 py-1 rounded border border-dark-border">
+                  {userEmail}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="text-text-secondary hover:text-white px-3 py-2 rounded-lg text-sm transition-colors border border-dark-border hover:border-dark-elevated"
+                >
+                  Esci
+                </button>
+              </>
+            ) : (
               <button
-                onClick={handleLogout}
-                className="text-text-secondary hover:text-white px-3 py-2 rounded-lg text-sm transition-colors border border-dark-border hover:border-dark-elevated"
-                title="Esci"
+                onClick={handleShowLogin}
+                className="text-brand hover:text-brand-light px-3 py-2 rounded-lg text-sm font-medium transition-colors border border-brand/30 hover:border-brand/60"
               >
-                Esci
+                Accedi
               </button>
             )}
             <button

@@ -2,9 +2,12 @@ import React from 'react';
 
 interface LandingPageProps {
   onEnter: () => void;
+  onLogin?: () => void;
+  isLoggedIn?: boolean;
+  userEmail?: string | null;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, onLogin, isLoggedIn, userEmail }) => {
   return (
     <div className="min-h-screen bg-dark-bg text-white">
       {/* Top accent bar */}
@@ -19,12 +22,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
             </svg>
             <span className="text-lg font-bold text-white">La Cassetta degli AI-trezzi</span>
           </div>
-          <button
-            onClick={onEnter}
-            className="bg-brand text-dark-bg hover:bg-brand-light px-5 py-2 rounded-lg font-semibold transition-all text-sm"
-          >
-            Inizia
-          </button>
+          <div className="flex items-center gap-2">
+            {isLoggedIn ? (
+              <span className="text-xs text-text-secondary bg-dark-hover px-3 py-1.5 rounded-lg border border-dark-border">
+                {userEmail}
+              </span>
+            ) : onLogin ? (
+              <button
+                onClick={onLogin}
+                className="text-brand hover:text-brand-light px-4 py-2 rounded-lg font-medium transition-all text-sm border border-brand/30 hover:border-brand/60"
+              >
+                Accedi
+              </button>
+            ) : null}
+            <button
+              onClick={onEnter}
+              className="bg-brand text-dark-bg hover:bg-brand-light px-5 py-2 rounded-lg font-semibold transition-all text-sm"
+            >
+              Inizia
+            </button>
+          </div>
         </div>
       </header>
 
@@ -50,13 +67,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
           <p className="text-sm text-brand-light mb-8">
             Workflow AI Analyzer &mdash; La Cassetta degli AI-trezzi
           </p>
-          <button
-            onClick={onEnter}
-            className="bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
-          >
-            Inizia l'Analisi Gratuita
-          </button>
-          <p className="mt-4 text-xs text-gray-500">Nessuna registrazione richiesta. I dati restano nel tuo browser.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={onEnter}
+              className="bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
+            >
+              Prova Subito
+            </button>
+            {!isLoggedIn && onLogin && (
+              <button
+                onClick={onLogin}
+                className="border border-brand text-brand hover:bg-brand/10 px-8 py-4 rounded-xl font-bold text-lg transition-all"
+              >
+                Accedi con L'Officina
+              </button>
+            )}
+          </div>
+          <p className="mt-4 text-xs text-gray-500">
+            {isLoggedIn
+              ? 'I tuoi workflow sono salvati nel cloud. Accessibili da qualsiasi dispositivo.'
+              : 'Puoi provare senza account. Accedi con L\'Officina per salvare i tuoi dati nel cloud.'
+            }
+          </p>
         </div>
       </section>
 
@@ -158,35 +190,91 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
         </div>
       </section>
 
-      {/* Newsletter / Substack */}
+      {/* Abbonati: Cloud Save */}
       <section className="bg-gradient-to-r from-brand/10 via-brand/5 to-brand/10 border-y border-brand/20 py-16">
-        <div className="max-w-3xl mx-auto px-4 text-center">
-          <div className="mb-4">
-            <svg className="w-10 h-10 text-brand mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-            </svg>
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              Abbonati a L'Officina e{' '}
+              <span className="text-brand">salva il tuo lavoro</span>
+            </h2>
+            <p className="text-gray-300 text-lg max-w-2xl mx-auto">
+              Gli iscritti a L'Officina accedono con la propria email e ottengono il salvataggio cloud dei workflow. I tuoi dati, sempre con te.
+            </p>
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">
-            Questo tool e un regalo per gli iscritti a
-          </h2>
-          <h3 className="text-3xl md:text-4xl font-extrabold text-brand mb-4">
-            La Cassetta degli AI-trezzi
-          </h3>
-          <p className="text-gray-300 mb-6 text-lg max-w-xl mx-auto">
-            La newsletter settimanale con strumenti pratici, prompt, tutorial e strategie per usare l'AI nel lavoro di tutti i giorni.
-          </p>
-          <a
-            href="https://lacassettadegliaitrezzi.substack.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
-          >
-            Iscriviti Gratis alla Newsletter
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </a>
-          <p className="mt-3 text-xs text-gray-500">Gratis, ogni settimana nella tua inbox</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            {[
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                  </svg>
+                ),
+                title: 'Salvataggio cloud',
+                desc: 'I tuoi workflow sono salvati nel cloud. Accedi da qualsiasi dispositivo e ritrova tutto dove lo avevi lasciato.',
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                ),
+                title: 'Dati protetti',
+                desc: 'I tuoi dati sono al sicuro. Nessuno puo accedervi, solo tu con la tua email di Substack.',
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                  </svg>
+                ),
+                title: 'Tutti gli strumenti',
+                desc: 'Accesso completo a tutti i tool de La Cassetta degli AI-trezzi, presenti e futuri.',
+              },
+            ].map((item, i) => (
+              <div key={i} className="bg-dark-surface/80 border border-brand/20 rounded-xl p-6 text-center">
+                <div className="w-12 h-12 mx-auto bg-brand/15 rounded-full flex items-center justify-center mb-4 text-brand">
+                  {item.icon}
+                </div>
+                <h3 className="text-lg font-bold mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-400">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center">
+            {isLoggedIn ? (
+              <div className="inline-flex items-center gap-2 bg-brand/15 border border-brand/30 px-6 py-3 rounded-xl">
+                <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-brand font-semibold">Sei connesso come {userEmail}</span>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                {onLogin && (
+                  <button
+                    onClick={onLogin}
+                    className="inline-flex items-center gap-2 bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
+                  >
+                    Accedi con L'Officina
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </button>
+                )}
+                <a
+                  href="https://cassettadegliaitrezzi.it"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand hover:text-brand-light text-sm font-medium underline"
+                >
+                  Non sei ancora abbonato? Scopri L'Officina
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -197,14 +285,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
             Pronto a scoprire il potenziale AI della tua azienda?
           </h2>
           <p className="text-gray-400 mb-8 text-lg">
-            Inizia gratuitamente. I tuoi dati restano nel browser, nessun account richiesto.
+            {isLoggedIn
+              ? 'I tuoi workflow sono al sicuro nel cloud. Inizia o continua la tua analisi.'
+              : 'Prova subito senza registrazione, oppure accedi con L\'Officina per salvare il tuo lavoro.'}
           </p>
-          <button
-            onClick={onEnter}
-            className="bg-brand text-dark-bg hover:bg-brand-light px-10 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
-          >
-            Inizia l'Analisi
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={onEnter}
+              className="bg-brand text-dark-bg hover:bg-brand-light px-10 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
+            >
+              {isLoggedIn ? 'Vai all\'Analisi' : 'Prova Senza Account'}
+            </button>
+            {!isLoggedIn && onLogin && (
+              <button
+                onClick={onLogin}
+                className="border border-brand text-brand hover:bg-brand/10 px-10 py-4 rounded-xl font-bold text-lg transition-all"
+              >
+                Accedi
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
