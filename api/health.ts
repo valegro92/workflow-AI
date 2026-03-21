@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withHeaders, CacheStrategy } from './middleware/headers.js';
+import { withHeaders, CacheStrategy } from '../lib/headers.js';
 
 /**
  * Health Check Endpoint

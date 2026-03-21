@@ -2,35 +2,35 @@
   "functions": {
     "api/process-audio.ts": {
       "maxDuration": 30,
-      "includeFiles": "api/middleware/**"
+      "includeFiles": "lib/**"
     },
     "api/ai-suggestions.ts": {
       "maxDuration": 30,
-      "includeFiles": "api/middleware/**"
+      "includeFiles": "lib/**"
     },
     "api/ai-workflow-extract.ts": {
       "maxDuration": 30,
-      "includeFiles": "api/middleware/**"
+      "includeFiles": "lib/**"
     },
     "api/ai-chat.ts": {
       "maxDuration": 30,
-      "includeFiles": "api/middleware/**"
+      "includeFiles": "lib/**"
     },
     "api/ai-generate-bpmn.ts": {
       "maxDuration": 30,
-      "includeFiles": "api/middleware/**"
+      "includeFiles": "lib/**"
     },
     "api/health.ts": {
       "maxDuration": 10,
-      "includeFiles": "api/middleware/**"
+      "includeFiles": "lib/**"
     },
     "api/auth.ts": {
       "maxDuration": 15,
-      "includeFiles": "api/middleware/**"
+      "includeFiles": "lib/**"
     },
     "api/user-data.ts": {
       "maxDuration": 15,
-      "includeFiles": "api/middleware/**"
+      "includeFiles": "lib/**"
     }
   },
   "buildCommand": "npm run build",

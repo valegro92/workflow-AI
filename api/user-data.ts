@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withHeaders, CacheStrategy } from './middleware/headers.js';
-import { checkRateLimit, sendRateLimitError } from './middleware/rateLimit.js';
+import { withHeaders, CacheStrategy } from '../lib/headers.js';
+import { checkRateLimit, sendRateLimitError } from '../lib/rateLimit.js';
 import jwt from 'jsonwebtoken';
-import { getUserData, saveUserData } from './middleware/db.js';
+import { getUserData, saveUserData } from '../lib/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'workflow-ai-default-secret-change-in-production';
 

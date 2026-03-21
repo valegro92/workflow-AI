@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { withHeaders, CacheStrategy } from './middleware/headers.js';
-import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from './middleware/rateLimit.js';
+import { withHeaders, CacheStrategy } from '../lib/headers.js';
+import { checkRateLimit, sendRateLimitError, addRateLimitHeaders } from '../lib/rateLimit.js';
 import jwt from 'jsonwebtoken';
 import { Redis } from '@upstash/redis';
 
