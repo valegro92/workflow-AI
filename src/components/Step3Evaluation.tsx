@@ -1,0 +1,464 @@
+import React, { useState, useEffect } from 'react';
+import { useAppContext } from '../context/AppContext';
+import { Evaluation } from '../types';
+import {
+  calculateAutomationScore,
+  calculateCognitiveScore,
+  calculateStrategy,
+  calculatePriority
+} from '../utils/businessLogic';
+import { automationQuestions, cognitiveQuestions } from '../data/questions';
+
+export const Step3Evaluation: React.FC = () => {
+  const { state, addEvaluation, updateEvaluation, setCurrentStep } = useAppContext();
+
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [complessita, setComplessita] = useState<number>(3); // Default: media complessità
+  const [saveMessage, setSaveMessage] = useState<{ text: string; type: 'success' | 'done' } | null>(null);
+
+  // Auto-select first unevaluated workflow when workflows change
+  // Don't include selectedWorkflowId in deps to avoid circular dependency
+  useEffect(() => {
+    if (state.workflows.length > 0 && !selectedWorkflowId) {
+      const firstUneval = state.workflows.find(w => !state.evaluations[w.id]);
+      if (firstUneval) {
+        setSelectedWorkflowId(firstUneval.id);
+      } else if (state.workflows[0]) {
+        setSelectedWorkflowId(state.workflows[0].id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.workflows]); // Only run when workflows change, not when selectedWorkflowId changes
+
+  useEffect(() => {
+    // Carica valutazione esistente quando si seleziona un workflow
+    if (selectedWorkflowId && state.evaluations[selectedWorkflowId]) {
+      const evaluation = state.evaluations[selectedWorkflowId];
+      setAnswers({
+        a1: evaluation.a1,
+        a2: evaluation.a2,
+        a3: evaluation.a3,
+        a4: evaluation.a4,
+        c1: evaluation.c1,
+        c2: evaluation.c2,
+        c3: evaluation.c3,
+        c4: evaluation.c4
+      });
+      setComplessita(evaluation.complessita || 3);
+    } else {
+      setAnswers({});
+      setComplessita(3);
+    }
+  }, [selectedWorkflowId, state.evaluations]);
+
+  const selectedWorkflow = state.workflows.find(w => w.id === selectedWorkflowId);
+
+  const handleAnswerChange = (key: string, value: number) => {
+    setAnswers({ ...answers, [key]: value });
+  };
+
+  const allQuestionsAnswered = () => {
+    const requiredKeys = ['a1', 'a2', 'a3', 'a4', 'c1', 'c2', 'c3', 'c4'];
+    return requiredKeys.every(key => answers[key] !== undefined);
+  };
+
+  const autoScore = calculateAutomationScore(
+    answers.a1 || 0,
+    answers.a2 || 0,
+    answers.a3 || 0,
+    answers.a4 || 0
+  );
+
+  const cogScore = calculateCognitiveScore(
+    answers.c1 || 0,
+    answers.c2 || 0,
+    answers.c3 || 0,
+    answers.c4 || 0
+  );
+
+  const strategy = allQuestionsAnswered()
+    ? calculateStrategy(autoScore, cogScore)
+    : null;
+
+  const handleSave = () => {
+    if (!selectedWorkflowId || !allQuestionsAnswered()) {
+      return;
+    }
+
+    const impatto = selectedWorkflow?.tempoTotale || 0;
+    const priorita = calculatePriority(impatto, complessita);
+
+    const evaluation: Evaluation = {
+      workflowId: selectedWorkflowId,
+      a1: answers.a1,
+      a2: answers.a2,
+      a3: answers.a3,
+      a4: answers.a4,
+      c1: answers.c1,
+      c2: answers.c2,
+      c3: answers.c3,
+      c4: answers.c4,
+      autoScore,
+      cogScore,
+      strategy: strategy!,
+      impatto,
+      complessita,
+      priorita
+    };
+
+    if (state.evaluations[selectedWorkflowId]) {
+      updateEvaluation(selectedWorkflowId, evaluation);
+    } else {
+      addEvaluation(evaluation);
+    }
+
+    const savedId = selectedWorkflowId;
+
+    // Passa al prossimo workflow non valutato
+    const nextUneval = state.workflows.find(
+      w => w.id !== selectedWorkflowId && !state.evaluations[w.id]
+    );
+    if (nextUneval) {
+      setSelectedWorkflowId(nextUneval.id);
+      setAnswers({});
+      setComplessita(3);
+      setSaveMessage({
+        text: `${savedId} salvato! Prosegui ora con ${nextUneval.id} — ${nextUneval.titolo}`,
+        type: 'success',
+      });
+    } else {
+      setSaveMessage({
+        text: `${savedId} salvato! Tutti gli step sono stati valutati. Vai ai Risultati!`,
+        type: 'done',
+      });
+    }
+
+    // Auto-hide dopo 6 secondi
+    setTimeout(() => setSaveMessage(null), 6000);
+
+    // Scroll in cima per vedere il prossimo workflow
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const evaluatedCount = Object.keys(state.evaluations).length;
+  const totalCount = state.workflows.length;
+  const allEvaluated = evaluatedCount === totalCount;
+
+  if (state.workflows.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8 flex items-center justify-center min-h-[400px]">
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-8 text-center max-w-md">
+          <p className="text-gray-300 mb-6">
+            Devi prima creare almeno un workflow nella fase di mappatura.
+          </p>
+          <button
+            onClick={() => setCurrentStep(2)}
+            className="bg-brand hover:bg-brand-light text-dark-bg font-bold py-2 px-6 rounded-lg transition-colors"
+          >
+            Torna alla Mappatura
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <h2 className="text-3xl font-bold text-white mb-4">
+        Valutazione Step
+      </h2>
+
+      <div className="bg-brand-50 border border-brand/30 text-brand-light rounded-lg px-4 py-3 mb-6 text-sm flex items-center justify-between">
+        <span>
+          Fase 3 di 4 — Rispondi a 8 domande per determinare la strategia AI ottimale.
+          <span className="ml-2 text-white font-semibold">({evaluatedCount}/{totalCount} valutati)</span>
+        </span>
+        {allEvaluated && (
+          <button
+            onClick={() => setCurrentStep(4)}
+            className="bg-brand text-dark-bg font-semibold py-1.5 px-4 rounded-lg hover:bg-brand-light transition-colors text-sm whitespace-nowrap ml-4"
+          >
+            Vedi i Risultati →
+          </button>
+        )}
+      </div>
+
+      {/* Progress */}
+      <div className="mb-6">
+        <div className="h-2 rounded-full bg-dark-hover">
+          <div
+            className="h-2 rounded-full bg-brand transition-all"
+            style={{ width: totalCount > 0 ? `${(evaluatedCount / totalCount) * 100}%` : '0%' }}
+          />
+        </div>
+        <p className="text-gray-400 text-sm mt-2">
+          Step {evaluatedCount} di {totalCount} completati{' '}
+          {allEvaluated && '✓'}
+        </p>
+      </div>
+
+      {/* Messaggio progressione */}
+      {saveMessage && (
+        <div
+          className={`mb-6 p-4 rounded-lg border flex items-center justify-between transition-all ${
+            saveMessage.type === 'success'
+              ? 'bg-green-900/30 border-green-500/50 text-green-300'
+              : 'bg-brand-50 border-brand/50 text-brand-light'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">{saveMessage.type === 'success' ? '→' : '★'}</span>
+            <span className="font-semibold">{saveMessage.text}</span>
+          </div>
+          <button
+            onClick={() => setSaveMessage(null)}
+            className="text-gray-400 hover:text-white ml-4"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Selector Step */}
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
+        <label className="block text-sm font-semibold text-gray-300 mb-2">
+          Seleziona Step da Valutare
+        </label>
+        <select
+          value={selectedWorkflowId}
+          onChange={(e) => setSelectedWorkflowId(e.target.value)}
+          className="w-full px-4 py-2 bg-dark-hover border border-dark-border text-white rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+        >
+          {state.workflows.map((workflow) => (
+            <option key={workflow.id} value={workflow.id}>
+              {workflow.id} - {workflow.titolo}{' '}
+              {state.evaluations[workflow.id] ? '✓' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Card Info Step Corrente */}
+      {selectedWorkflow && (
+        <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <span className="inline-block bg-dark-hover text-gray-300 px-3 py-1 rounded-full text-sm font-semibold mr-2">
+                {selectedWorkflow.id}
+              </span>
+              <span className="inline-block bg-brand-50 text-brand-light px-3 py-1 rounded-full text-sm font-semibold">
+                {selectedWorkflow.fase}
+              </span>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-400">Tempo totale</p>
+              <p className="text-lg font-bold text-brand">
+                {selectedWorkflow.tempoTotale} min/mese
+              </p>
+            </div>
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">
+            {selectedWorkflow.titolo}
+          </h3>
+          <p className="text-gray-300">{selectedWorkflow.descrizione}</p>
+        </div>
+      )}
+
+      {/* Sezione AUTOMAZIONE */}
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
+        <h3 className="text-2xl font-bold text-white mb-4">
+          AUTOMAZIONE - Quanto è ripetibile?
+        </h3>
+
+        <div className="space-y-6">
+          {automationQuestions.map((q) => (
+            <div key={q.key}>
+              <p className="font-semibold text-gray-300 mb-3">{q.question}</p>
+              <div className="flex gap-4">
+                {q.options.map((option) => (
+                  <label
+                    key={option.value}
+                    className={`
+                      flex-1 p-4 border-2 rounded-lg cursor-pointer transition-all
+                      ${answers[q.key] === option.value
+                        ? 'border-green-500 bg-green-900/30'
+                        : 'border-dark-border hover:border-green-500/50'
+                      }
+                    `}
+                  >
+                    <input
+                      type="radio"
+                      name={q.key}
+                      value={option.value}
+                      checked={answers[q.key] === option.value}
+                      onChange={() => handleAnswerChange(q.key, option.value)}
+                      className="sr-only"
+                    />
+                    <div className="text-center">
+                      <div className="font-bold text-lg mb-1 text-white">{option.value}</div>
+                      <div className="text-sm text-gray-400">{option.label}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 p-4 bg-dark-hover rounded-lg">
+          <p className="text-lg font-bold text-white">
+            Score Automazione: <span className="text-green-600">{autoScore}/8</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Sezione CARICO COGNITIVO */}
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
+        <h3 className="text-2xl font-bold text-white mb-4">
+          CARICO COGNITIVO - Quanto pensiero richiede?
+        </h3>
+
+        <div className="space-y-6">
+          {cognitiveQuestions.map((q) => (
+            <div key={q.key}>
+              <p className="font-semibold text-gray-300 mb-3">{q.question}</p>
+              <div className="flex gap-4">
+                {q.options.map((option) => (
+                  <label
+                    key={option.value}
+                    className={`
+                      flex-1 p-4 border-2 rounded-lg cursor-pointer transition-all
+                      ${answers[q.key] === option.value
+                        ? 'border-orange-500 bg-orange-900/30'
+                        : 'border-dark-border hover:border-orange-500/50'
+                      }
+                    `}
+                  >
+                    <input
+                      type="radio"
+                      name={q.key}
+                      value={option.value}
+                      checked={answers[q.key] === option.value}
+                      onChange={() => handleAnswerChange(q.key, option.value)}
+                      className="sr-only"
+                    />
+                    <div className="text-center">
+                      <div className="font-bold text-lg mb-1 text-white">{option.value}</div>
+                      <div className="text-sm text-gray-400">{option.label}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 p-4 bg-dark-hover rounded-lg">
+          <p className="text-lg font-bold text-white">
+            Score Carico Cognitivo: <span className="text-orange-600">{cogScore}/8</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Preview Risultato */}
+      {strategy && (
+        <div
+          className="rounded-lg shadow-lg p-6 mb-6 text-white"
+          style={{ backgroundColor: strategy.color }}
+        >
+          <h3 className="text-2xl font-bold mb-3">Strategia AI</h3>
+          <div className="bg-white bg-opacity-20 rounded-lg p-4 mb-3">
+            <p className="text-sm opacity-90 mb-1">Score Automazione: {autoScore}/8</p>
+            <p className="text-sm opacity-90">Score Carico Cognitivo: {cogScore}/8</p>
+          </div>
+          <p className="text-3xl font-bold mb-2">{strategy.name}</p>
+          <p className="text-lg">{strategy.desc}</p>
+        </div>
+      )}
+
+      {/* Complessità di Implementazione */}
+      <div className="bg-dark-surface border border-dark-border rounded-lg p-6 mb-6">
+        <h3 className="text-xl font-bold text-white mb-3">
+          Complessità di Implementazione
+        </h3>
+        <p className="text-gray-400 mb-4 text-sm">
+          Quanto sforzo richiederà implementare questa strategia AI? (1 = molto facile, 5 = molto complesso)
+        </p>
+
+        <div className="flex gap-3">
+          {[1, 2, 3, 4, 5].map((value) => (
+            <label
+              key={value}
+              className={`
+                flex-1 p-4 border-2 rounded-lg cursor-pointer transition-all text-center
+                ${complessita === value
+                  ? 'border-brand bg-brand-50'
+                  : 'border-dark-border hover:border-brand/50'
+                }
+              `}
+            >
+              <input
+                type="radio"
+                name="complessita"
+                value={value}
+                checked={complessita === value}
+                onChange={() => setComplessita(value)}
+                className="sr-only"
+              />
+              <div className="font-bold text-2xl mb-1 text-white">{value}</div>
+              <div className="text-xs text-gray-400">
+                {value === 1 && 'Molto facile'}
+                {value === 2 && 'Facile'}
+                {value === 3 && 'Media'}
+                {value === 4 && 'Difficile'}
+                {value === 5 && 'Molto difficile'}
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex justify-between">
+        <button
+          onClick={() => setCurrentStep(2)}
+          className="bg-dark-hover hover:bg-dark-border text-white font-bold py-3 px-6 rounded-lg transition-colors"
+        >
+          Indietro
+        </button>
+
+        <div className="flex gap-4">
+          <button
+            onClick={handleSave}
+            disabled={!allQuestionsAnswered()}
+            className={`
+              font-bold py-3 px-6 rounded-lg transition-colors
+              ${allQuestionsAnswered()
+                ? 'bg-brand hover:bg-brand-light text-dark-bg'
+                : 'bg-dark-hover text-gray-500 cursor-not-allowed'
+              }
+            `}
+          >
+            Salva Valutazione
+          </button>
+
+          {allEvaluated && (
+            <button
+              onClick={() => setCurrentStep(4)}
+              className="bg-brand hover:bg-brand-light text-dark-bg font-bold py-3 px-6 rounded-lg transition-colors"
+            >
+              Vedi Risultati
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!allEvaluated && evaluatedCount > 0 && (
+        <div className="mt-4 text-center text-gray-400">
+          <p>Valuta tutti gli step per procedere ai risultati</p>
+        </div>
+      )}
+    </div>
+  );
+};

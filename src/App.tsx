@@ -1,0 +1,374 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AppProvider, useAppContext } from './context/AppContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { TabNavigation } from './components/TabNavigation';
+import { Step1Welcome } from './components/Step1Welcome';
+import { Step2Mapping } from './components/Step2Mapping';
+import { Step3Evaluation } from './components/Step3Evaluation';
+import { Step4Results } from './components/Step4Results';
+import ImportExport from './components/ImportExport';
+import TemplateLibrary from './components/TemplateLibrary';
+import WordImport from './components/WordImport';
+import VoiceImport from './components/VoiceImport';
+import SmartImport from './components/SmartImport';
+import AIChat from './components/AIChat';
+import { LandingPage } from './components/LandingPage';
+import { LoginPageAuth } from './components/LoginPage.auth';
+import { PaywallBanner } from './components/PaywallBanner';
+import { generateWorkflowId } from './utils/businessLogic';
+import { isPaywallActive, isGracePeriod, isAuthenticated as checkAuth, logout } from './utils/auth';
+
+const AppContent: React.FC = () => {
+  const { state, setCurrentStep, bulkAddWorkflows, addWorkflow } = useAppContext();
+  const [showImportExport, setShowImportExport] = useState(false);
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [showWordImport, setShowWordImport] = useState(false);
+  const [showVoiceImport, setShowVoiceImport] = useState(false);
+  const [showSmartImport, setShowSmartImport] = useState(false);
+  const [showImportDropdown, setShowImportDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(() => checkAuth());
+  const paywallActive = isPaywallActive();
+  const gracePeriod = isGracePeriod();
+
+  const [hasEntered, setHasEntered] = useState(() => {
+    return localStorage.getItem('workflow-ai-entered') === 'true' || state.workflows.length > 0;
+  });
+
+  const handleEnterApp = () => {
+    localStorage.setItem('workflow-ai-entered', 'true');
+    setHasEntered(true);
+  };
+
+  const handleLoginSuccess = useCallback(() => {
+    setIsLoggedIn(true);
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    logout();
+    setIsLoggedIn(false);
+  }, []);
+
+  // Listen for openTemplateLibrary event from Step1Welcome
+  useEffect(() => {
+    const handler = () => setShowTemplateLibrary(true);
+    window.addEventListener('openTemplateLibrary', handler);
+    return () => window.removeEventListener('openTemplateLibrary', handler);
+  }, []);
+
+  // Listen for openVoiceImport event from Step1Welcome
+  useEffect(() => {
+    const handler = () => setShowVoiceImport(true);
+    window.addEventListener('openVoiceImport', handler);
+    return () => window.removeEventListener('openVoiceImport', handler);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowImportDropdown(false);
+      }
+    };
+    if (showImportDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showImportDropdown]);
+
+  // Se il paywall è attivo e l'utente non è loggato → LoginPage
+  if (paywallActive && !isLoggedIn) {
+    return <LoginPageAuth onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  if (!hasEntered) {
+    return <LandingPage onEnter={handleEnterApp} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-dark-bg text-white">
+      {/* Teal accent bar */}
+      <div className="h-1 bg-brand" />
+
+      {/* Banner periodo di grazia (8-14 maggio 2026) */}
+      {gracePeriod && <PaywallBanner />}
+
+      {/* Header */}
+      <header className="bg-dark-surface border-b border-brand/30 py-3 shadow-lg">
+        <div className="max-w-6xl mx-auto px-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            {/* Toolbox icon */}
+            <svg className="w-8 h-8 text-brand flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+            <div>
+              <h1 className="text-xl font-bold text-white">Workflow AI Analyzer</h1>
+              <p className="text-xs text-brand">La Cassetta degli AI-trezzi</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {/* Logout button — visibile solo se paywall attivo e utente loggato */}
+            {paywallActive && isLoggedIn && (
+              <button
+                onClick={handleLogout}
+                className="text-text-secondary hover:text-white px-3 py-2 rounded-lg text-sm transition-colors border border-dark-border hover:border-dark-elevated"
+                title="Esci"
+              >
+                Esci
+              </button>
+            )}
+            <button
+              onClick={() => setShowTemplateLibrary(true)}
+              className="bg-brand text-dark-bg hover:bg-brand-light px-4 py-2 rounded-lg font-semibold transition-all text-sm"
+            >
+              Template
+            </button>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowImportDropdown(!showImportDropdown)}
+                className="bg-dark-hover hover:bg-dark-border text-white px-4 py-2 rounded-lg font-semibold transition-all text-sm border border-dark-border flex items-center gap-1"
+              >
+                Importa
+                <svg className={`w-4 h-4 transition-transform ${showImportDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showImportDropdown && (
+                <div className="absolute right-0 mt-1 w-56 bg-dark-surface border border-dark-border rounded-lg shadow-xl z-50">
+                  <button
+                    onClick={() => { setShowSmartImport(true); setShowImportDropdown(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover rounded-t-lg transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Import TXT / JSON (AI)
+                  </button>
+                  <button
+                    onClick={() => { setShowWordImport(true); setShowImportDropdown(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover transition-colors border-t border-dark-border flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Import da Word
+                  </button>
+                  <button
+                    onClick={() => { setShowVoiceImport(true); setShowImportDropdown(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover transition-colors border-t border-dark-border flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+                    </svg>
+                    Nota Vocale / Testo
+                  </button>
+                  <button
+                    onClick={() => { setShowImportExport(true); setShowImportDropdown(false); }}
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-dark-hover rounded-b-lg transition-colors border-t border-dark-border flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    Import/Export CSV/Excel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Stepper Navigation */}
+      <TabNavigation
+        currentStep={state.currentStep}
+        onStepChange={setCurrentStep}
+        workflowCount={state.workflows.length}
+        evaluationCount={Object.keys(state.evaluations).length}
+      />
+
+      {/* Main Content */}
+      <main className="pb-12">
+        {state.currentStep === 1 && (
+          <ErrorBoundary>
+            <Step1Welcome />
+          </ErrorBoundary>
+        )}
+        {state.currentStep === 2 && (
+          <ErrorBoundary>
+            <Step2Mapping />
+          </ErrorBoundary>
+        )}
+        {state.currentStep === 3 && (
+          <ErrorBoundary>
+            <Step3Evaluation />
+          </ErrorBoundary>
+        )}
+        {state.currentStep === 4 && (
+          <ErrorBoundary>
+            <Step4Results />
+          </ErrorBoundary>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-dark-surface border-t border-dark-border py-4">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <p className="text-xs text-gray-300 mb-1">
+            Un regalo per gli iscritti a{' '}
+            <a
+              href="https://lacassettadegliaitrezzi.substack.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand hover:text-brand-light hover:underline font-bold"
+            >
+              La Cassetta degli AI-trezzi
+            </a>
+          </p>
+          <p className="text-xs text-gray-500">
+            Powered by{' '}
+            <a
+              href="https://www.linkedin.com/in/valentino-grossi/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand hover:text-brand-light hover:underline font-medium"
+            >
+              Valentino Grossi
+            </a>
+            {' | '}
+            <a
+              href="https://valentinogrossi.it"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-gray-300 hover:underline"
+            >
+              valentinogrossi.it
+            </a>
+          </p>
+        </div>
+      </footer>
+
+      {/* Bottom accent bar */}
+      <div className="h-1 bg-brand" />
+
+      {/* Modals */}
+      {showImportExport && (
+        <ImportExport
+          workflows={state.workflows}
+          evaluations={state.evaluations}
+          onImport={(workflows, evaluations) => {
+            bulkAddWorkflows(workflows);
+            if (evaluations) {
+              console.log('Evaluations imported:', evaluations);
+            }
+          }}
+          onClose={() => setShowImportExport(false)}
+        />
+      )}
+
+      {showTemplateLibrary && (
+        <TemplateLibrary
+          onSelectTemplate={(workflow) => {
+            const newId = generateWorkflowId(state.workflows);
+            const tempoTotale = workflow.tempoMedio * workflow.frequenza;
+            addWorkflow({
+              ...workflow,
+              id: newId,
+              tempoTotale,
+            });
+            setCurrentStep(2);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onSelectMultiple={(workflows) => {
+            const existingWorkflows = [...state.workflows];
+            const workflowsToAdd = workflows.map((workflow) => {
+              const newId = generateWorkflowId(existingWorkflows);
+              const tempoTotale = workflow.tempoMedio * workflow.frequenza;
+              const newWorkflow = { ...workflow, id: newId, tempoTotale };
+              existingWorkflows.push(newWorkflow);
+              return newWorkflow;
+            });
+
+            bulkAddWorkflows(workflowsToAdd);
+            setCurrentStep(1);
+            setShowTemplateLibrary(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onClose={() => setShowTemplateLibrary(false)}
+        />
+      )}
+
+      {showVoiceImport && (
+        <VoiceImport
+          onImportComplete={() => {
+            setShowVoiceImport(false);
+            setCurrentStep(1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onClose={() => setShowVoiceImport(false)}
+        />
+      )}
+
+      {showSmartImport && (
+        <SmartImport onClose={() => setShowSmartImport(false)} />
+      )}
+
+      {showWordImport && (
+        <WordImport
+          onImportMultiple={(workflows) => {
+            const existingWorkflows = [...state.workflows];
+            const workflowsToAdd = workflows.map((workflow) => {
+              const newId = generateWorkflowId(existingWorkflows);
+              const tempoTotale = workflow.tempoMedio * workflow.frequenza;
+              const newWorkflow = { ...workflow, id: newId, tempoTotale };
+              existingWorkflows.push(newWorkflow);
+              return newWorkflow;
+            });
+
+            bulkAddWorkflows(workflowsToAdd);
+            setCurrentStep(1);
+            setShowWordImport(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onClose={() => setShowWordImport(false)}
+        />
+      )}
+
+      {/* AI Chat Assistant */}
+      <AIChat
+        currentWorkflow={state.workflows[state.workflows.length - 1]}
+        allWorkflows={state.workflows}
+        currentStep={state.currentStep}
+      />
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ErrorBoundary>
+          <AppProvider>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ErrorBoundary>
+                    <AppContent />
+                  </ErrorBoundary>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AppProvider>
+        </ErrorBoundary>
+      </BrowserRouter>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
