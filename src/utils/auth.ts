@@ -120,3 +120,22 @@ export function dismissBanner(): void {
 export function isAuthenticated(): boolean {
   return isTokenValid(getStoredToken());
 }
+
+/**
+ * Ritorna gli headers di autenticazione per le API
+ */
+export function getAuthHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
+/**
+ * Estrae l'email dell'utente dal JWT
+ */
+export function getUserEmail(): string | null {
+  const token = getStoredToken();
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  return payload?.email || null;
+}

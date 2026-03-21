@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { AppState, Workflow, Evaluation } from '../types';
 import { calculateStats, fixDuplicateWorkflowIds } from '../utils/businessLogic';
+import { isAuthenticated, getAuthHeaders, isPaywallActive } from '../utils/auth';
 
 interface AppContextType {
   state: AppState;
@@ -120,14 +121,82 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return initialState;
   });
 
-  // Salva stato su localStorage ad ogni cambiamento
+  // Ref per il debounce del sync server
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLoadingFromServer = useRef(false);
+
+  /**
+   * Salva stato sul server (debounced)
+   */
+  const syncToServer = useCallback((stateToSync: AppState) => {
+    if (!isPaywallActive() || !isAuthenticated()) return;
+    if (isLoadingFromServer.current) return;
+
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        await fetch('/api/user-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ appState: stateToSync }),
+        });
+      } catch (err) {
+        console.error('❌ Sync to server failed:', err);
+      }
+    }, 5000); // Debounce 5 secondi
+  }, []);
+
+  /**
+   * Carica stato dal server al mount (se loggato)
+   */
+  useEffect(() => {
+    if (!isPaywallActive() || !isAuthenticated()) return;
+
+    const loadFromServer = async () => {
+      try {
+        isLoadingFromServer.current = true;
+        const res = await fetch('/api/user-data', {
+          headers: { ...getAuthHeaders() },
+        });
+        const json = await res.json();
+
+        if (json.success && json.data) {
+          const serverState = json.data as AppState;
+          // Merge: se il server ha workflow, usa quelli; altrimenti mantieni localStorage
+          if (serverState.workflows && serverState.workflows.length > 0) {
+            setState(prev => ({
+              ...serverState,
+              currentStep: prev.currentStep, // mantieni step corrente locale
+              stats: calculateStats(serverState.workflows, serverState.evaluations || {}),
+            }));
+          } else {
+            // Primo login: salva i dati locali sul server
+            syncToServer(state);
+          }
+        } else {
+          // Nessun dato sul server: salva lo stato locale
+          syncToServer(state);
+        }
+      } catch (err) {
+        console.error('❌ Load from server failed:', err);
+      } finally {
+        isLoadingFromServer.current = false;
+      }
+    };
+
+    loadFromServer();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Salva stato su localStorage ad ogni cambiamento + sync server
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
       console.error('Error saving state:', error);
     }
-  }, [state]);
+    // Sync con server se loggato
+    syncToServer(state);
+  }, [state, syncToServer]);
 
   const setCurrentStep = (step: number) => {
     setState(prev => ({ ...prev, currentStep: step }));

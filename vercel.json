@@ -27,6 +27,10 @@
     "api/auth.ts": {
       "maxDuration": 15,
       "includeFiles": "api/middleware/**"
+    },
+    "api/user-data.ts": {
+      "maxDuration": 15,
+      "includeFiles": "api/middleware/**"
     }
   },
   "buildCommand": "npm run build",
