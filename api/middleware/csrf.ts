@@ -136,7 +136,7 @@ export function checkCSRF(req: VercelRequest, res: VercelResponse): boolean {
  * Returns handler that checks CSRF before executing
  */
 export function withCSRF(
-  handler: (req: VercelRequest, res: VercelResponse) => Promise<void> | void
+  handler: (req: VercelRequest, res: VercelResponse) => Promise<any> | any
 ) {
   return async (req: VercelRequest, res: VercelResponse) => {
     if (!checkCSRF(req, res)) {

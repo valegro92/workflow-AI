@@ -32,16 +32,18 @@ function generateToken(email: string): string {
  * Verifica email contro Upstash Redis (iscritti L'Officina)
  * Ritorna JWT token se autorizzato
  */
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   // Solo POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
   // Rate limiting
   const rateLimitResult = checkRateLimit(req, AUTH_RATE_LIMIT);
   if (!rateLimitResult.allowed) {
-    return sendRateLimitError(res, rateLimitResult.retryAfter || 60);
+    sendRateLimitError(res, rateLimitResult.retryAfter || 60);
+    return;
   }
 
   try {
@@ -49,10 +51,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Validazione input
     if (!email || typeof email !== 'string') {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Email obbligatoria',
       });
+      return;
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -60,17 +63,19 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione formato email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(normalizedEmail)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Formato email non valido',
       });
+      return;
     }
 
     // Admin bypass
     if (ADMIN_EMAILS.includes(normalizedEmail)) {
       const token = generateToken(normalizedEmail);
       addRateLimitHeaders(res, rateLimitResult.remaining || 0, AUTH_RATE_LIMIT.maxAttempts);
-      return res.status(200).json({ success: true, token });
+      res.status(200).json({ success: true, token });
+      return;
     }
 
     // Verifica su Upstash Redis
@@ -79,10 +84,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!redisUrl || !redisToken) {
       console.error('❌ Redis non configurato: KV_REST_API_URL o KV_REST_API_TOKEN mancanti');
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
         message: 'Servizio di autenticazione temporaneamente non disponibile',
       });
+      return;
     }
 
     const redis = new Redis({ url: redisUrl, token: redisToken });
@@ -96,18 +102,19 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         // Subscriber valido
         const token = generateToken(normalizedEmail);
         addRateLimitHeaders(res, rateLimitResult.remaining || 0, AUTH_RATE_LIMIT.maxAttempts);
-        return res.status(200).json({ success: true, token });
+        res.status(200).json({ success: true, token });
+        return;
       }
     }
 
     // Non autorizzato
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: "Email non trovata tra gli abbonati attivi de L'Officina",
     });
   } catch (error: any) {
     console.error('❌ Auth error:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: "Errore durante l'autenticazione",
     });

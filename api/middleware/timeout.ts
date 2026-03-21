@@ -23,7 +23,7 @@ export interface TimeoutOptions {
  * @returns Wrapped handler with timeout protection
  */
 export function withTimeout(
-  handler: (req: VercelRequest, res: VercelResponse) => Promise<void> | void,
+  handler: (req: VercelRequest, res: VercelResponse) => Promise<any> | any,
   options: TimeoutOptions = {}
 ) {
   const {

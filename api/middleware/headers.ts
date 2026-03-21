@@ -163,7 +163,7 @@ export function setJSONHeaders(res: VercelResponse): void {
  * @returns Wrapped handler with headers
  */
 export function withHeaders(
-  handler: (req: VercelRequest, res: VercelResponse) => Promise<void> | void,
+  handler: (req: VercelRequest, res: VercelResponse) => Promise<any> | any,
   options: {
     cache?: CacheStrategy;
     security?: boolean;

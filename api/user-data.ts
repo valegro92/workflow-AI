@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { withHeaders, CacheStrategy } from './middleware/headers.js';
 import { checkRateLimit, sendRateLimitError } from './middleware/rateLimit.js';
 import jwt from 'jsonwebtoken';
-import { getUserData, saveUserData } from './db.js';
+import { getUserData, saveUserData } from './middleware/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'workflow-ai-default-secret-change-in-production';
 
@@ -36,66 +36,72 @@ function getEmailFromToken(req: VercelRequest): string | null {
  *
  * Richiede JWT valido nel header Authorization: Bearer <token>
  */
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   // Solo GET e POST
   if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
   // Rate limiting
   const rateLimitResult = checkRateLimit(req, DATA_RATE_LIMIT);
   if (!rateLimitResult.allowed) {
-    return sendRateLimitError(res, rateLimitResult.retryAfter || 60);
+    sendRateLimitError(res, rateLimitResult.retryAfter || 60);
+    return;
   }
 
   // Verifica JWT
   const email = getEmailFromToken(req);
   if (!email) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: 'Token non valido o mancante',
     });
+    return;
   }
 
   try {
     if (req.method === 'GET') {
-      // Carica dati utente
       const appState = await getUserData(email);
 
       if (!appState) {
-        return res.status(200).json({
+        res.status(200).json({
           success: true,
           data: null,
           message: 'Nessun dato salvato',
         });
+        return;
       }
 
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
         data: appState,
       });
+      return;
     }
 
     if (req.method === 'POST') {
       const { appState } = req.body || {};
 
       if (!appState || typeof appState !== 'object') {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'appState obbligatorio (oggetto JSON)',
         });
+        return;
       }
 
       await saveUserData(email, appState);
 
-      return res.status(200).json({
+      res.status(200).json({
         success: true,
         message: 'Dati salvati',
       });
+      return;
     }
   } catch (error: any) {
     console.error('❌ User data error:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: 'Errore nel salvataggio dei dati',
     });

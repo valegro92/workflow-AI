@@ -267,7 +267,7 @@ export function validateBody(
  */
 export function withValidation(
   schema: ValidationSchema,
-  handler: (req: VercelRequest, res: VercelResponse) => Promise<void> | void
+  handler: (req: VercelRequest, res: VercelResponse) => Promise<any> | any
 ) {
   return async (req: VercelRequest, res: VercelResponse) => {
     // Validate request body
