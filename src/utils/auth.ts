@@ -6,9 +6,18 @@
 // Date di cutoff per il paywall
 export const PAYWALL_DATE = new Date('2026-05-15T00:00:00');
 export const GRACE_START = new Date('2026-05-08T00:00:00');
+export const FREE_PERIOD_END = new Date('2026-05-01T00:00:00');
 
 const TOKEN_KEY = 'workflow-ai-token';
 const BANNER_DISMISSED_KEY = 'workflow-ai-banner-dismissed';
+
+/**
+ * Controlla se siamo nel periodo free (prima del 1° maggio 2026)
+ * Durante il periodo free chiunque può registrarsi senza abbonamento
+ */
+export function isFreePeriod(): boolean {
+  return new Date() < FREE_PERIOD_END;
+}
 
 /**
  * Controlla se il paywall è attivo (dal 15 maggio 2026)

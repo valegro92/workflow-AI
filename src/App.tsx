@@ -17,6 +17,7 @@ import { LandingPage } from './components/LandingPage';
 import { LoginPageAuth } from './components/LoginPage.auth';
 import { PaywallBanner } from './components/PaywallBanner';
 import { WelcomeBanner } from './components/WelcomeBanner';
+import { FreePeriodNotice } from './components/FreePeriodNotice';
 import { generateWorkflowId } from './utils/businessLogic';
 import { isPaywallActive, isGracePeriod, isAuthenticated as checkAuth, logout, getUserEmail } from './utils/auth';
 
@@ -123,6 +124,9 @@ const AppContent: React.FC = () => {
 
       {/* Welcome banner dopo primo login */}
       {isLoggedIn && <WelcomeBanner userEmail={userEmail} />}
+
+      {/* Popup avviso periodo free — mostra una volta per sessione */}
+      {isLoggedIn && <FreePeriodNotice />}
 
       {/* Header */}
       <header className="bg-dark-surface border-b border-brand/30 py-3 shadow-lg">
