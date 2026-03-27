@@ -45,6 +45,7 @@ const AppContent: React.FC = () => {
   };
 
   const [showLoginPage, setShowLoginPage] = useState(false);
+  const [cloudBannerDismissed, setCloudBannerDismissed] = useState(() => sessionStorage.getItem('cloud-banner-dismissed') === 'true');
   const [userEmail, setUserEmail] = useState<string | null>(() => getUserEmail());
 
   const handleLoginSuccess = useCallback(() => {
@@ -115,6 +116,29 @@ const AppContent: React.FC = () => {
 
       {/* Welcome banner dopo primo login */}
       {isLoggedIn && <WelcomeBanner userEmail={userEmail} />}
+
+      {/* Promemoria cloud save per utenti non loggati */}
+      {!isLoggedIn && state.workflows.length > 0 && !cloudBannerDismissed && (
+        <div className="bg-brand/10 border-b border-brand/20 px-4 py-2.5">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+            <p className="text-sm text-gray-300 flex items-center gap-2">
+              <svg className="w-4 h-4 text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+              </svg>
+              <span>I tuoi dati si salvano solo su questo browser. <button onClick={handleShowLogin} className="text-brand hover:text-brand-light font-semibold underline">Accedi con L'Officina</button> per salvarli nel cloud.</span>
+            </p>
+            <button
+              onClick={() => { sessionStorage.setItem('cloud-banner-dismissed', 'true'); setCloudBannerDismissed(true); }}
+              className="text-gray-500 hover:text-gray-300 flex-shrink-0"
+              aria-label="Chiudi"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header className="bg-dark-surface border-b border-brand/30 py-3 shadow-lg">
