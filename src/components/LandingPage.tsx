@@ -1,5 +1,4 @@
 import React from 'react';
-import { isFreePeriod, FREE_PERIOD_END } from '../utils/auth';
 
 interface LandingPageProps {
   onEnter: () => void;
@@ -9,12 +8,6 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, onLogin, isLoggedIn, userEmail }) => {
-  const freePeriod = isFreePeriod();
-  const formattedDate = FREE_PERIOD_END.toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
   return (
     <div className="min-h-screen bg-dark-bg text-white">
       {/* Top accent bar */}
@@ -82,27 +75,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, onLogin, isLo
               >
                 Vai all'Analisi
               </button>
-            ) : freePeriod ? (
-              <>
-                <button
-                  onClick={onLogin || onEnter}
-                  className="bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
-                >
-                  Registrati Gratis
-                </button>
-                <button
-                  onClick={onEnter}
-                  className="border border-dark-border text-gray-400 hover:bg-dark-hover px-8 py-4 rounded-xl font-medium text-lg transition-all"
-                >
-                  Prova senza account
-                </button>
-              </>
             ) : (
               <>
+                <button
+                  onClick={onEnter}
+                  className="bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
+                >
+                  Entra
+                </button>
                 {onLogin && (
                   <button
                     onClick={onLogin}
-                    className="bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
+                    className="border border-brand/30 text-brand hover:bg-brand/10 px-8 py-4 rounded-xl font-medium text-lg transition-all"
                   >
                     Accedi con L'Officina
                   </button>
@@ -113,9 +97,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, onLogin, isLo
           <p className="mt-4 text-xs text-gray-500">
             {isLoggedIn
               ? 'I tuoi workflow sono salvati. Accessibili da qualsiasi dispositivo.'
-              : freePeriod
-                ? `Accesso gratuito fino al ${formattedDate}. Registrati per salvare i tuoi workflow.`
-                : "Riservato agli abbonati de L'Officina della Cassetta degli AI-trezzi."
+              : "Gratuito. Per salvare i tuoi dati, accedi con L'Officina della Cassetta degli AI-trezzi."
             }
           </p>
         </div>
@@ -224,18 +206,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, onLogin, isLo
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-bold mb-3">
-              {freePeriod ? (
-                <>Registrati gratis e <span className="text-brand">salva il tuo lavoro</span></>
-              ) : (
-                <>L'Officina della Cassetta degli AI-trezzi</>
-              )}
+              Accedi e <span className="text-brand">salva il tuo lavoro</span>
             </h2>
             <p className="text-gray-300 text-lg max-w-2xl mx-auto">
-              {freePeriod ? (
-                <>Fino al {formattedDate} l'accesso e gratuito per tutti. Registrati con la tua email e i tuoi workflow saranno salvati nel cloud, accessibili da qualsiasi dispositivo.</>
-              ) : (
-                <>L'Officina e il piano a pagamento de La Cassetta degli AI-trezzi, la newsletter sull'adozione AI nelle PMI. Include questo tool, forfAIt e tutti i futuri strumenti pratici.</>
-              )}
+              L'Officina e il piano a pagamento de La Cassetta degli AI-trezzi.
+              Accedi con la tua email e i tuoi workflow saranno salvati nel cloud, accessibili da qualsiasi dispositivo.
             </p>
           </div>
 
@@ -294,7 +269,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, onLogin, isLo
                     onClick={onLogin}
                     className="inline-flex items-center gap-2 bg-brand text-dark-bg hover:bg-brand-light px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
                   >
-                    {freePeriod ? 'Registrati Gratis' : "Accedi con L'Officina"}
+                    Accedi con L'Officina
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
@@ -323,9 +298,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, onLogin, isLo
           <p className="text-gray-400 mb-8 text-lg">
             {isLoggedIn
               ? 'I tuoi workflow sono salvati. Inizia o continua la tua analisi.'
-              : freePeriod
-                ? `Registrati gratis fino al ${formattedDate} e salva i tuoi workflow nel cloud.`
-                : "Accedi con L'Officina della Cassetta degli AI-trezzi per iniziare."
+              : "Usa lo strumento gratis. Accedi con L'Officina per salvare i tuoi workflow nel cloud."
             }
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -336,29 +309,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, onLogin, isLo
               >
                 Vai all'Analisi
               </button>
-            ) : freePeriod ? (
+            ) : (
               <>
                 <button
-                  onClick={onLogin || onEnter}
+                  onClick={onEnter}
                   className="bg-brand text-dark-bg hover:bg-brand-light px-10 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
                 >
-                  Registrati Gratis
+                  Entra
                 </button>
-                <button
-                  onClick={onEnter}
-                  className="border border-dark-border text-gray-400 hover:bg-dark-hover px-10 py-4 rounded-xl font-medium text-lg transition-all"
-                >
-                  Prova senza account
-                </button>
+                {onLogin && (
+                  <button
+                    onClick={onLogin}
+                    className="border border-brand/30 text-brand hover:bg-brand/10 px-10 py-4 rounded-xl font-medium text-lg transition-all"
+                  >
+                    Accedi con L'Officina
+                  </button>
+                )}
               </>
-            ) : onLogin ? (
-              <button
-                onClick={onLogin}
-                className="bg-brand text-dark-bg hover:bg-brand-light px-10 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand/20 hover:shadow-brand/40"
-              >
-                Accedi con L'Officina
-              </button>
-            ) : null}
+            )}
           </div>
         </div>
       </section>

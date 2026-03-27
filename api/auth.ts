@@ -10,13 +10,6 @@ const ADMIN_EMAILS = ['ai@valentinogrossi.it'];
 const JWT_SECRET = process.env.JWT_SECRET || 'workflow-ai-default-secret-change-in-production';
 const TOKEN_EXPIRY = '24h';
 
-// Periodo free: prima di questa data chiunque può registrarsi
-const FREE_PERIOD_END = new Date('2026-05-01T00:00:00');
-
-function isFreePeriod(): boolean {
-  return new Date() < FREE_PERIOD_END;
-}
-
 // Rate limit: 10 tentativi per minuto
 const AUTH_RATE_LIMIT = {
   maxAttempts: 10,
@@ -85,16 +78,7 @@ async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
       return;
     }
 
-    // Periodo free: chiunque può registrarsi senza check abbonamento
-    if (isFreePeriod()) {
-      console.log(`🆓 Free period login: ${normalizedEmail}`);
-      const token = generateToken(normalizedEmail);
-      addRateLimitHeaders(res, rateLimitResult.remaining || 0, AUTH_RATE_LIMIT.maxAttempts);
-      res.status(200).json({ success: true, token });
-      return;
-    }
-
-    // Dopo il periodo free: verifica su Upstash Redis (solo abbonati Officina)
+    // Verifica su Upstash Redis (solo iscritti autorizzati)
     const redisUrl = process.env.KV_REST_API_URL;
     const redisToken = process.env.KV_REST_API_TOKEN;
 
@@ -123,10 +107,10 @@ async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
       }
     }
 
-    // Non autorizzato (dopo periodo free)
+    // Non autorizzato
     res.status(401).json({
       success: false,
-      message: "Accesso riservato agli abbonati de L'Officina della Cassetta degli AI-trezzi. Scopri di più su cassettadegliaitrezzi.it",
+      message: "Accesso riservato agli iscritti de L'Officina della Cassetta degli AI-trezzi. Scopri di più su cassettadegliaitrezzi.it",
     });
   } catch (error: any) {
     console.error('❌ Auth error:', error);

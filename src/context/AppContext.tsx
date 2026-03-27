@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { AppState, Workflow, Evaluation } from '../types';
 import { calculateStats, fixDuplicateWorkflowIds } from '../utils/businessLogic';
-import { isAuthenticated, getAuthHeaders, isPaywallActive } from '../utils/auth';
+import { isAuthenticated, getAuthHeaders } from '../utils/auth';
 
 interface AppContextType {
   state: AppState;
@@ -129,7 +129,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
    * Salva stato sul server (debounced)
    */
   const syncToServer = useCallback((stateToSync: AppState) => {
-    if (!isPaywallActive() || !isAuthenticated()) return;
+    if (!isAuthenticated()) return;
     if (isLoadingFromServer.current) return;
 
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -150,7 +150,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
    * Carica stato dal server al mount (se loggato)
    */
   useEffect(() => {
-    if (!isPaywallActive() || !isAuthenticated()) return;
+    if (!isAuthenticated()) return;
 
     const loadFromServer = async () => {
       try {

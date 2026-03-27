@@ -15,11 +15,9 @@ import SmartImport from './components/SmartImport';
 import AIChat from './components/AIChat';
 import { LandingPage } from './components/LandingPage';
 import { LoginPageAuth } from './components/LoginPage.auth';
-import { PaywallBanner } from './components/PaywallBanner';
 import { WelcomeBanner } from './components/WelcomeBanner';
-import { FreePeriodNotice } from './components/FreePeriodNotice';
 import { generateWorkflowId } from './utils/businessLogic';
-import { isPaywallActive, isGracePeriod, isAuthenticated as checkAuth, logout, getUserEmail } from './utils/auth';
+import { isAuthenticated as checkAuth, logout, getUserEmail } from './utils/auth';
 
 const AppContent: React.FC = () => {
   const { state, setCurrentStep, bulkAddWorkflows, addWorkflow } = useAppContext();
@@ -33,10 +31,11 @@ const AppContent: React.FC = () => {
 
   // Auth state
   const [isLoggedIn, setIsLoggedIn] = useState(() => checkAuth());
-  const paywallActive = isPaywallActive();
-  const gracePeriod = isGracePeriod();
 
+  // Chi non è loggato ricomincia sempre dalla landing page
+  // Chi è loggato mantiene lo stato di ingresso
   const [hasEntered, setHasEntered] = useState(() => {
+    if (!checkAuth()) return false;
     return localStorage.getItem('workflow-ai-entered') === 'true' || state.workflows.length > 0;
   });
 
@@ -93,12 +92,7 @@ const AppContent: React.FC = () => {
     }
   }, [showImportDropdown]);
 
-  // Se il paywall è attivo e l'utente non è loggato → LoginPage obbligatoria
-  if (paywallActive && !isLoggedIn) {
-    return <LoginPageAuth onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  // Se l'utente ha cliccato "Accedi" (login volontario, pre-paywall)
+  // Se l'utente ha cliccato "Accedi" → mostra LoginPage
   if (showLoginPage && !isLoggedIn) {
     return <LoginPageAuth onLoginSuccess={handleLoginSuccess} />;
   }
@@ -119,14 +113,8 @@ const AppContent: React.FC = () => {
       {/* Teal accent bar */}
       <div className="h-1 bg-brand" />
 
-      {/* Banner periodo di grazia (8-14 maggio 2026) */}
-      {gracePeriod && <PaywallBanner />}
-
       {/* Welcome banner dopo primo login */}
       {isLoggedIn && <WelcomeBanner userEmail={userEmail} />}
-
-      {/* Popup avviso periodo free — mostra una volta per sessione */}
-      {isLoggedIn && <FreePeriodNotice />}
 
       {/* Header */}
       <header className="bg-dark-surface border-b border-brand/30 py-3 shadow-lg">

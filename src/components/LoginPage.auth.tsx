@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { storeToken, isFreePeriod, FREE_PERIOD_END } from '../utils/auth';
+import { storeToken } from '../utils/auth';
 
 interface LoginPageAuthProps {
   onLoginSuccess: () => void;
@@ -7,14 +7,12 @@ interface LoginPageAuthProps {
 
 /**
  * Pagina di login
- * - Periodo free (prima del 1° maggio): chiunque può registrarsi
- * - Dopo: solo abbonati L'Officina (verifica via Upstash Redis)
+ * Solo iscritti L'Officina (verifica via Upstash Redis)
  */
 export const LoginPageAuth: React.FC<LoginPageAuthProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const freePeriod = isFreePeriod();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,12 +45,6 @@ export const LoginPageAuth: React.FC<LoginPageAuthProps> = ({ onLoginSuccess }) 
     }
   };
 
-  const formattedDate = FREE_PERIOD_END.toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-bg px-4">
       <div className="w-full max-w-md">
@@ -71,31 +63,21 @@ export const LoginPageAuth: React.FC<LoginPageAuthProps> = ({ onLoginSuccess }) 
             </p>
           </div>
 
-          {/* Info box — cambia in base al periodo */}
-          {freePeriod ? (
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-300 text-center">
-                <span className="text-green-400 font-semibold">Accesso gratuito</span> fino al {formattedDate}.
-                <br />
-                Registrati con la tua email per salvare i tuoi workflow nel cloud.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-brand/10 border border-brand/30 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-300 text-center">
-                Questo strumento e riservato agli abbonati de{' '}
-                <span className="text-brand font-semibold">L'Officina della Cassetta degli AI-trezzi</span>,
-                il piano a pagamento della newsletter con tutti i tool pratici per adottare l'AI nel tuo lavoro.
-              </p>
-            </div>
-          )}
+          {/* Info box */}
+          <div className="bg-brand/10 border border-brand/30 rounded-lg p-4 mb-6">
+            <p className="text-sm text-gray-300 text-center">
+              Accedi con la tua email di{' '}
+              <span className="text-brand font-semibold">L'Officina della Cassetta degli AI-trezzi</span>{' '}
+              per salvare i tuoi workflow nel cloud.
+            </p>
+          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
-                {freePeriod ? 'La tua email' : 'La tua email di Substack'}
+                La tua email di Substack
               </label>
               <input
                 id="email"
@@ -122,28 +104,15 @@ export const LoginPageAuth: React.FC<LoginPageAuthProps> = ({ onLoginSuccess }) 
               disabled={loading || !email}
               className="w-full py-2.5 px-4 bg-brand text-dark-bg font-semibold rounded-lg hover:bg-brand-light disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {loading ? 'Verifico...' : freePeriod ? 'Registrati gratis' : 'Accedi'}
+              {loading ? 'Verifico...' : 'Accedi'}
             </button>
           </form>
 
           {/* Footer — Cos'è L'Officina */}
           <div className="mt-8 pt-6 border-t border-dark-border">
-            {freePeriod ? (
-              <>
-                <p className="text-center text-sm text-text-secondary mb-3">
-                  Dal {formattedDate} l'accesso sara riservato agli abbonati de{' '}
-                  <span className="text-brand font-semibold">L'Officina</span>.
-                </p>
-                <p className="text-center text-xs text-gray-500 mb-4">
-                  L'Officina della Cassetta degli AI-trezzi e il piano a pagamento della newsletter:
-                  include questo tool, forfAIt e tutti i futuri strumenti pratici per integrare l'AI nel tuo lavoro.
-                </p>
-              </>
-            ) : (
-              <p className="text-center text-sm text-text-secondary mb-3">
-                Non sei ancora abbonato?
-              </p>
-            )}
+            <p className="text-center text-sm text-text-secondary mb-3">
+              Non sei ancora iscritto?
+            </p>
             <a
               href="https://cassettadegliaitrezzi.it"
               target="_blank"
