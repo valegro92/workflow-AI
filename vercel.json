@@ -31,6 +31,10 @@
     "api/user-data.ts": {
       "maxDuration": 15,
       "includeFiles": "lib/**"
+    },
+    "api/admin-subscribers.ts": {
+      "maxDuration": 15,
+      "includeFiles": "lib/**"
     }
   },
   "buildCommand": "npm run build",
