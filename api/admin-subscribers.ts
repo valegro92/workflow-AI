@@ -25,7 +25,7 @@ async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   }
 
   // Verifica admin secret
-  const adminSecret = process.env.ADMIN_SECRET;
+  const adminSecret = process.env.ADMIN_SECRET?.trim();
   if (!adminSecret) {
     res.status(500).json({ error: 'ADMIN_SECRET non configurato nelle variabili di ambiente' });
     return;
