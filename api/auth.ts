@@ -8,7 +8,19 @@ import { Redis } from '@upstash/redis';
 const ADMIN_EMAILS = ['ai@valentinogrossi.it'];
 
 // Email ammesse all'app senza passare da Redis (whitelist statica)
-const ALLOWED_EMAILS = ['celli@email.it'];
+const ALLOWED_EMAILS = [
+  'celli@email.it',
+  'francesca.gaudino@bakermckenzie.com',
+  'info@nicolalorenzini.it',
+  'g.ambrosino@demetraform.it',
+  'armando.delucia@crmpartners.it',
+  'gianlucascarpellini@gmail.com',
+  'avv.roberto.barsanti@gmail.com',
+  'stefferri@icloud.com',
+  'l-albertini@bluewin.ch',
+  'lorenzo.gant@gmail.com',
+  'valegro92@gmail.com',
+];
 
 const JWT_SECRET = process.env.JWT_SECRET || 'workflow-ai-default-secret-change-in-production';
 const TOKEN_EXPIRY = '24h';
