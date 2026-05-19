@@ -7,6 +7,9 @@ import { Redis } from '@upstash/redis';
 // Admin emails: sempre autorizzate senza Redis
 const ADMIN_EMAILS = ['ai@valentinogrossi.it'];
 
+// Email ammesse all'app senza passare da Redis (whitelist statica)
+const ALLOWED_EMAILS = ['celli@email.it'];
+
 const JWT_SECRET = process.env.JWT_SECRET || 'workflow-ai-default-secret-change-in-production';
 const TOKEN_EXPIRY = '24h';
 
@@ -72,6 +75,14 @@ async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
 
     // Admin bypass
     if (ADMIN_EMAILS.includes(normalizedEmail)) {
+      const token = generateToken(normalizedEmail);
+      addRateLimitHeaders(res, rateLimitResult.remaining || 0, AUTH_RATE_LIMIT.maxAttempts);
+      res.status(200).json({ success: true, token });
+      return;
+    }
+
+    // Whitelist statica: utenti ammessi senza Redis
+    if (ALLOWED_EMAILS.includes(normalizedEmail)) {
       const token = generateToken(normalizedEmail);
       addRateLimitHeaders(res, rateLimitResult.remaining || 0, AUTH_RATE_LIMIT.maxAttempts);
       res.status(200).json({ success: true, token });
